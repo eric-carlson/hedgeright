@@ -340,7 +340,7 @@ body.wide{--panelW:560px}
     </g>
   </g>
 </svg>HedgeRight</h1>
-      <div id="histBar"><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><span id="saveWrap"><button id="saveBtn" onclick="saveClick()" title="Save (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="saveState" onclick="saveClick()" title="Save"></span><span id="netBadge"></span><span id="fsBadge"></span></div>
+      <div id="histBar"><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span><span id="fsBadge"></span></div>
       <div class="sub" id="ranchSub">California native hedgerows, planned by goal and grown on paper first</div>
     </div>
     <div id="grip" title="Drag to resize"></div>
@@ -432,7 +432,7 @@ function downloadApp(){
    One shared JSON blob, gated by a password set once per device. The Worker URL is
    fixed for this deployment; only the password lives in localStorage — recoverable
    from wherever you actually keep it (a password manager), same as any login. */
-const CLOUD_SYNC_URL='https://hedgeright-sync.eric-carlson.workers.dev/design'; /* <-- replace after `wrangler deploy` */
+const CLOUD_SYNC_URL='https://hedgeright-sync.eric-carlson.workers.dev/design';
 let cloudStatus={state:'unconfigured',msg:'',at:null};
 function cloudToken(){ try{ return localStorage.getItem('hedgeright.cloudToken')||''; }catch(e){ return ''; } }
 function setCloudTokenValue(t){ try{ localStorage.setItem('hedgeright.cloudToken',t); }catch(e){} }
@@ -660,11 +660,15 @@ function fsBadge(){ const b=document.getElementById('fsBadge'); if(!b) return;
   b.className='show ok'; b.textContent=FS.dirty?'saving…':'saved to file';
   b.title=FS.name+(FS.lastAt?' · last written '+new Date(FS.lastAt).toLocaleTimeString():''); }
 function fsStatusHtml(){
+  const cloudNote=cloudConfigured()
+    ?`<p class="small mute">Cloud sync is on for this device — this design is also written to your Cloudflare Worker on every change (see Cloud sync below), so that's a real second copy outside this browser.</p>`:'';
   if(FS.handle) return `<p class="small"><b>${esc(FS.name)}</b> ${prov('obs','on your disk')}<br><span class="mute">Written on every change${FS.lastAt?', last at '+new Date(FS.lastAt).toLocaleTimeString():''}. This file is the real record — app storage is only a cache.</span></p>
-    <div class="row"><button class="small" onclick="fsWrite()">Save now</button><button class="small" onclick="fsLink()">Save to a different file…</button><button class="small" onclick="fsUnlink()">Unlink</button></div>`;
+    <div class="row"><button class="small" onclick="fsWrite()">Save now</button><button class="small" onclick="fsLink()">Save to a different file…</button><button class="small" onclick="fsUnlink()">Unlink</button></div>`+cloudNote;
   if(FS.supported) return `<p class="small">This design lives in the browser's storage, which the app does not control. Link it to a file on your own disk and every change is written straight there.</p>
-    <div class="row"><button onclick="fsLink()">Keep this design in a file…</button><button class="small" onclick="fsOpen()">Open a design file…</button></div>`;
-  return `<p class="small mute">This browser cannot write straight to a file — that needs Chrome or Edge on a desktop. Export JSON regularly; it is the only copy you control.</p>`; }
+    <div class="row"><button onclick="fsLink()">Keep this design in a file…</button><button class="small" onclick="fsOpen()">Open a design file…</button></div>`+cloudNote;
+  return cloudConfigured()
+    ?`<p class="small mute">This browser cannot write straight to a file — that needs Chrome or Edge on a desktop. Cloud sync is on, though, so this design is also written to your Cloudflare Worker on every change — that's your real copy here.</p>`
+    :`<p class="small mute">This browser cannot write straight to a file — that needs Chrome or Edge on a desktop. Turn on Cloud sync below, or export JSON regularly, so you have a copy outside this browser's storage.</p>`; }
 const ICON={
   populate:`<svg viewBox="0 0 64 44" class="ic"><line x1="4" y1="37" x2="60" y2="37" stroke="#8A6B4A" stroke-width="2" stroke-linecap="round"/>
     <ellipse cx="14" cy="30" rx="7" ry="6" fill="#6FAF6A"/><rect x="12.6" y="30" width="2.8" height="7" fill="#3D6B45"/>
@@ -695,8 +699,8 @@ const ICON={
 };
 function bigBtn(icon,label,sub,onclick,cls){ return `<button class="bigbtn ${cls||''}" onclick="${onclick}">${ICON[icon]||''}<span><b>${esc(label)}</b>${sub?`<i>${esc(sub)}</i>`:''}</span></button>`; }
 let S=null;
-function blankRanch(name,center,zoom){ return {id:uid(),name:name||'New ranch',center:center||[39.32,-123.11],origin:(center||[39.32,-123.11]).slice(),zoom:zoom||15,hedgerows:[],water:{nodes:[],lines:[]},feed:'gravity',feedPsi:0,hexCache:{},goals:{},plan:{set:[]},climate:null,aoi:null,creeks:[]}; }
-function defaultState(){ const r=blankRanch('Magruder Ranch',[39.3205,-123.1105],16); return {version:1,ranches:[r],active:r.id,species:JSON.parse(JSON.stringify(SPECIES_DEFAULT)),sel:{hedge:null,row:null,species:null,wnode:null,wline:null},ui:{goalsOpen:true}}; }
+function blankRanch(name,center,zoom){ return {id:uid(),name:name??'New ranch',center:center||[38.889326,-123.162412],origin:(center||[38.889326,-123.162412]).slice(),zoom:zoom||15,hedgerows:[],water:{nodes:[],lines:[]},feed:'gravity',feedPsi:0,hexCache:{},goals:{},plan:{set:[]},climate:null,aoi:null,creeks:[]}; }
+function defaultState(){ const r=blankRanch('',[38.889326,-123.162412],16); return {version:1,ranches:[r],active:r.id,species:JSON.parse(JSON.stringify(SPECIES_DEFAULT)),sel:{hedge:null,row:null,species:null,wnode:null,wline:null},ui:{goalsOpen:true}}; }
 const R=()=>S.ranches.find(r=>r.id===S.active)||S.ranches[0];
 const SP=id=>S.species.find(s=>s.id===id);
 const curHedge=()=>R().hedgerows.find(h=>h.id===S.sel.hedge)||null;
@@ -732,7 +736,7 @@ function hexRound(q,r){ let x=q,z=r,y=-x-z, rx=Math.round(x),ry=Math.round(y),rz
 function hexCenter(q,r){ return toLL([HEX_S*(Math.sqrt(3)*q+Math.sqrt(3)/2*r), HEX_S*1.5*r]); }
 function hexPoly(q,r){ const c=toXY(hexCenter(q,r)); const out=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-30); out.push(toLL([c[0]+HEX_S*Math.cos(a),c[1]+HEX_S*Math.sin(a)])); } return out; }
 const hkey=(q,r)=>q+','+r;
-let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, handleLayer, canvasR;
+let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, foundLayer, handleLayer, canvasR;
 let hexCanvas=null,hexCtx=null,heatCanvasEl=null,heatCtx=null,hexCells=[],heatCells=[],heatBest=null;
 let mode='select', tmpPts=[], painting=false, hoverHex=null;
 function initMap(){
@@ -756,8 +760,8 @@ function initMap(){
   map.getPane('hexP').appendChild(hexCanvas); map.getPane('hexP').appendChild(heatCanvasEl);
   hexCtx=hexCanvas.getContext('2d'); heatCtx=heatCanvasEl.getContext('2d');
   map.createPane('waterP'); map.getPane('waterP').style.zIndex=500;
-  rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
-  map.on('click',onMapClick); map.on('dblclick',()=>{ if(mode==='hedge'||mode==='wline'||mode==='pond'||mode==='aoi') finishDraw(); });
+  rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); foundLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
+  map.on('click',onMapClick); map.on('dblclick',(e)=>{ if(['hedge','wline','pond','aoi','creek'].includes(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
   map.on('mousedown',onDown); map.on('mousemove',onMove); map.on('mouseup',onUp);
   map.on('moveend',()=>{ const rr=R(); rr.center=[map.getCenter().lat,map.getCenter().lng]; rr.zoom=map.getZoom(); if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); if(soilOn) loadSoilPolys(); if(heatOn&&!aoi()) runHeat(); drawAll(); saveSoon(); });
   map.on('zoomend',()=>{ if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); drawAll(); });
@@ -955,7 +959,7 @@ document.addEventListener('keydown',e=>{
   const inField=/^(INPUT|TEXTAREA|SELECT)$/.test((e.target||{}).tagName||'');
   if(document.getElementById('dlg')&&document.getElementById('dlg').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); UI.close(null); } return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!inField){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'&&!inField){ e.preventDefault(); curSave?saveAs(curSave.name):promptSaveAs(); return; }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'&&!inField){ e.preventDefault(); manualSaveClick(); return; }
   if(inField) return;
   if(e.key==='Escape'){ if(['hedge','pond','aoi','wline','creek'].includes(mode)&&tmpPts.length){ tmpPts=[]; tmpLayer.clearLayers(); modeBanner(); readout('Cancelled.'); }
     else if(mode!=='select'){ setMode('select'); } return; }
@@ -1242,7 +1246,7 @@ async function findPonds(){ if(!map) return; busy(true,'Looking for ponds in vie
   const down=[r0.status==='rejected'?'the wetlands inventory':null,r1.status==='rejected'?'NHD waterbodies':null].filter(Boolean);
   busy(false,foundPonds.length+' found');
   readout(foundPonds.length?('Found '+foundPonds.length+' water feature'+(foundPonds.length===1?'':'s')+' in view.'+(down.length?' '+down.join(' and ')+' did not answer, so there may be more — a file opened from disk cannot reach the wetlands service.':'')):(errs?'Pond lookup failed ('+errs+' of 2 services unreachable) — draw the pond by hand.':'No mapped ponds or wetlands in this view — draw the pond by hand.')); renderWater(); showTab('water'); drawFound(); }
-function drawFound(){ tmpLayer.clearLayers(); foundPonds.forEach((p,i)=>{ const pg=L.polygon(p.poly,{pane:'waterP',color:p.pondLike?'#4C8FBF':'#7FA3B8',weight:2,dashArray:'4 3',fillOpacity:.15}).addTo(tmpLayer);
+function drawFound(){ foundLayer.clearLayers(); foundPonds.forEach((p,i)=>{ const pg=L.polygon(p.poly,{pane:'waterP',color:p.pondLike?'#4C8FBF':'#7FA3B8',weight:2,dashArray:'4 3',fillOpacity:.15}).addTo(foundLayer);
     pg.bindPopup('<b>'+esc(p.name)+'</b><br><span class="small">'+p.acres.toFixed(2)+' ac · '+esc(p.src||'')+'</span><br><button class="small" onclick="adoptPond('+i+')">Add as pond</button> <button class="small" onclick="dismissFound('+i+')">Not a pond</button>',{closeButton:false,autoPan:false});
     pg.on('mouseover',e=>{ pg.openPopup(e.latlng); }); pg.on('click',e=>{ pg.openPopup(e.latlng); }); }); }
 function dismissFound(i){ foundPonds.splice(i,1); drawFound(); renderPanels(); }
@@ -1431,11 +1435,11 @@ function mergeCreekRuns(list){ const byName={}; const out=[];
           parts.splice(i,1); joined=true; break; } }
       out.push(run); } });
   return out; }
-function drawFoundCreeks(){ tmpLayer.clearLayers(); foundCreeks.forEach((c,i)=>{
+function drawFoundCreeks(){ foundLayer.clearLayers(); foundCreeks.forEach((c,i)=>{
   L.polyline(c.pts,{pane:'waterP',color:'#7FB6E8',weight:4,dashArray:'6 5',opacity:.9})
-   .addTo(tmpLayer).bindPopup('<b>'+esc(c.name)+'</b><br><span class="small">'+Math.round(pathLenFt(c.pts))+' ft · '+esc(c.src)+'</span><br><button class="small" onclick="adoptCreek('+i+')">Add as creek</button>')
+   .addTo(foundLayer).bindPopup('<b>'+esc(c.name)+'</b><br><span class="small">'+Math.round(pathLenFt(c.pts))+' ft · '+esc(c.src)+'</span><br><button class="small" onclick="adoptCreek('+i+')">Add as creek</button>')
    .on('mouseover',e=>e.target.openPopup(e.latlng)); }); }
-function adoptCreek(i){ const c=foundCreeks[i]; if(!c) return; foundCreeks.splice(i,1); tmpLayer.clearLayers(); drawFoundCreeks();
+function adoptCreek(i){ const c=foundCreeks[i]; if(!c) return; foundCreeks.splice(i,1); foundLayer.clearLayers(); drawFoundCreeks();
   commit('Add '+c.name,()=>{ R().creeks=R().creeks||[]; R().creeks.push({id:uid(),name:c.name,pts:c.pts,flow:c.flow,widthFt:6,incisedFt:2,src:c.src}); });
   drawAll(); renderPanels(); }
 async function adoptAllCreeks(){ if(!foundCreeks.length){ UI.toast('Nothing to add'); return; }
@@ -1443,7 +1447,7 @@ async function adoptAllCreeks(){ if(!foundCreeks.length){ UI.toast('Nothing to a
   if(!await UI.confirm('Add '+n+' mapped stream'+(n===1?'':'s')+' — '+ft.toLocaleString()+' ft in all? NHD flow codes set the regime; check the bank height on any that matter, since an incised channel wets far less ground. Undoable.',{ok:'Add '+n,title:'Add them all'})) return;
   commit('Add '+n+' creek'+(n===1?'':'s'),()=>{ R().creeks=R().creeks||[];
     foundCreeks.forEach(c=>R().creeks.push({id:uid(),name:c.name,pts:c.pts,flow:c.flow,widthFt:6,incisedFt:2,src:c.src})); });
-  foundCreeks=[]; tmpLayer.clearLayers(); drawAll(); renderPanels();
+  foundCreeks=[]; foundLayer.clearLayers(); drawAll(); renderPanels();
   readout(n+' stream'+(n===1?'':'s')+' added. Bank height defaults to 2 ft; raise it on any that run in a cut channel.'); }
 async function findAllWater(){ busy(true,'Looking for ponds and streams…');
   await findPonds(); await findCreeks(); busy(false,'Search done');
@@ -1843,13 +1847,13 @@ function renderRanch(){ const r=R();
     <div class="row"><input type="text" id="geo" class="grow" placeholder="e.g. 31165 Hwy 128, Yorkville, CA  or  39.045, -123.208" onkeydown="if(event.key==='Enter'){event.preventDefault();geocode();}">
       <button class="small" onclick="geocode()">Go</button></div>
     <p class="small mute" id="geoNote">Currently centred at ${r.center[0].toFixed(5)}, ${r.center[1].toFixed(5)}.</p>
-    <h2>File</h2>${fsStatusHtml()}
     <h2>Cloud sync</h2>
     <p class="small mute">Syncs this design across your devices via a Cloudflare Worker. One password, set once per device — recover it from your password manager if a device gets wiped.</p>
-    <div class="row"><input type="password" id="cloudToken" class="grow" placeholder="sync password" value="${esc(cloudToken())}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCloudToken();}">
-      <button class="small" onclick="saveCloudToken()">Save</button>
-      ${cloudToken()?`<button class="small danger" onclick="clearCloudToken()">Clear</button>`:''}</div>
+    <form class="row" onsubmit="event.preventDefault();saveCloudToken();"><input type="password" id="cloudToken" name="hedgeright-sync-password" class="grow" placeholder="sync password" value="${esc(cloudToken())}" autocomplete="current-password">
+      <button type="submit" class="small">Save</button>
+      ${cloudToken()?`<button type="button" class="small danger" onclick="clearCloudToken()">Clear</button>`:''}</form>
     <p class="small mute" id="cloudStatus"></p>
+    <h2>File</h2>${fsStatusHtml()}
     <h2>Study area</h2>`;
   if(aoi()){ html+=`<p class="small">${aoiAcres().toFixed(1)} acres outlined, ${(hexesInAoi()||[]).length} acre hexes.</p><div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`; }
   else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="setMode('aoi')">Draw study area</button></p>`;
@@ -2202,13 +2206,22 @@ function snapRestore(id){ const s=snapList().find(x=>x.id===id); if(!s) return; 
 function snapDelete(id){ snapPut(snapList().filter(x=>x.id!==id)); }
 function saveState(){ return localStorage.getItem('hedgeright.dirty')==='1'?'dirty':'ok'; }
 let _dirty=false;
+let autoSaveOn=true;
+function loadAutoSavePref(){ try{ const v=localStorage.getItem('hedgeright.autoSave'); autoSaveOn=v===null?true:v==='1'; }catch(e){ autoSaveOn=true; } }
+function setAutoSave(on){ autoSaveOn=on; try{ localStorage.setItem('hedgeright.autoSave',on?'1':'0'); }catch(e){} saveBadge(); if(on&&_dirty) persistNow(); }
 function markDirty(v){ _dirty=v===undefined?true:v; saveBadge(); }
-function saveBadge(){ const el=document.getElementById('saveState'); const btn=document.getElementById('saveBtn'); if(!el) return;
-  el.className=_dirty?'dirty':'ok'; el.textContent=_dirty?'unsaved':(curSave?'saved':''); el.title=curSave?('Saved as "'+curSave.name+'"'):'Not yet saved to a named slot';
-  if(btn) btn.classList.toggle('dirty',_dirty); }
-function saveClick(){ saveNow(); }
+function saveBadge(){ const box=document.getElementById('autoSaveBox'); if(box) box.checked=autoSaveOn;
+  const btn=document.getElementById('saveBtn'); if(btn){ btn.style.display=autoSaveOn?'none':''; btn.disabled=!_dirty;
+    btn.classList.toggle('dirty',_dirty); btn.title=_dirty?'Unsaved changes — click to save (Ctrl+S)':'Nothing to save'; } }
+/* What "save" actually does: write the unnamed autosave copy, push to the cloud if
+   configured, and update the named save slot too if this design has one. Runs either
+   on the auto-save debounce or from a manual click — same work either way. */
+function persistNow(){ try{ localStorage.setItem('hedgeright.autosave',JSON.stringify(S)); }catch(e){}
+  if(curSave) saveAs(curSave.name); else markDirty(false);
+  cloudPush(); }
+function manualSaveClick(){ clearTimeout(_saveT); persistNow(); }
 let _saveT=null;
-function saveSoon(){ markDirty(true); clearTimeout(_saveT); _saveT=setTimeout(()=>{ try{ localStorage.setItem('hedgeright.autosave',JSON.stringify(S)); }catch(e){} if(curSave) saveAs(curSave.name); else markDirty(true); cloudPush(); },1200); }
+function saveSoon(){ markDirty(true); if(!autoSaveOn) return; clearTimeout(_saveT); _saveT=setTimeout(persistNow,1200); }
 function toggleSaveMenu(e){ if(e) e.stopPropagation(); const w=document.getElementById('saveWrap'); w.classList.toggle('open');
   document.getElementById('saveMenuHolder').innerHTML=w.classList.contains('open')?`<div class="menu">
     <button onclick="promptSaveAs();toggleSaveMenu()">Save as… <kbd>Ctrl+S</kbd></button>
@@ -2238,10 +2251,11 @@ function renderStart(){ const html=`<div class="stitle"><h1>HedgeRight</h1></div
   <div class="row" style="margin-top:10px"><button class="small" onclick="document.getElementById('impInput').click()">Import JSON…</button>
     <button class="small" onclick="fsOpen()">Open a file from disk…</button></div>`;
   setHtml('startBody',html); }
-function startNew(){ const r=blankRanch('New ranch',R()?R().center:[39.32,-123.11],R()?R().zoom:15); S.ranches.push(r); S.active=r.id; curSave=null;
+function startNew(){ const r=blankRanch('New ranch',R()?R().center:[38.889326,-123.162412],R()?R().zoom:15); S.ranches.push(r); S.active=r.id; curSave=null;
   hideStart(); if(map){ map.setView(r.center,r.zoom); drawAll(); } renderPanels(); showTab('ranch'); }
 function finishWizard(){ hideStart(); }
 (async function boot(){
+  loadAutoSavePref();
   let loaded=false;
   if(cloudConfigured()){ const cloud=await cloudPull(); if(cloud){ S=cloud; loaded=true; } }
   if(!loaded){
