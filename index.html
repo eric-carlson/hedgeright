@@ -2183,7 +2183,7 @@ function normalizeState(){ if(!S.species) S.species=JSON.parse(JSON.stringify(SP
     r.hedgerows.forEach(h=>{ h.rows.forEach(rr=>{ rr.plants=rr.plants||[]; }); }); });
   if(!S.sel) S.sel={hedge:null,row:null,species:null,wnode:null,wline:null}; }
 function renderPanels(){ const t=currentTab(); renderTabIfNeeded(t); renderStageHint(t); updateHistButtons(); saveBadge(); fsBadge(); netBadge();
-  const sw=document.getElementById('saveWrap'); if(sw) sw.innerHTML=savesHtml? '' : ''; }
+}
 let curSave=null;
 function saveIndexKey(){ return 'hedgeright.saves.index'; }
 function saveIndex(){ try{ return JSON.parse(localStorage.getItem(saveIndexKey())||'[]'); }catch(e){ return []; } }
