@@ -23,7 +23,14 @@ button{cursor:pointer;background:var(--paper2);border:1px solid var(--line);bord
 button:hover{border-color:var(--mute)}
 button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 button.small{padding:3px 8px;font-size:13px}
-button.danger{color:var(--alert)}
+button.danger{color:var(--alert);border-color:var(--alert)}
+button.danger:hover{background:#F1D8CC}
+/* The one "do this next" signal in the app — ink fill, bold, everywhere it means the
+   same thing. Mirrors #stageBar .nxt, which already used this pattern; generalized so
+   any button can carry it instead of just the stage bar. */
+button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
+button.primary:hover{background:#16201A;border-color:#16201A}
+button:disabled{opacity:.42;cursor:default}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--water);outline-offset:1px}
 input[type=text],input[type=number],select{background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 8px;width:100%}
 input[type=number]{width:88px}
@@ -79,6 +86,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 #hexTip b{font-weight:700}
 #layerBox{position:absolute;right:10px;bottom:calc(var(--tapeH) + 12px);z-index:800;background:rgba(238,240,232,.94);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px;display:flex;flex-direction:column;gap:3px}
 #layerBox label{margin:0;display:flex;gap:6px;align-items:center;color:var(--ink);cursor:pointer}
+#heatLegend:empty{display:none}
+#heatLegend{border-top:1px solid var(--line);margin-top:4px;padding-top:5px;font-size:12px;width:200px}
 
 #tape{height:var(--tapeH);z-index:1;position:relative;border-top:1px solid var(--line);background:var(--paper);overflow:hidden;display:flex;flex-direction:column}
 #tape.hidden{display:none}
@@ -123,7 +132,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .bigbtn .ic{width:64px;height:44px;flex:0 0 auto}
 .bigbtn b{display:block;font-size:15px}
 .bigbtn i{display:block;font-style:normal;font-size:13px;color:var(--mute);margin-top:2px}
-.bigbtn.primary{background:linear-gradient(180deg,#F3F5EC,#E7EBDD);border-color:var(--ok)}
+.bigbtn.primary{background:linear-gradient(180deg,#F3F5EC,#E7EBDD);border:2px solid var(--ink)}
 .bigbtn.primary b{color:var(--ink)}
 .bigbtn:disabled{opacity:.5;cursor:not-allowed}
 .bigrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -190,7 +199,9 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 #saveState:hover{border-color:var(--line)}
 .prov{font-size:10px;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:5px;color:var(--mute);cursor:help;vertical-align:1px}
 #modeBanner{position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:880;background:var(--ink);color:var(--paper);
-  font-size:13px;padding:6px 12px;border-radius:9px;display:none;gap:10px;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+  font-size:13px;padding:6px 12px;border-radius:9px;display:none;gap:10px;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:top .15s ease}
+#mapWrap.busy-active #modeBanner{top:148px}
+@media (max-width:820px){#mapWrap.busy-active #modeBanner{top:auto}}
 #modeBanner.show{display:flex}
 #modeBanner .cta{background:var(--paper);color:var(--ink);border-radius:6px;padding:3px 8px;animation:hrpulse 1.6s ease-in-out infinite}
 @keyframes hrpulse{0%,100%{opacity:.85}50%{opacity:1}}
@@ -340,7 +351,7 @@ body.wide{--panelW:560px}
     </g>
   </g>
 </svg>HedgeRight</h1>
-      <div id="histBar"><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span><span id="fsBadge"></span></div>
+      <div id="histBar"><button onclick="openSettingsDialog()" title="Settings" style="font-size:19px;line-height:1;padding:3px 9px">⚙</button><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span><span id="fsBadge"></span></div>
       <div class="sub" id="ranchSub">California native hedgerows, planned by goal and grown on paper first</div>
     </div>
     <div id="grip" title="Drag to resize"></div>
@@ -406,6 +417,7 @@ body.wide{--panelW:560px}
       <label><input type="checkbox" id="lySoil" onchange="toggleSoilLayer()"> Soil map units</label>
       <label><input type="checkbox" id="lyLabels" checked onchange="drawAll()"> Row labels</label>
       <label><input type="checkbox" id="lyTape" checked onchange="renderTape()"> Row tape</label>
+      <div id="heatLegend"></div>
     </div>
     <div id="growDock"></div>
     <div id="tape">
@@ -454,16 +466,20 @@ async function cloudPush(){
     cloudStatus={state:'ok',msg:'synced',at:Date.now()}; }
   catch(e){ cloudStatus={state:'error',msg:(e&&e.message)||String(e),at:Date.now()}; }
   renderCloudStatus(); }
-function renderCloudStatus(){ const el=document.getElementById('cloudStatus'); if(!el) return;
-  if(!cloudDeployed()){ el.textContent='Worker not deployed yet.'; return; }
-  if(!cloudToken()){ el.textContent='No password set on this device.'; return; }
-  if(cloudStatus.state==='ok') el.textContent='Synced'+(cloudStatus.at?' · '+new Date(cloudStatus.at).toLocaleTimeString():'');
-  else if(cloudStatus.state==='error') el.textContent='Sync failed: '+cloudStatus.msg;
-  else el.textContent='Not yet synced this session.'; }
-async function saveCloudToken(){ const inp=document.getElementById('cloudToken'); if(!inp) return; setCloudTokenValue(inp.value.trim());
+function renderCloudStatus(){ const els=document.querySelectorAll('.cloudStatusEl'); if(!els.length) return;
+  let text;
+  if(!cloudDeployed()) text='Worker not deployed yet.';
+  else if(!cloudToken()) text='No password set on this device.';
+  else if(cloudStatus.state==='ok') text='Synced'+(cloudStatus.at?' · '+new Date(cloudStatus.at).toLocaleTimeString():'');
+  else if(cloudStatus.state==='error') text='Sync failed: '+cloudStatus.msg;
+  else text='Not yet synced this session.';
+  els.forEach(el=>el.textContent=text); }
+async function saveCloudToken(inputId){ inputId=inputId||'cloudToken'; const inp=document.getElementById(inputId); if(!inp) return; setCloudTokenValue(inp.value.trim());
   renderCloudStatus(); const data=await cloudPull();
   if(data){ commit('Pull cloud sync',()=>{ S=data; normalizeState(); }); if(map){ map.setView(R().center,R().zoom); drawAll(); } renderPanels(); } }
-function clearCloudToken(){ setCloudTokenValue(''); cloudStatus={state:'unconfigured',msg:'',at:null}; renderCloudStatus(); }
+function clearCloudToken(){ setCloudTokenValue(''); cloudStatus={state:'unconfigured',msg:'',at:null};
+  ['cloudToken','cloudTokenDlg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  renderCloudStatus(); renderPanels(); }
 
 /* ---------------- HexRow — map-based hedgerow planner
    Structure: state → geometry → map render → modes → hex info →
@@ -773,8 +789,8 @@ function initMap(){
 }
 function readout(t){ document.getElementById('readout').textContent=t||''; }
 let _busyN=0,_busyT=null;
-function busy(on,label){ const el=document.getElementById('busy'); if(!el) return; if(on){ _busyN++; clearTimeout(_busyT); el.classList.remove('done'); el.classList.add('show'); if(label) document.getElementById('busyText').textContent=label; }
-  else { _busyN=Math.max(0,_busyN-1); if(_busyN===0){ el.classList.add('done'); document.getElementById('busyText').textContent=label||'Read.'; _busyT=setTimeout(()=>{ el.classList.remove('show','done'); },700); } } }
+function busy(on,label){ const el=document.getElementById('busy'); if(!el) return; const mw=document.getElementById('mapWrap'); if(on){ _busyN++; clearTimeout(_busyT); el.classList.remove('done'); el.classList.add('show'); if(mw) mw.classList.add('busy-active'); if(label) document.getElementById('busyText').textContent=label; }
+  else { _busyN=Math.max(0,_busyN-1); if(_busyN===0){ el.classList.add('done'); document.getElementById('busyText').textContent=label||'Read.'; _busyT=setTimeout(()=>{ el.classList.remove('show','done'); if(mw) mw.classList.remove('busy-active'); },700); } } }
 
 function drawAll(){ drawCreeks(); drawAoi(); drawRows(); drawPlants(); drawWater(); renderTape(); }
 function drawRows(){ rowLayer.clearLayers(); const labels=document.getElementById('lyLabels').checked, z=map.getZoom();
@@ -789,7 +805,9 @@ function drawRows(){ rowLayer.clearLayers(); const labels=document.getElementByI
   });
 }
 function drawHandles(h){ handleLayer.clearLayers(); h.centerline.forEach((pt,i)=>{ const mk=L.marker(pt,{draggable:true,icon:L.divIcon({className:'vh',iconSize:[18,18]}),keyboard:false,zIndexOffset:900}).addTo(handleLayer);
-  mk.on('drag',()=>{ const ll=mk.getLatLng(); h.centerline[i]=[ll.lat,ll.lng]; drawRows(); }); mk.on('dragend',()=>{ clampPlants(h); drawAll(); renderPanels(); saveSoon(); }); }); }
+  let before=null; mk.on('dragstart',()=>{ before=JSON.stringify(S); });
+  mk.on('drag',()=>{ const ll=mk.getLatLng(); h.centerline[i]=[ll.lat,ll.lng]; drawRows(); });
+  mk.on('dragend',()=>{ clampPlants(h); if(before&&JSON.stringify(S)!==before){ HIST.stack.push({label:'Reshape '+h.name,state:before}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0; updateHistButtons(); UI.toast('Reshape '+h.name,{label:'Undo',fn:undo}); } before=null; drawAll(); renderPanels(); saveSoon(); }); }); }
 function clampPlants(h){ h.rows.forEach((r,i)=>{ const L=rowLenFt(h,i); r.plants=r.plants.filter(p=>p.ft<=L+0.5); }); }
 function plantRadius(){ const z=map.getZoom(); return z>=20?7:z>=19?5:z>=18?4:z>=17?3:2; }
 function drawPlants(){ plantLayer.clearLayers(); if(map.getZoom()<15) return; const rad=plantRadius();
@@ -925,6 +943,7 @@ function onMove(e){ const ll=[e.latlng.lat,e.latlng.lng]; if(mode==='select'&&(h
   if(!painting) return; brush(ll); }
 function onUp(){ if(painting){ painting=false; if(_strokeBefore&&JSON.stringify(S)!==_strokeBefore){ HIST.stack.push({label:mode==='erase'?'Erase plants':'Paint '+((SP(S.sel.species)||{}).common||'plants'),state:_strokeBefore}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0; updateHistButtons(); } _strokeBefore=null; drawAll(); renderPanels(); saveSoon(); } }
 let _strokeBefore=null;
+let _goalBefore=null;
 function brush(ll){ const nr=nearestRow(ll,tolFt()); if(!nr){ return; } const r=nr.h.rows[nr.i];
   if(mode==='erase'){ const before=r.plants.length; r.plants=r.plants.filter(p=>Math.abs(p.ft-nr.ft)>3); if(r.plants.length!==before) drawPlants(); return; }
   const sp=SP(S.sel.species); if(!sp){ readout('Pick a species first.'); return; }
@@ -1250,7 +1269,10 @@ function drawFound(){ foundLayer.clearLayers(); foundPonds.forEach((p,i)=>{ cons
     pg.bindPopup('<b>'+esc(p.name)+'</b><br><span class="small">'+p.acres.toFixed(2)+' ac · '+esc(p.src||'')+'</span><br><button class="small" onclick="adoptPond('+i+')">Add as pond</button> <button class="small" onclick="dismissFound('+i+')">Not a pond</button>',{closeButton:false,autoPan:false});
     pg.on('mouseover',e=>{ pg.openPopup(e.latlng); }); pg.on('click',e=>{ pg.openPopup(e.latlng); }); }); }
 function dismissFound(i){ foundPonds.splice(i,1); drawFound(); renderPanels(); }
-function adoptPond(i){ const p=foundPonds[i]; if(!p) return; const W=R().water; const c=centroidLL(p.poly); const n={id:uid(),kind:'pond',name:p.pondLike?'Pond '+(W.nodes.filter(x=>x.kind==='pond').length+1):p.name,lat:c[0],lng:c[1],elevFt:null,poly:p.poly,lined:false,fill:p.artificial?'summer':'year',poolFt:null,source:p.src+' '+p.code,acres:p.acres}; W.nodes.push(n); S.sel.wnode=n.id; foundPonds.splice(i,1); drawFound(); autoElev([n]); invalidateSeep(); drawWater(); renderPanels(); saveSoon(); readout(n.name+' added from '+p.src+' — set lined / fill regime and check pool elevation.'); }
+function adoptPond(i){ const p=foundPonds[i]; if(!p) return; const c=centroidLL(p.poly); foundPonds.splice(i,1); drawFound();
+  let n;
+  commit('Add pond from '+p.src,()=>{ const W=R().water; n={id:uid(),kind:'pond',name:p.pondLike?'Pond '+(W.nodes.filter(x=>x.kind==='pond').length+1):p.name,lat:c[0],lng:c[1],elevFt:null,poly:p.poly,lined:false,fill:p.artificial?'summer':'year',poolFt:null,source:p.src+' '+p.code,acres:p.acres}; W.nodes.push(n); S.sel.wnode=n.id; });
+  autoElev([n]); invalidateSeep(); drawWater(); renderPanels(); readout(n.name+' added from '+p.src+' — set lined / fill regime and check pool elevation.'); }
 function centroidLL(poly){ let la=0,ln=0; poly.forEach(p=>{ la+=p[0]; ln+=p[1]; }); return [la/poly.length,ln/poly.length]; }
 function invalidateSeep(){ }
 function drawSeepBands(){ R().water.nodes.filter(n=>n.kind==='pond').forEach(p=>{ if(p.poly&&p.poly.length>=3) L.polygon(p.poly,{pane:'waterP',color:'#4C8FBF',weight:2,fillColor:'#4C8FBF',fillOpacity:.25,interactive:false}).addTo(waterLayer);
@@ -1317,8 +1339,10 @@ function hwLossFt(Qgpm,Lft,dIn,C){ if(Qgpm<=0||Lft<=0||dIn<=0) return 0; const Q
 function velHeadFt(Q,d){ const v=0.4085*Q/(d*d); return v*v/64.4; }
 function segFlow(availFt,segs,dLast){ if(availFt<=0||!segs.length) return 0; const need=Q=>segs.reduce((s,e)=>s+hwLossFt(Q,e.Lft,e.dIn,e.C),0)+velHeadFt(Q,dLast)-availFt; let lo=0,hi=5000; if(need(hi)<0)return hi; for(let i=0;i<60;i++){const m=(lo+hi)/2; if(need(m)>0)hi=m; else lo=m;} return (lo+hi)/2; }
 function addPondPoly(poly){ const W=R().water; const c=centroidLL(poly); const n={id:uid(),kind:'pond',name:'Pond '+(W.nodes.filter(x=>x.kind==='pond').length+1),lat:c[0],lng:c[1],elevFt:null,poly,lined:false,fill:'summer',poolFt:null,source:'drawn',acres:polyAreaAcres(poly)}; W.nodes.push(n); S.sel.wnode=n.id; S.sel.wline=null; autoElev([n]); drawWater(); renderPanels(); saveSoon(); readout(n.name+' drawn ('+n.acres.toFixed(2)+' ac). Set lined / fill regime and check pool elevation in the Water tab.'); }
-function addWaterNode(ll){ const W=R().water; const n={id:uid(),kind:wnodeKind,name:WKINDS[wnodeKind].label+' '+(W.nodes.filter(x=>x.kind===wnodeKind).length+1),lat:ll[0],lng:ll[1],elevFt:null,tankHt:wnodeKind==='tank'?8:0,tankGal:wnodeKind==='tank'?5000:null,regPsi:wnodeKind==='reg'?25:null,measPsi:null};
-  W.nodes.push(n); S.sel.wnode=n.id; S.sel.wline=null; drawWater(); renderPanels(); saveSoon(); if(n.kind!=='valve'&&n.kind!=='reg') autoElev([n]); if(n.kind==='pond') Object.keys(R().hexCache).forEach(k=>{ R().hexCache[k].stale=true; }); }
+function addWaterNode(ll){ let n;
+  commit('Place '+WKINDS[wnodeKind].label.toLowerCase(),()=>{ const W=R().water; n={id:uid(),kind:wnodeKind,name:WKINDS[wnodeKind].label+' '+(W.nodes.filter(x=>x.kind===wnodeKind).length+1),lat:ll[0],lng:ll[1],elevFt:null,tankHt:wnodeKind==='tank'?8:0,tankGal:wnodeKind==='tank'?5000:null,regPsi:wnodeKind==='reg'?25:null,measPsi:null};
+    W.nodes.push(n); S.sel.wnode=n.id; S.sel.wline=null; });
+  drawWater(); renderPanels(); if(n.kind!=='valve'&&n.kind!=='reg') autoElev([n]); if(n.kind==='pond') Object.keys(R().hexCache).forEach(k=>{ R().hexCache[k].stale=true; }); }
 function autoElev(nodes){ elevSample(nodes.map(n=>[n.lat,n.lng])).then(el=>{ let c=0; el.forEach((v,i)=>{ if(v!=null){ nodes[i].elevFt=v; c++; } }); if(c){ drawWater(); renderPanels(); saveSoon(); } else readout('Elevation lookup returned nothing — enter elevation by hand.'); }).catch(()=>readout('Elevation lookup failed — needs internet; enter by hand.')); }
 function snapNode(ll,maxFt){ let best=null,bd=maxFt||40; R().water.nodes.forEach(n=>{ if(n.kind==='pond') return; const d=llFt(ll,[n.lat,n.lng]); if(d<=bd){ bd=d; best=n.id; } }); return best; }
 function addWaterLine(pts){ const W=R().water; const a=snapNode(pts[0]), b=snapNode(pts[pts.length-1]); if(a){ const n=W.nodes.find(x=>x.id===a); pts[0]=[n.lat,n.lng]; } if(b){ const n=W.nodes.find(x=>x.id===b); pts[pts.length-1]=[n.lat,n.lng]; }
@@ -1360,7 +1384,7 @@ function drawWater(){ waterLayer.clearLayers(); const W=R().water; const sol=sol
   W.nodes.forEach(n=>{ const sel=n.id===S.sel.wnode; const k=WKINDS[n.kind]||WKINDS.outlet; const mk=L.marker([n.lat,n.lng],{pane:'waterP',interactive:mode==='select',draggable:mode==='select',icon:L.divIcon({className:'',html:'<div class="wnode '+n.kind+(sel?' sel':'')+'">'+k.glyph+'</div>',iconSize:[26,26],iconAnchor:[13,13]}),keyboard:false}).addTo(waterLayer);
     const so=sol.nodes[n.id]; let tip=n.name; if(n.elevFt!=null) tip+=' · '+Math.round(n.elevFt)+' ft'; if(so&&so.psi!=null) tip+=' · '+so.psi.toFixed(1)+' psi'+(so.demand?' at '+so.demand.gpm.toFixed(2)+' gpm':' static'); mk.bindTooltip(tip);
     mk.on('click',e=>{ L.DomEvent.stop(e); if(mode==='select'){ S.sel.wnode=n.id; S.sel.wline=null; drawWater(); renderPanels(); showTab('water'); } });
-    mk.on('dragend',()=>{ const ll=mk.getLatLng(); n.lat=ll.lat; n.lng=ll.lng; W.lines.forEach(wl=>{ if(wl.a===n.id) wl.pts[0]=[n.lat,n.lng]; if(wl.b===n.id) wl.pts[wl.pts.length-1]=[n.lat,n.lng]; }); if(n.kind!=='valve'&&n.kind!=='reg') autoElev([n]); drawWater(); renderPanels(); saveSoon(); }); });
+    mk.on('dragend',()=>{ const ll=mk.getLatLng(); commit('Move '+n.name,()=>{ n.lat=ll.lat; n.lng=ll.lng; W.lines.forEach(wl=>{ if(wl.a===n.id) wl.pts[0]=[n.lat,n.lng]; if(wl.b===n.id) wl.pts[wl.pts.length-1]=[n.lat,n.lng]; }); }); if(n.kind!=='valve'&&n.kind!=='reg') autoElev([n]); drawWater(); renderPanels(); }); });
 }
 function addCreek(pts){ const r=R(); r.creeks=r.creeks||[];
   const c={id:uid(),name:'Creek '+(r.creeks.length+1),pts,flow:'seasonal',widthFt:6,incisedFt:2,src:'drawn'};
@@ -1385,10 +1409,10 @@ function creeksHtml(){ const cs=R().creeks||[];
   if(!cs.length) return `<p class="small mute">None yet. A channel wets a corridor of ground beside it — wider than a pond does on the same soil — and that band is where the willows, dogwood and alder belong. Use <b>Find the water on this ranch</b> above, or trace one by hand.</p>`;
   html+=cs.map(c=>{ const sel=c.id===S.sel.creek; const band=creekBandFt(c,creekSoil(c));
     return `<div class="card${sel?' sel':''}" onclick="S.sel.creek='${c.id}';drawAll();renderPanels()">
-      <div class="row"><input type="text" class="grow" value="${esc(c.name)}" onclick="event.stopPropagation()" onchange="creekById('${c.id}').name=this.value;drawAll();renderPanels();saveSoon()"><span class="small mute">${Math.round(pathLenFt(c.pts))} ft</span></div>
-      <div class="row" style="margin-top:6px"><div><label>Flow</label><select onclick="event.stopPropagation()" onchange="creekById('${c.id}').flow=this.value;drawAll();renderPanels();saveSoon()">${Object.keys(CREEK_FLOW).map(k=>`<option value="${k}"${c.flow===k?' selected':''}>${CREEK_FLOW[k]}</option>`).join('')}</select></div>
-        <div><label>Bank above summer water, ft</label><input type="number" step="0.5" min="0" max="20" value="${c.incisedFt}" onclick="event.stopPropagation()" onchange="creekById('${c.id}').incisedFt=+this.value;drawAll();renderPanels();saveSoon()"></div>
-        <div><label>Channel width ft</label><input type="number" step="1" min="1" value="${c.widthFt}" onclick="event.stopPropagation()" onchange="creekById('${c.id}').widthFt=+this.value;saveSoon()"></div></div>
+      <div class="row"><input type="text" class="grow" value="${esc(c.name)}" onclick="event.stopPropagation()" onchange="commit('Rename creek',()=>{creekById('${c.id}').name=this.value});drawAll();renderPanels()"><span class="small mute">${Math.round(pathLenFt(c.pts))} ft</span></div>
+      <div class="row" style="margin-top:6px"><div><label>Flow</label><select onclick="event.stopPropagation()" onchange="commit('Set creek flow',()=>{creekById('${c.id}').flow=this.value});drawAll();renderPanels()">${Object.keys(CREEK_FLOW).map(k=>`<option value="${k}"${c.flow===k?' selected':''}>${CREEK_FLOW[k]}</option>`).join('')}</select></div>
+        <div><label>Bank above summer water, ft</label><input type="number" step="0.5" min="0" max="20" value="${c.incisedFt}" onclick="event.stopPropagation()" onchange="commit('Set bank height',()=>{creekById('${c.id}').incisedFt=+this.value});drawAll();renderPanels()"></div>
+        <div><label>Channel width ft</label><input type="number" step="1" min="1" value="${c.widthFt}" onclick="event.stopPropagation()" onchange="commit('Set channel width',()=>{creekById('${c.id}').widthFt=+this.value})"></div></div>
       <p class="small mute">Riparian band reaches about <b>${band} ft</b> each side here ${prov('model')}. ${c.incisedFt>=6?'<span class="warn">A bank this high strands a row above the water table — the band is cut back accordingly.</span>':''}</p>
       <button class="small danger" onclick="event.stopPropagation();delCreek('${c.id}')">Delete</button></div>`; }).join('');
   return html; }
@@ -1817,7 +1841,7 @@ function stageDone(t){ const r=R(); switch(t){
   case 'report': return false; default: return false; } }
 function renderStageRail(){ document.querySelectorAll('#tabs button').forEach(b=>{ const t=b.dataset.tab; b.classList.toggle('done',stageDone(t)&&t!==currentTab()); }); }
 function renderStageHint(t){ const map={
-  ranch:'Set the ranch name and map location, or open a saved design.',
+  ranch:'Outline the ground you want ranked, or jump to a hedgerow already drawn.',
   water:'Map tanks, wells, ponds and pipes — this feeds every irrigation calculation.',
   goals:'Weight what you want from the hedgerow; tap the map to read the ground.',
   rows:'Draw hedgerow centrelines and set row count and spacing.',
@@ -1837,48 +1861,44 @@ function renderStageBar(t){ const el=document.getElementById('stageBar'); if(!el
   const label={water:'Set up water',goals:'Explore goals',rows:'Draw rows',paint:'Plant',build:'Build',shop:'Cost it',report:'View plan'}[nx];
   el.innerHTML=nx?`<span class="why">${esc(why)}</span><span class="grow"></span><button class="nxt" onclick="showTab('${nx}')" ${(nx==='rows'&&!r.hedgerows.length)?'':''}>${esc(label)} →</button>`
                  :`<span class="why">That is every stage — jump back to any tab above to keep refining.</span>`; }
-function renderRanch(){ const r=R();
-  document.getElementById('ranchSub').textContent=r.name+' · '+r.hedgerows.length+' hedgerow'+(r.hedgerows.length===1?'':'s');
-  let html=`<label>Ranch name</label><input type="text" value="${esc(r.name)}" onchange="R().name=this.value;renderPanels();saveSoon()">
-    <div class="row" style="margin-top:10px"><button class="small" onclick="fitAllView()">Zoom to everything</button>
-      <button class="small" onclick="showStart()">Ranches &amp; saves</button></div>
-    <h2>Location</h2>
+function renderRanchSettingsBody(sfx){ sfx=sfx||''; const r=R();
+  return `<label>Ranch name</label><input type="text" value="${esc(r.name)}" onchange="commit('Rename ranch',()=>{R().name=this.value});renderPanels()">
+    <div class="row" style="margin-top:10px"><button class="small" onclick="openRanchesSavesDialog(true)">Ranches &amp; saves</button></div>
+    <h2>Location <span class="mute geoNoteEl" style="font-size:13px;font-weight:400">— centred at ${r.center[0].toFixed(5)}, ${r.center[1].toFixed(5)}</span></h2>
     <p class="small mute">Type an address, place name, or coordinates as <code>lat, lng</code>.</p>
-    <div class="row"><input type="text" id="geo" class="grow" placeholder="e.g. 31165 Hwy 128, Yorkville, CA  or  39.045, -123.208" onkeydown="if(event.key==='Enter'){event.preventDefault();geocode();}">
-      <button class="small" onclick="geocode()">Go</button></div>
-    <p class="small mute" id="geoNote">Currently centred at ${r.center[0].toFixed(5)}, ${r.center[1].toFixed(5)}.</p>
+    <div class="row"><input type="text" id="geo${sfx}" class="grow" placeholder="e.g. 31165 Hwy 128, Yorkville, CA  or  39.045, -123.208" onkeydown="if(event.key==='Enter'){event.preventDefault();geocode('geo${sfx}');}">
+      <button class="small" onclick="geocode('geo${sfx}')">Go</button></div>
     <h2>Cloud sync</h2>
     <p class="small mute">Syncs this design across your devices via a Cloudflare Worker. One password, set once per device — recover it from your password manager if a device gets wiped.</p>
-    <form class="row" onsubmit="event.preventDefault();saveCloudToken();"><input type="password" id="cloudToken" name="hedgeright-sync-password" class="grow" placeholder="sync password" value="${esc(cloudToken())}" autocomplete="current-password">
+    <form class="row" onsubmit="event.preventDefault();saveCloudToken('cloudToken${sfx}');"><input type="password" id="cloudToken${sfx}" name="hedgeright-sync-password" class="grow" placeholder="sync password" value="${esc(cloudToken())}" autocomplete="current-password">
       <button type="submit" class="small">Save</button>
       ${cloudToken()?`<button type="button" class="small danger" onclick="clearCloudToken()">Clear</button>`:''}</form>
-    <p class="small mute" id="cloudStatus"></p>
-    <h2>File</h2>${fsStatusHtml()}
-    <h2>Study area</h2>`;
+    <p class="small mute cloudStatusEl"></p>
+    ${cloudConfigured()?'':`<h2>File</h2>${fsStatusHtml()}`}`; }
+function openSettingsDialog(){ UI.open('Settings','<div style="max-height:70vh;overflow:auto">'+renderRanchSettingsBody('Dlg')+'</div>',[{label:'Close',primary:true,value:null}]); }
+function renderRanch(){ const r=R();
+  document.getElementById('ranchSub').textContent=r.name+' · '+r.hedgerows.length+' hedgerow'+(r.hedgerows.length===1?'':'s');
+  let html=`<h2>Study area</h2>`;
   if(aoi()){ html+=`<p class="small">${aoiAcres().toFixed(1)} acres outlined, ${(hexesInAoi()||[]).length} acre hexes.</p><div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`; }
   else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="setMode('aoi')">Draw study area</button></p>`;
-  html+=`<h2>Hedgerows</h2>`;
-  if(!r.hedgerows.length) html+=bigBtn('hedgerow','Draw your first hedgerow','tap a line on the map for the centreline',"setMode('hedge')",'primary');
-  else { html+=r.hedgerows.map(h=>{ const st=hedgeStats(h); return `<div class="card${h.id===S.sel.hedge?' sel':''}" onclick="S.sel.hedge='${h.id}';S.sel.row=0;drawAll();renderPanels();zoomHedge('${h.id}')">
-      <h3>${esc(h.name)}</h3><p class="small mute">${Math.round(pathLenFt(h.centerline))} ft · ${h.rows.length} rows · ${st.n} plants</p></div>`; }).join('')
-    + bigBtn('hedgerow','Draw another hedgerow','',"setMode('hedge')"); }
+  html+=`<p class="small mute">Lost track of what you've drawn? <button class="small" onclick="fitAllView()">Zoom to everything</button> frames every hedgerow and water node on the ranch.</p>`;
   setHtml('tab-ranch',html); renderCloudStatus(); }
 /* Accepts either "lat, lng" (jumps instantly, no network) or a free-text place/address
    (geocoded via Nominatim — needs a real browser tab, not the sandboxed preview). */
-function geocode(){ const input=document.getElementById('geo'); const q=(input&&input.value||'').trim(); if(!q) return;
-  const note=document.getElementById('geoNote');
+function geocode(inputId){ inputId=inputId||'geo'; const input=document.getElementById(inputId); const q=(input&&input.value||'').trim(); if(!q) return;
+  const setNote=t=>document.querySelectorAll('.geoNoteEl').forEach(el=>el.textContent=t);
   const m=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
   if(m){ const ll=[+m[1],+m[2]];
-    if(Math.abs(ll[0])>90||Math.abs(ll[1])>180){ if(note) note.textContent='That doesn\'t look like a valid latitude/longitude.'; return; }
+    if(Math.abs(ll[0])>90||Math.abs(ll[1])>180){ setNote('That doesn\'t look like a valid latitude/longitude.'); return; }
     R().center=ll; if(map) map.setView(ll,Math.max(map.getZoom(),16));
-    if(note) note.textContent='Centred at '+ll[0].toFixed(5)+', '+ll[1].toFixed(5)+'.';
+    setNote('Centred at '+ll[0].toFixed(5)+', '+ll[1].toFixed(5)+'.');
     saveSoon(); return; }
-  if(note) note.textContent='Searching…';
+  setNote('Searching…');
   fetchJSON('https://nominatim.openstreetmap.org/search?'+new URLSearchParams({q,format:'json',limit:1}),null,{label:'Place search'})
-    .then(js=>{ if(!js.length){ if(note) note.textContent='Nothing found for "'+q+'" — try a fuller address, or lat, lng.'; return; }
+    .then(js=>{ if(!js.length){ setNote('Nothing found for "'+q+'" — try a fuller address, or lat, lng.'); return; }
       const ll=[+js[0].lat,+js[0].lon]; R().center=ll; if(map) map.setView(ll,16);
-      if(note) note.textContent=js[0].display_name; saveSoon(); })
-    .catch(err=>{ if(note) note.textContent='Search failed: '+(err&&err.message?err.message:String(err))+'. Try lat, lng instead, or check the browser console for details.'; }); }
+      setNote(js[0].display_name); saveSoon(); })
+    .catch(err=>{ setNote('Search failed: '+(err&&err.message?err.message:String(err))+'. Try lat, lng instead, or check the browser console for details.'); }); }
 function fitAllView(){ const pts=[]; R().hedgerows.forEach(h=>pts.push(...h.centerline)); R().water.nodes.forEach(n=>pts.push([n.lat,n.lng])); if(!pts.length){ UI.toast('Nothing drawn yet'); return; } map.fitBounds(L.latLngBounds(pts),{padding:[40,40]}); }
 function zoomHedge(id){ const h=R().hedgerows.find(x=>x.id===id); if(h) map.fitBounds(L.latLngBounds(h.centerline),{padding:[60,60],maxZoom:19}); }
 function establishNote(sp){ const s=spSummer(sp); const t={never:'No summer water, ever — a single deep soak in a drought year kills it.',fall:'No summer water; a light soak is safe only after the fall rains begin.',ok:'Tolerates occasional summer water once past year one.',default:'Summer water only through the establishment taper; none once weaned.'}[s]||''; return t; }
@@ -1886,24 +1906,24 @@ function renderRows(){ const h=curHedge(); const r=R(); let html='';
   if(!r.hedgerows.length){ html=`<p class="small mute">Draw a hedgerow first.</p>`+bigBtn('hedgerow','Draw a hedgerow','',"setMode('hedge')",'primary'); setHtml('tab-rows',html); return; }
   if(!h){ setHtml('tab-rows',`<p class="small mute">Select a hedgerow.</p>`); return; }
   const site=hedgeHexes(h); const moist=rowMoistures(h);
-  html+=`<div class="row"><input type="text" class="grow" value="${esc(h.name)}" onchange="curHedge().name=this.value;renderPanels();drawAll();saveSoon()">
+  html+=`<div class="row"><input type="text" class="grow" value="${esc(h.name)}" onchange="commit('Rename hedgerow',()=>{curHedge().name=this.value});renderPanels();drawAll()">
     <button class="small danger" onclick="delHedge('${h.id}')">Delete</button></div>
     <p class="small mute">${Math.round(pathLenFt(h.centerline))} ft centreline${site.length?' · '+site.length+' acre hex'+(site.length===1?'':'es')+' read':' · not read yet'}</p>`;
   const off=edgeOffer(h);
   if(off&&!h.pondEdge&&!h.creekEdge){ const rec=off.rec; html+=`<div class="issue"><b>${off.kind==='pond'?'A pond':'A creek'}</b> runs near this line (${off.obj.name||''}).
     <div class="row" style="margin-top:4px"><button class="small" onclick="applyEdgeOffer(${rec})">Align row 1 at ${rec} ft</button><button class="small" onclick="setMode('select')">Ignore</button></div></div>`; }
   if(h.pondEdge||h.creekEdge){ const edge=h.pondEdge?'pondEdge':'creekEdge'; const objs=h.pondEdge?R().water.nodes:creeks(); const obj=objs.find(o=>o.id===h[edge][h.pondEdge?'pondId':'creekId']);
-    html+=`<div class="issue good">Row 1 held ${h[edge].offsetFt} ft from ${obj?esc(obj.name):(h.pondEdge?'the pond':'the creek')}<button class="small" style="float:right" onclick="${h.pondEdge?'clearPondEdge':'clearCreekEdge'}(curHedge());drawAll();renderPanels();saveSoon()">Unlink</button></div>`; }
+    html+=`<div class="issue good">Row 1 held ${h[edge].offsetFt} ft from ${obj?esc(obj.name):(h.pondEdge?'the pond':'the creek')}<button class="small" style="float:right" onclick="commit('Unlink from water',()=>{${h.pondEdge?'clearPondEdge':'clearCreekEdge'}(curHedge())});drawAll();renderPanels()">Unlink</button></div>`; }
   html+=`<h2>Rows</h2><div class="row"><label style="margin:0">Count</label><input type="number" min="1" max="8" value="${h.rows.length}" style="width:56px" onchange="commit('Set row count',()=>setRowCount(curHedge(),+this.value));drawAll();renderPanels();saveSoon()">
     <label style="margin:0">Density</label><select onchange="commit('Set density',()=>{curHedge().density=this.value;relayoutHedge(curHedge());});drawAll();renderPanels();saveSoon()">${Object.keys(DENSITY).map(k=>`<option value="${k}"${(h.density||'touching')===k?' selected':''}>${DENSITY[k].label}</option>`).join('')}</select></div>`;
   html+=h.rows.map((r0,i)=>{ const sel=S.sel.row===i; const st=rowStats(h,i); const m=moist[i];
     return `<div class="card${sel?' sel':''}" onclick="S.sel.row=${i};drawAll();renderPanels()">
-      <div class="row"><input type="text" class="grow" value="${esc(r0.name)}" onclick="event.stopPropagation()" onchange="curHedge().rows[${i}].name=this.value;drawAll();renderPanels();saveSoon()">
+      <div class="row"><input type="text" class="grow" value="${esc(r0.name)}" onclick="event.stopPropagation()" onchange="commit('Rename row',()=>{curHedge().rows[${i}].name=this.value});drawAll();renderPanels()">
         <select onclick="event.stopPropagation()" onchange="commit('Set regime',()=>curHedge().rows[${i}].regime=this.value);renderPanels();saveSoon()">${Object.keys(REGIMES).map(k=>`<option value="${k}"${r0.regime===k?' selected':''}>${REGIMES[k]}</option>`).join('')}</select></div>
       <p class="small mute">${Math.round(rowLenFt(h,i))} ft · ${st.n} plants · ${st.gpm.toFixed(2)} gpm${site.length?' · moisture '+m.toFixed(2):''}</p>
-      ${i<h.rows.length-1?`<label style="margin:4px 0 0">Gap to next row, ft</label><input type="number" min="3" max="30" value="${(h.gapsFt&&h.gapsFt[i])||h.rowSpacingFt||8}" onclick="event.stopPropagation()" onchange="curHedge().gapsFt=curHedge().gapsFt||[];curHedge().gapsFt[${i}]=+this.value;clampPlants(curHedge());drawAll();renderPanels();saveSoon()">`:''}
+      ${i<h.rows.length-1?`<label style="margin:4px 0 0">Gap to next row, ft</label><input type="number" min="3" max="30" value="${(h.gapsFt&&h.gapsFt[i])||h.rowSpacingFt||8}" onclick="event.stopPropagation()" onchange="commit('Set row gap',()=>{curHedge().gapsFt=curHedge().gapsFt||[];curHedge().gapsFt[${i}]=+this.value;clampPlants(curHedge())});drawAll();renderPanels()">`:''}
     </div>`; }).join('');
-  html+=`<div class="row" style="margin-top:8px"><button class="small" onclick="doPopulate()">${h.rows.some(r=>r.plants.length)?'Re-run auto-fill':'Auto-fill from goals'}</button>
+  html+=`<div class="row" style="margin-top:8px"><button class="small primary" onclick="doPopulate()">${h.rows.some(r=>r.plants.length)?'Re-run auto-fill':'Auto-fill from goals'}</button>
     <button class="small" onclick="commit('Clear all plants',()=>h.rows.forEach(r=>r.plants=[]));drawAll();renderPanels();saveSoon()">Clear plants</button></div>`;
   if(h.autoLog&&h.autoLog.length) html+=`<details open><summary>Why it filled this way</summary>`+h.autoLog.map(l=>`<div class="small" style="padding:2px 0">${esc(l)}</div>`).join('')+`</details>`;
   html+=waterInfluenceHtml(h);
@@ -1915,29 +1935,29 @@ async function doPopulate(){ busy(true,'Filling the hedgerow…'); const h=curHe
   if(!hedgeHexes(h).length) await sampleHedgeHexes(h);
   commit('Fill '+h.name,()=>populateHedge(h)); drawAll(); renderPanels(); showTab('rows'); busy(false,'Filled'); readout(h.name+' filled — see “Why it filled this way” below, or open Build to walk the row.'); }
 function renderWater(){ const r=R(); const sol=solveNet();
-  let html=`<div class="row"><label style="margin:0">Feed</label><select onchange="R().feed=this.value;drawAll();renderPanels();saveSoon()"><option value="gravity"${r.feed==='gravity'?' selected':''}>Gravity</option><option value="pumped"${r.feed==='pumped'?' selected':''}>Pumped</option></select>
-    ${r.feed==='pumped'?`<label style="margin:0">psi</label><input type="number" style="width:60px" value="${r.feedPsi||0}" onchange="R().feedPsi=+this.value;drawAll();renderPanels();saveSoon()">`:''}</div>
+  let html=`<div class="row"><label style="margin:0">Feed</label><select onchange="commit('Set water feed',()=>{R().feed=this.value});drawAll();renderPanels()"><option value="gravity"${r.feed==='gravity'?' selected':''}>Gravity</option><option value="pumped"${r.feed==='pumped'?' selected':''}>Pumped</option></select>
+    ${r.feed==='pumped'?`<label style="margin:0">psi</label><input type="number" style="width:60px" value="${r.feedPsi||0}" onchange="commit('Set feed psi',()=>{R().feedPsi=+this.value});drawAll();renderPanels()">`:''}</div>
     <h2>Find the water on this ranch</h2>
     <div class="row">${bigBtn('pond','Find ponds','NWI + NHD waterbodies in view',"findPonds()")}${bigBtn('creek','Find creeks','NHD flowlines in view',"findCreeks()")}</div>
-    <button class="small" onclick="findAllWater()">Find both at once</button>
+    <button class="small primary" onclick="findAllWater()">Find both at once</button>
     ${(foundPonds.length||foundCreeks.length)?`<p class="small">${foundPonds.length} pond${foundPonds.length===1?'':'s'}/wetland${foundPonds.length===1?'':'s'}, ${foundCreeks.length} stream${foundCreeks.length===1?'':'s'} found in view — tap one on the map, or:</p>
       <div class="row">${foundPonds.length?`<button class="small" onclick="adoptAllPonds(true)">Add all ponds</button><button class="small" onclick="adoptAllPonds(false)">Add every water feature</button>`:''}${foundCreeks.length?`<button class="small" onclick="adoptAllCreeks()">Add all streams</button>`:''}</div>`:''}
     <h2>Nodes</h2><div class="row">${Object.keys(WKINDS).filter(k=>k!=='pond').map(k=>`<button class="small${wnodeKind===k?' on':''}" onclick="wnodeKind='${k}';setMode('wnode')">${WKINDS[k].label}</button>`).join('')}<button class="small" onclick="setMode('pond')">Draw pond outline</button></div>`;
   const n=r.water.nodes.find(x=>x.id===S.sel.wnode);
   if(n){ const so=sol.nodes[n.id];
-    html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(n.name)}" onchange="wnodeById('${n.id}').name=this.value;drawWater();renderPanels();saveSoon()"><button class="small danger" onclick="delNode('${n.id}')">Delete</button></div>
-      <label>Elevation, ft</label><input type="number" value="${n.elevFt!=null?n.elevFt.toFixed(1):''}" onchange="wnodeById('${n.id}').elevFt=+this.value;drawWater();renderPanels();saveSoon()">
-      ${n.kind==='tank'?`<label>Tank height, ft</label><input type="number" value="${n.tankHt||0}" onchange="wnodeById('${n.id}').tankHt=+this.value;drawWater();renderPanels();saveSoon()"><label>Tank size, gal</label><input type="number" value="${n.tankGal||0}" onchange="wnodeById('${n.id}').tankGal=+this.value;saveSoon()">`:''}
-      ${n.kind==='reg'?`<label>Set to, psi</label><input type="number" value="${n.regPsi||0}" onchange="wnodeById('${n.id}').regPsi=+this.value;drawWater();renderPanels();saveSoon()">`:''}
-      ${n.kind==='pond'?`<label><input type="checkbox" ${n.lined?'checked':''} onchange="wnodeById('${n.id}').lined=this.checked;drawAll();renderPanels();saveSoon()"> Lined (no seep)</label>
-        <label>Fill regime</label><select onchange="wnodeById('${n.id}').fill=this.value;drawAll();renderPanels();saveSoon()">${Object.keys(POND_FILL).map(k=>`<option value="${k}"${n.fill===k?' selected':''}>${POND_FILL[k]}</option>`).join('')}</select>
-        <label>Pool elevation, ft</label><input type="number" value="${pondPoolFt(n)!=null?pondPoolFt(n).toFixed(1):''}" onchange="wnodeById('${n.id}').poolFt=+this.value;drawAll();renderPanels();saveSoon()">
+    html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(n.name)}" onchange="commit('Rename node',()=>{wnodeById('${n.id}').name=this.value});drawWater();renderPanels()"><button class="small danger" onclick="delNode('${n.id}')">Delete</button></div>
+      <label>Elevation, ft</label><input type="number" value="${n.elevFt!=null?n.elevFt.toFixed(1):''}" onchange="commit('Set elevation',()=>{wnodeById('${n.id}').elevFt=+this.value});drawWater();renderPanels()">
+      ${n.kind==='tank'?`<label>Tank height, ft</label><input type="number" value="${n.tankHt||0}" onchange="commit('Set tank height',()=>{wnodeById('${n.id}').tankHt=+this.value});drawWater();renderPanels()"><label>Tank size, gal</label><input type="number" value="${n.tankGal||0}" onchange="commit('Set tank size',()=>{wnodeById('${n.id}').tankGal=+this.value})">`:''}
+      ${n.kind==='reg'?`<label>Set to, psi</label><input type="number" value="${n.regPsi||0}" onchange="commit('Set regulator psi',()=>{wnodeById('${n.id}').regPsi=+this.value});drawWater();renderPanels()">`:''}
+      ${n.kind==='pond'?`<label><input type="checkbox" ${n.lined?'checked':''} onchange="commit('Set pond lined',()=>{wnodeById('${n.id}').lined=this.checked});drawAll();renderPanels()"> Lined (no seep)</label>
+        <label>Fill regime</label><select onchange="commit('Set fill regime',()=>{wnodeById('${n.id}').fill=this.value});drawAll();renderPanels()">${Object.keys(POND_FILL).map(k=>`<option value="${k}"${n.fill===k?' selected':''}>${POND_FILL[k]}</option>`).join('')}</select>
+        <label>Pool elevation, ft</label><input type="number" value="${pondPoolFt(n)!=null?pondPoolFt(n).toFixed(1):''}" onchange="commit('Set pool elevation',()=>{wnodeById('${n.id}').poolFt=+this.value});drawAll();renderPanels()">
         ${n.acres?`<p class="small mute">${n.acres.toFixed(2)} acres${n.source?' · '+esc(n.source):''}</p>`:''}`:''}
-      <label>Measured psi (optional, checks the model)</label><input type="number" value="${n.measPsi!=null?n.measPsi:''}" onchange="wnodeById('${n.id}').measPsi=this.value===''?null:+this.value;renderPanels();saveSoon()">
+      <label>Measured psi (optional, checks the model)</label><input type="number" value="${n.measPsi!=null?n.measPsi:''}" onchange="commit('Set measured psi',()=>{wnodeById('${n.id}').measPsi=this.value===''?null:+this.value});renderPanels()">
       ${so&&so.psi!=null?`<p class="small">Modelled: <b>${so.psi.toFixed(1)} psi</b>${so.measPsi!=null?` · measured ${so.measPsi} psi ${Math.abs(so.measPsi-so.psi)>8?'<span class="alert">— check pipe size/elevation</span>':'<span class="ok">— close match</span>'}`:''}${so.freeGpm!=null?` · ~${so.freeGpm.toFixed(1)} gpm free flow`:''}</p>`:''}</div>`; }
   const wl=r.water.lines.find(x=>x.id===S.sel.wline);
-  if(wl){ html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(wl.name)}" onchange="wlineById('${wl.id}').name=this.value;drawWater();renderPanels();saveSoon()"><button class="small danger" onclick="delLine('${wl.id}')">Delete</button></div>
-    <label>Diameter</label><select onchange="wlineById('${wl.id}').dIn=+this.value;drawWater();renderPanels();saveSoon()">${PIPE_SIZES.map(p=>`<option value="${p.id}"${Math.abs(wl.dIn-p.id)<0.01?' selected':''}>${p.label}</option>`).join('')}</select>
+  if(wl){ html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(wl.name)}" onchange="commit('Rename pipe',()=>{wlineById('${wl.id}').name=this.value});drawWater();renderPanels()"><button class="small danger" onclick="delLine('${wl.id}')">Delete</button></div>
+    <label>Diameter</label><select onchange="commit('Set pipe diameter',()=>{wlineById('${wl.id}').dIn=+this.value});drawWater();renderPanels()">${PIPE_SIZES.map(p=>`<option value="${p.id}"${Math.abs(wl.dIn-p.id)<0.01?' selected':''}>${p.label}</option>`).join('')}</select>
     <p class="small mute">${Math.round(pathLenFt(wl.pts))} ft · C=${wl.C}</p></div>`; }
   html+=`<h2>Creeks</h2><div class="row"><button class="small" onclick="setMode('creek')">Trace a creek</button></div>`+creeksHtml();
   html+=`<h2>Network</h2>`+renderIrrigation();
@@ -1959,7 +1979,7 @@ function drawAoi(){ if(!aoiLayer) aoiLayer=L.layerGroup().addTo(map); aoiLayer.c
 let aoiLayer=null;
 function flyToAoi(){ if(!aoi()) return; map.fitBounds(L.latLngBounds(aoi()),{padding:[40,40]}); }
 let heatOn=false;
-function heatToggle(){ heatOn=document.getElementById('lyHeat').checked; if(heatOn) runHeat(); else { heatCells=[]; heatBest=null; paintHeatCanvas(); const l=document.getElementById('heatLegend'); if(l) l.remove(); } }
+function heatToggle(){ heatOn=document.getElementById('lyHeat').checked; if(heatOn) runHeat(); else { heatCells=[]; heatBest=null; paintHeatCanvas(); renderHeatLegend(); } }
 let _heatSeq=0;
 function heatBounds(){ if(aoi()) return hexesInAoi(); return map.getZoom()>=15?hexesInView():[]; }
 async function runHeat(){ if(!heatOn) return; const hx=heatBounds(); if(!hx.length){ readout('Draw a study area, or zoom to 15+, for the heat map.'); return; }
@@ -1972,11 +1992,14 @@ function heatScore(info){ if(!info) return null; const sl=shortlist().slice(0,Ma
   if(!sl.length) return null; const scores=sl.map(x=>{ const f=speciesFit(x.sp,info,null); return f?f.score:null; }).filter(v=>v!=null); if(!scores.length) return null;
   return scores.reduce((a,b)=>a+b,0)/scores.length; }
 function heatColor(s){ if(s==null) return '#888'; const stops=[[0,[180,71,30]],[0.5,[201,162,39]],[1,[61,122,74]]]; let a=stops[0],b=stops[stops.length-1]; for(let i=0;i<stops.length-1;i++){ if(s>=stops[i][0]&&s<=stops[i+1][0]){ a=stops[i]; b=stops[i+1]; break; } } const t=(s-a[0])/((b[0]-a[0])||1); const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*t)); return `rgb(${c[0]},${c[1]},${c[2]})`; }
-function drawHeat(){ if(!heatOn){ heatCells=[]; heatBest=null; paintHeatCanvas(); return; } const hx=heatBounds(); let best=null;
+function drawHeat(){ if(!heatOn){ heatCells=[]; heatBest=null; paintHeatCanvas(); renderHeatLegend(); return; } const hx=heatBounds(); let best=null;
   hx.forEach(([q,r])=>{ const info=hexInfo(q,r); const s=heatScore(info); if(s!=null&&(!best||s>best.s)) best={q,r,s}; });
-  heatCells=hx; heatBest=best; paintHeatCanvas();
-  let leg=document.getElementById('heatLegend'); if(!leg){ leg=document.createElement('div'); leg.id='heatLegend'; leg.style.cssText='position:absolute;left:10px;top:10px;z-index:800;background:rgba(238,240,232,.94);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px'; document.getElementById('mapWrap').appendChild(leg); }
-  leg.innerHTML='Plant suitability<div class="heatbar"></div><div class="row small mute" style="justify-content:space-between"><span>poor fit</span><span>good fit</span></div>'+(best?`<div class="small">best: acre ${best.q},${best.r} · ${Math.round(best.s*100)}%</div>`:''); }
+  heatCells=hx; heatBest=best; paintHeatCanvas(); renderHeatLegend(); }
+/* Lives inside #layerBox now, right under the checkboxes, instead of as its own
+   free-floating card — one right-side panel instead of two. */
+function renderHeatLegend(){ const el=document.getElementById('heatLegend'); if(!el) return;
+  if(!heatOn){ el.innerHTML=''; return; }
+  el.innerHTML='<b>Plant suitability</b><div class="heatbar"></div><div class="row small mute" style="justify-content:space-between"><span>poor fit</span><span>good fit</span></div>'+(heatBest?`<div class="small">best: acre ${heatBest.q},${heatBest.r} · ${Math.round(heatBest.s*100)}%</div>`:''); }
 function paintHeatCanvas(){ paintCellCanvas(heatCanvasEl,heatCtx,heatCells,([q,r])=>{ const info=hexInfo(q,r); const s=heatScore(info);
   return {fillColor:heatColor(s),fillOpacity:s==null?0.05:0.5,strokeColor:'#fff',strokeOpacity:.3,weight:.5}; },heatBest?[heatBest.q,heatBest.r]:null); }
 function bestAcreFor(spId){ const sp=SP(spId); const hx=aoi()?hexesInAoi():hexesInView(); let best=null;
@@ -1988,7 +2011,7 @@ function suggestSwap(spId){ const sf=siteSummaryFit(SP(spId)); if(!sf||sf.score>
 function heatBreakdown(q,r){ const info=hexInfo(q,r); if(!info) return ''; const sl=shortlist().slice(0,8);
   return sl.map(x=>{ const f=speciesFit(x.sp,info,null); return f?`<div class="row small"><span class="grow">${esc(x.sp.common)}</span><span>${Math.round(f.score*100)}%</span></div>`:''; }).join(''); }
 function renderGoals(){ const r=R(); r.goals=r.goals||{}; let html=`<h2>What do you want from it?</h2>`
-    +Object.keys(GOALS).map(g=>`<div class="goal"><span>${esc(GOALS[g])}</span><input type="range" min="0" max="3" value="${r.goals[g]||0}" oninput="R().goals['${g}']=+this.value;this.nextElementSibling.textContent=['none','a little','a lot','defining'][+this.value]" onchange="renderGoals();saveSoon()"><span class="mute small">${['none','a little','a lot','defining'][r.goals[g]||0]}</span></div>`).join('');
+    +Object.keys(GOALS).map(g=>`<div class="goal"><span>${esc(GOALS[g])}</span><input type="range" min="0" max="3" value="${r.goals[g]||0}" onpointerdown="_goalBefore=JSON.stringify(S)" oninput="R().goals['${g}']=+this.value;this.nextElementSibling.textContent=['none','a little','a lot','defining'][+this.value]" onchange="renderGoals();if(_goalBefore&&JSON.stringify(S)!==_goalBefore){HIST.stack.push({label:'Adjust goal weight',state:_goalBefore});if(HIST.stack.length>HIST.max)HIST.stack.shift();HIST.redo.length=0;updateHistButtons();UI.toast('Adjust goal weight',{label:'Undo',fn:undo});}_goalBefore=null;saveSoon()"><span class="mute small">${['none','a little','a lot','defining'][r.goals[g]||0]}</span></div>`).join('');
   html+=`<h2>Study area</h2>`;
   if(!aoi()) html+=`<p class="small mute">Outline the ground you're considering and every acre gets read and ranked by fit. <button class="small" onclick="setMode('aoi')">Draw study area</button></p>`;
   else html+=`<p class="small">${aoiAcres().toFixed(1)} acres, ${(hexesInAoi()||[]).length} hexes.</p><label><input type="checkbox" ${heatOn?'checked':''} onchange="document.getElementById('lyHeat').checked=this.checked;heatToggle()"> Show suitability heat map</label>
@@ -2001,7 +2024,7 @@ function renderGoals(){ const r=R(); r.goals=r.goals||{}; let html=`<h2>What do 
       <span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span>
       <button class="addbtn ${inSet?'in':''}" onclick="event.stopPropagation();togglePlanSet('${x.sp.id}')">${inSet?'✓ in plan':'+ add'}</button></div>`; }).join('');
   setHtml('tab-goals',html); }
-function togglePlanSet(id){ const set=planSet(); const i=set.indexOf(id); if(i>=0) set.splice(i,1); else set.push(id); renderPanels(); saveSoon(); }
+function togglePlanSet(id){ commit((planSet().includes(id)?'Remove ':'Add ')+((SP(id)||{}).common||'species')+' to plan',()=>{ const set=planSet(); const i=set.indexOf(id); if(i>=0) set.splice(i,1); else set.push(id); }); renderPanels(); }
 async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=siteSummaryFit(sp); const g=goalScore(sp);
   const body=`<p class="small"><i>${esc(sp.sci)}</i> ${prov('lib')}<br>${esc(sp.notes||'')}</p>
     <p class="small"><span class="pill">${esc(sp.story)}</span><span class="pill">${sp.ht}×${sp.rad*2} ft</span><span class="pill">bloom ${esc(bloomStr(sp))}</span><span class="pill">${esc(sp.moisture)}</span></p>
@@ -2157,7 +2180,7 @@ function renderReport(){ const h=curHedge(); if(!h){ setHtml('tab-report',`<p cl
   const ids=bloomStats(h);
   let html=`<h2>${esc(h.name)} — plan</h2>`;
   html+=bloomDialBlock(ids);
-  html+=`<div class="row"><button onclick="exportPlanDoc()">Export full plan (printable HTML)</button><button class="small" onclick="exportCSV()">Export plant list CSV</button><button class="small" onclick="exportJSON()">Export design JSON</button></div>`;
+  html+=`<div class="row"><button class="primary" onclick="exportPlanDoc()">Export full plan (printable HTML)</button><button class="small" onclick="exportCSV()">Export plant list CSV</button><button class="small" onclick="exportJSON()">Export design JSON</button></div>`;
   html+=`<h3>Justification</h3>`+justificationHtml(h);
   setHtml('tab-report',html); }
 function exportPlanDoc(){ const h=curHedge(); if(!h) return;
@@ -2195,7 +2218,7 @@ async function saveAs(name){ try{ localStorage.setItem('hedgeright.save.'+name,J
 async function openSave(name){ try{ const txt=localStorage.getItem('hedgeright.save.'+name); if(!txt) throw new Error('not found');
     S=JSON.parse(txt); normalizeState(); curSave={id:name,name}; hideStart(); if(map){ map.setView(R().center,R().zoom); drawAll(); } renderPanels(); }
   catch(e){ UI.alert('Could not open "'+name+'": '+(e.message||e)); } }
-function deleteSave(name){ localStorage.removeItem('hedgeright.save.'+name); putIndex(saveIndex().filter(x=>x.name!==name)); if(curSave&&curSave.name===name) curSave=null; renderStart(); }
+function deleteSave(name){ localStorage.removeItem('hedgeright.save.'+name); putIndex(saveIndex().filter(x=>x.name!==name)); if(curSave&&curSave.name===name) curSave=null; refreshRanchesSavesView(); }
 function saveNow(){ if(curSave) saveAs(curSave.name); else promptSaveAs(); if(FS.handle) fsWrite(); }
 async function promptSaveAs(){ const name=await UI.prompt('Name this design',curSave?curSave.name:R().name,{title:'Save as'}); if(name) saveAs(name); }
 function snapListKey(){ return 'hedgeright.snaps.'+(curSave?curSave.name:'unsaved'); }
@@ -2225,7 +2248,7 @@ function saveSoon(){ markDirty(true); if(!autoSaveOn) return; clearTimeout(_save
 function toggleSaveMenu(e){ if(e) e.stopPropagation(); const w=document.getElementById('saveWrap'); w.classList.toggle('open');
   document.getElementById('saveMenuHolder').innerHTML=w.classList.contains('open')?`<div class="menu">
     <button onclick="promptSaveAs();toggleSaveMenu()">Save as… <kbd>Ctrl+S</kbd></button>
-    <button onclick="showStart();toggleSaveMenu()">Open a saved design…</button>
+    <button onclick="toggleSaveMenu();openRanchesSavesDialog(false)">Open a saved design…</button>
     <button onclick="snapTake();toggleSaveMenu()">Take a snapshot</button>
     <div class="sep"></div>
     <button onclick="exportJSON();toggleSaveMenu()">Export JSON</button>
@@ -2238,8 +2261,26 @@ function savesHtml(){ const idx=saveIndex().sort((a,b)=>b.at-a.at);
   if(!idx.length) return `<p class="small mute">Nothing saved yet.</p>`;
   return `<div class="slist">`+idx.map(s=>`<div class="srow" onclick="openSave('${esc(s.name)}')"><span class="grow">${esc(s.name)}</span><span class="small mute">${new Date(s.at).toLocaleDateString()}</span>
     <button class="small danger" onclick="event.stopPropagation();deleteSave('${esc(s.name)}')">Delete</button></div>`).join('')+`</div>`; }
-function showStart(){ document.getElementById('start').classList.add('show'); renderStart(); }
-function hideStart(){ document.getElementById('start').classList.remove('show'); }
+function showStart(){ const d=document.getElementById('dlg'); if(d&&d.classList.contains('show')) UI.close(null); document.getElementById('start').classList.add('show'); renderStart(); }
+function hideStart(){ document.getElementById('start').classList.remove('show'); const d=document.getElementById('dlg'); if(d&&d.classList.contains('show')) UI.close(null); }
+/* Same picker as renderStart()/#start, but as a modal over the map instead of a full-screen
+   takeover — used when opened from Settings or the save menu. Shares the same action handlers
+   (startNew, hideStart, openSave, savesHtml) since hideStart() now closes this dialog too. */
+function renderRanchesSavesBody(){
+  return `<div class="scards">
+    <div class="scard" onclick="startNew()"><h3>New design</h3><p class="small mute">Start from a map location.</p></div>
+    <div class="scard" onclick="hideStart()"><h3>Continue</h3><p class="small mute">${esc(designSummary())}</p></div>
+  </div>
+  <h2>Saved designs</h2>${savesHtml()}
+  <input type="file" id="impInputDlg" accept=".json,.hedgeright.json" style="display:none" onchange="if(this.files[0]){ importJSON(this.files[0]); }">
+  <div class="row" style="margin-top:10px"><button class="small" onclick="document.getElementById('impInputDlg').click()">Import JSON…</button>
+    <button class="small" onclick="fsOpen()">Open a file from disk…</button></div>`; }
+function refreshRanchesSavesView(){ const d=document.getElementById('dlg'); const t=document.getElementById('dlgT');
+  if(d&&d.classList.contains('show')&&t&&t.textContent==='Ranches & saves'){ const b=document.getElementById('dlgB'); if(b) b.innerHTML=renderRanchesSavesBody(); }
+  else renderStart(); }
+function openRanchesSavesDialog(returnToSettings){
+  const actions=returnToSettings?[{label:'← Settings',value:'back'},{label:'Close',primary:true,value:null}]:[{label:'Close',primary:true,value:null}];
+  UI.open('Ranches & saves','<div style="max-height:70vh;overflow:auto">'+renderRanchesSavesBody()+'</div>',actions).then(v=>{ if(v==='back') openSettingsDialog(); }); }
 function renderStart(){ const html=`<div class="stitle"><h1>HedgeRight</h1></div>
   <p class="mute">California native hedgerows, planned by goal and grown on paper first.</p>
   <div class="scards">
