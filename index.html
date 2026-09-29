@@ -488,18 +488,13 @@ function renderCloudStatus(){ const els=document.querySelectorAll('.cloudStatusE
   else if(cloudStatus.state==='ok') text='Synced'+(cloudStatus.at?' · '+new Date(cloudStatus.at).toLocaleTimeString():'');
   else text='Not yet synced this session.';
   els.forEach(el=>el.textContent=text); }
-async function saveAccessCode(inputId){ inputId=inputId||'accessCode'; const inp=document.getElementById(inputId); if(!inp) return; setAccessCode(inp.value.trim());
-  renderCloudStatus(); const data=await cloudPull(); await cloudWhoAmI();
-  if(data){ commit('Pull cloud sync',()=>{ S=data; normalizeState(); }); if(map){ map.setView(R().center,R().zoom); drawAll(); } }
-  renderPanels(); }
-function clearAccessCode(){ setAccessCode(''); cloudStatus={state:'unconfigured',msg:'',at:null}; cloudIdentity={role:null,name:null};
-  ['accessCode','accessCodeDlg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  renderCloudStatus(); renderPeopleAccess(); renderPanels(); }
 /* ---- People with access: owner-only. The owner's own bootstrap secret (the wrangler
    SYNC_PASSWORD) never appears here — it isn't part of this list, it's what makes you
    the owner in the first place. Every entry below is an editor or viewer, added and
    removed freely without touching anyone else's code. ---- */
 let _peopleList=[];
+let _peopleListPristine=null; /* snapshot taken when the list is fetched, restored on Cancel */
+let _selectedPerson=null; /* null = nothing chosen, 'new' = adding someone, or an index into _peopleList */
 const ACCESS_WORDS=['oak','ridge','creek','hollow','meadow','grove','bramble','willow','fern','stone','maple','thicket','sparrow','otter','bracken','heron','alder','vale'];
 function genAccessCode(){ const w=()=>ACCESS_WORDS[Math.floor(Math.random()*ACCESS_WORDS.length)]; return w()+'-'+w()+'-'+Math.floor(10+Math.random()*90); }
 async function fetchUsers(){ if(!cloudConfigured()||cloudIdentity.role!=='owner') return null;
@@ -512,21 +507,40 @@ async function saveUsers(list){
 async function renderPeopleAccess(){ const els=document.querySelectorAll('.peopleAccessEl'); if(!els.length) return;
   if(cloudIdentity.role!=='owner'){ els.forEach(el=>el.innerHTML=''); return; }
   els.forEach(el=>el.innerHTML='<h2>People with access</h2><p class="small mute">Loading…</p>');
-  _peopleList=(await fetchUsers())||[]; paintPeopleAccess(); }
+  _peopleList=(await fetchUsers())||[]; _peopleListPristine=JSON.parse(JSON.stringify(_peopleList)); _selectedPerson=null; paintPeopleAccess(); }
+/* Edits here (add/remove/rename/role/code) only touch the local _peopleList — nothing
+   is pushed to the Worker until Settings' OK button commits it. Cancel restores
+   _peopleListPristine instead. This is a deliberate exception to how the rest of the
+   app auto-saves on every change: this list is shared with other people's access, so
+   it gets a review step the way single-field ranch edits don't need. */
 function paintPeopleAccess(){ document.querySelectorAll('.peopleAccessEl').forEach(el=>el.innerHTML=peopleAccessHtml(_peopleList)); }
+function pickPerson(v){ _selectedPerson=v; paintPeopleAccess(); }
+function personFieldsHtml(sel,idx){ return `<label>Name</label><input type="text" value="${esc(sel.name)}" onchange="updatePersonField(${idx},'name',this.value)">
+    <label>Role</label><select onchange="updatePersonField(${idx},'role',this.value)">
+      <option value="editor"${sel.role==='editor'?' selected':''}>Editor</option>
+      <option value="viewer"${sel.role==='viewer'?' selected':''}>Viewer</option></select>
+    <label>Code</label><input type="text" value="${esc(sel.code)}" onchange="updatePersonField(${idx},'code',this.value)">
+    <div class="row"><button class="small danger" onclick="removePerson(${idx})">Remove</button></div>`; }
 function peopleAccessHtml(list){
-  return `<h2>People with access</h2>
-    <p class="small mute">Each person gets their own code. Removing someone here cuts off their access immediately — nobody else's code changes.</p>
-    ${list.map((u,i)=>`<div class="card"><div class="row">
-        <input type="text" class="grow" placeholder="name" value="${esc(u.name)}" onchange="updatePersonField(${i},'name',this.value)">
-        <select onchange="updatePersonField(${i},'role',this.value)"><option value="editor"${u.role==='editor'?' selected':''}>Editor</option><option value="viewer"${u.role==='viewer'?' selected':''}>Viewer</option></select>
-        <button class="small danger" onclick="removePerson(${i})">Remove</button></div>
-      <p class="small mute">Code: <code>${esc(u.code)}</code></p></div>`).join('')}
-    ${list.length?'':'<p class="small mute">Nobody added yet.</p>'}
-    <div class="row" style="margin-top:8px"><button class="small" onclick="addPerson()">Add someone</button></div>`; }
-function updatePersonField(i,field,val){ _peopleList[i][field]=val; paintPeopleAccess(); saveUsers(_peopleList); }
-function removePerson(i){ _peopleList.splice(i,1); paintPeopleAccess(); saveUsers(_peopleList); }
-function addPerson(){ _peopleList.push({name:'',code:genAccessCode(),role:'editor'}); paintPeopleAccess(); saveUsers(_peopleList); }
+  const isNew=_selectedPerson==='new';
+  let html=`<h2>People with access</h2>
+    <p class="small mute">Each person gets their own code. Removing someone here cuts off their access — nobody else's code changes. Nothing here reaches the server until you click OK below.</p>
+    <div class="row"><button class="small" onclick="pickPerson('new')">Add</button></div>`;
+  if(isNew) html+=`<div class="card"><label>Name</label><input type="text" id="newPersonName" placeholder="their name">
+      <label>Role</label><select id="newPersonRole"><option value="editor" selected>Editor</option><option value="viewer">Viewer</option></select>
+      <label>Code</label><input type="text" id="newPersonCode" value="${genAccessCode()}">
+      <div class="row" style="margin-top:8px"><button class="small" onclick="addPerson()">Add</button></div></div>`;
+  html+=`<label>Person</label><div class="list">
+      ${list.map((u,i)=>`<div class="sp${_selectedPerson===i?' on':''}" onclick="pickPerson(${i})"><span class="n">${esc(u.name||'(unnamed)')}</span><span class="mute small">${esc(u.role)}</span></div>${_selectedPerson===i?`<div class="card">${personFieldsHtml(u,i)}</div>`:''}`).join('')}
+    </div>`;
+  return html; }
+function updatePersonField(i,field,val){ _peopleList[i][field]=val; paintPeopleAccess(); }
+function removePerson(i){ _peopleList.splice(i,1); _selectedPerson=null; paintPeopleAccess(); }
+function addPerson(){ const nameInp=document.getElementById('newPersonName'); const roleInp=document.getElementById('newPersonRole'); const codeInp=document.getElementById('newPersonCode');
+  const name=(nameInp&&nameInp.value||'').trim(); if(!name){ UI.toast('Enter a name first'); return; }
+  const code=(codeInp&&codeInp.value||'').trim()||genAccessCode();
+  _peopleList.push({name,code,role:(roleInp&&roleInp.value)||'editor'});
+  _selectedPerson=_peopleList.length-1; paintPeopleAccess(); }
 
 /* ---------------- HexRow — map-based hedgerow planner
    Structure: state → geometry → map render → modes → hex info →
@@ -1868,7 +1882,7 @@ function stageDone(t){ const r=R(); switch(t){
   case 'report': return false; default: return false; } }
 function renderStageRail(){ document.querySelectorAll('#tabs button').forEach(b=>{ const t=b.dataset.tab; b.classList.toggle('done',stageDone(t)&&t!==currentTab()); }); }
 function renderStageHint(t){ const map={
-  ranch:'Outline the ground you want ranked, or jump to a hedgerow already drawn.',
+  ranch:'Outline the ground you want ranked. Tap a hedgerow on the map to work on it.',
   water:'Map tanks, wells, ponds and pipes — this feeds every irrigation calculation.',
   goals:'Weight what you want from the hedgerow; tap the map to read the ground.',
   rows:'Draw hedgerow centrelines and set row count and spacing.',
@@ -1888,22 +1902,58 @@ function renderStageBar(t){ const el=document.getElementById('stageBar'); if(!el
   const label={water:'Set up water',goals:'Explore goals',rows:'Draw rows',paint:'Plant',build:'Build',shop:'Cost it',report:'View plan'}[nx];
   el.innerHTML=nx?`<span class="why">${esc(why)}</span><span class="grow"></span><button class="nxt" onclick="showTab('${nx}')" ${(nx==='rows'&&!r.hedgerows.length)?'':''}>${esc(label)} →</button>`
                  :`<span class="why">That is every stage — jump back to any tab above to keep refining.</span>`; }
+/* Everything in the Settings dialog stages into these instead of writing through
+   commit()/saveSoon()/setAccessCode() directly — nothing here touches the shared
+   design or this device's saved code until the dialog's OK button applies it, and
+   Cancel discards it untouched. Deliberately NOT reset when the dialog is (re)opened —
+   only when OK/Cancel actually resolves — so edits survive a detour through the
+   nested "Ranches & saves" dialog and back via its "← Settings" button. */
+let _dlgPendingName=null;
+let _dlgPendingCenter=null;
+let _dlgOriginalCenter=null; /* so Cancel can snap the map preview back */
+let _dlgPendingCode=null;
 function renderRanchSettingsBody(sfx){ sfx=sfx||''; const r=R();
+  const nameVal=_dlgPendingName!==null?_dlgPendingName:r.name;
+  const centerVal=_dlgPendingCenter!==null?_dlgPendingCenter:r.center;
+  const codeVal=_dlgPendingCode!==null?_dlgPendingCode:accessCode();
   return `<h2>Ranch <span class="mute" style="font-size:12px;font-weight:400">— shared, everyone with access sees this</span></h2>
-    <label>Name</label><input type="text" value="${esc(r.name)}" onchange="commit('Rename ranch',()=>{R().name=this.value});renderPanels()">
+    <label>Name</label><input type="text" value="${esc(nameVal)}" onchange="_dlgPendingName=this.value">
     <div class="row" style="margin-top:10px"><button class="small" onclick="openRanchesSavesDialog(true)">Ranches &amp; saves</button></div>
-    <h3>Location <span class="mute geoNoteEl" style="font-size:13px;font-weight:400">— centred at ${r.center[0].toFixed(5)}, ${r.center[1].toFixed(5)}</span></h3>
-    <p class="small mute">Type an address, place name, or coordinates as <code>lat, lng</code>.</p>
+    <h3>Location <span class="mute geoNoteEl" style="font-size:13px;font-weight:400">— centred at ${centerVal[0].toFixed(5)}, ${centerVal[1].toFixed(5)}</span></h3>
+    <p class="small mute">Type an address, place name, or coordinates as <code>lat, lng</code>. Applied when you click OK below.</p>
     <div class="row"><input type="text" id="geo${sfx}" class="grow" placeholder="e.g. 31165 Hwy 128, Yorkville, CA  or  39.045, -123.208" onkeydown="if(event.key==='Enter'){event.preventDefault();geocode('geo${sfx}');}">
       <button class="small" onclick="geocode('geo${sfx}')">Go</button></div>
     <h2>Your access <span class="mute" style="font-size:12px;font-weight:400">— personal, this device only</span></h2>
-    <p class="small mute">One access code per person, set once per device — recover it from your password manager if a device gets wiped.</p>
-    <form class="row" onsubmit="event.preventDefault();saveAccessCode('accessCode${sfx}');"><input type="password" id="accessCode${sfx}" name="hedgeright-access-code" class="grow" placeholder="access code" value="${esc(accessCode())}" autocomplete="current-password">
-      <button type="submit" class="small">Save</button>
-      ${accessCode()?`<button type="button" class="small danger" onclick="clearAccessCode()">Clear</button>`:''}</form>
+    <p class="small mute">One access code per person, set once per device — recover it from your password manager if a device gets wiped. Applied when you click OK below.</p>
+    <form onsubmit="event.preventDefault();"><label>Access code</label><input type="password" id="accessCode${sfx}" name="hedgeright-access-code" placeholder="access code" value="${esc(codeVal)}" autocomplete="current-password" onchange="_dlgPendingCode=this.value"></form>
     <p class="small mute cloudStatusEl"></p>
     <div class="peopleAccessEl"></div>`; }
-function openSettingsDialog(){ UI.open('Settings','<div style="max-height:70vh;overflow:auto">'+renderRanchSettingsBody('Dlg')+'</div>',[{label:'Close',primary:true,value:null}]); renderCloudStatus(); renderPeopleAccess(); }
+function openSettingsDialog(){
+  UI.open('Settings','<div style="max-height:70vh;overflow:auto">'+renderRanchSettingsBody('Dlg')+'</div>',
+    [{label:'Cancel',value:'cancel'},{label:'OK',primary:true,value:'ok'}])
+    .then(async v=>{
+      if(v==='ok'){
+        /* Access code first, since it can swap out which ranch everything else below
+           applies to. If you change both your code and the ranch name in the same
+           sitting, the name lands on whatever design the new code loads — the code
+           switch is treated as happening first, name/location edits second. */
+        if(_dlgPendingCode!==null&&_dlgPendingCode!==accessCode()){
+          setAccessCode(_dlgPendingCode);
+          if(_dlgPendingCode){ const data=await cloudPull(); await cloudWhoAmI(); if(data){ S=data; normalizeState(); } }
+          else { cloudStatus={state:'unconfigured',msg:'',at:null}; cloudIdentity={role:null,name:null}; }
+        }
+        if(_dlgPendingName!==null&&_dlgPendingName!==R().name) commit('Rename ranch',()=>{ R().name=_dlgPendingName; });
+        if(_dlgPendingCenter!==null) commit('Move ranch location',()=>{ R().center=_dlgPendingCenter; });
+        if(_peopleListPristine&&JSON.stringify(_peopleList)!==JSON.stringify(_peopleListPristine)) saveUsers(_peopleList);
+        if(map){ map.setView(R().center,R().zoom); drawAll(); }
+        renderPanels();
+      } else {
+        if(_dlgOriginalCenter&&map) map.setView(_dlgOriginalCenter,map.getZoom());
+        if(_peopleListPristine) _peopleList=JSON.parse(JSON.stringify(_peopleListPristine));
+      }
+      _dlgPendingName=null; _dlgPendingCenter=null; _dlgOriginalCenter=null; _dlgPendingCode=null; _selectedPerson=null;
+    });
+  renderCloudStatus(); renderPeopleAccess(); }
 function renderRanch(){ const r=R();
   document.getElementById('ranchSub').textContent=r.name+' · '+r.hedgerows.length+' hedgerow'+(r.hedgerows.length===1?'':'s');
   let html=`<h2>Study area</h2>`;
@@ -1915,17 +1965,17 @@ function renderRanch(){ const r=R();
    (geocoded via Nominatim — needs a real browser tab, not the sandboxed preview). */
 function geocode(inputId){ inputId=inputId||'geo'; const input=document.getElementById(inputId); const q=(input&&input.value||'').trim(); if(!q) return;
   const setNote=t=>document.querySelectorAll('.geoNoteEl').forEach(el=>el.textContent=t);
+  if(_dlgOriginalCenter===null) _dlgOriginalCenter=R().center.slice();
   const m=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
   if(m){ const ll=[+m[1],+m[2]];
     if(Math.abs(ll[0])>90||Math.abs(ll[1])>180){ setNote('That doesn\'t look like a valid latitude/longitude.'); return; }
-    R().center=ll; if(map) map.setView(ll,Math.max(map.getZoom(),16));
-    setNote('Centred at '+ll[0].toFixed(5)+', '+ll[1].toFixed(5)+'.');
-    saveSoon(); return; }
+    _dlgPendingCenter=ll; if(map) map.setView(ll,Math.max(map.getZoom(),16));
+    setNote('Will centre at '+ll[0].toFixed(5)+', '+ll[1].toFixed(5)+' — click OK to apply.'); return; }
   setNote('Searching…');
   fetchJSON('https://nominatim.openstreetmap.org/search?'+new URLSearchParams({q,format:'json',limit:1}),null,{label:'Place search'})
     .then(js=>{ if(!js.length){ setNote('Nothing found for "'+q+'" — try a fuller address, or lat, lng.'); return; }
-      const ll=[+js[0].lat,+js[0].lon]; R().center=ll; if(map) map.setView(ll,16);
-      setNote(js[0].display_name); saveSoon(); })
+      const ll=[+js[0].lat,+js[0].lon]; _dlgPendingCenter=ll; if(map) map.setView(ll,16);
+      setNote(js[0].display_name+' — click OK to apply.'); })
     .catch(err=>{ setNote('Search failed: '+(err&&err.message?err.message:String(err))+'. Try lat, lng instead, or check the browser console for details.'); }); }
 function fitAllView(){ const pts=[]; R().hedgerows.forEach(h=>pts.push(...h.centerline)); R().water.nodes.forEach(n=>pts.push([n.lat,n.lng])); if(!pts.length){ UI.toast('Nothing drawn yet'); return; } map.fitBounds(L.latLngBounds(pts),{padding:[40,40]}); }
 function zoomHedge(id){ const h=R().hedgerows.find(x=>x.id===id); if(h) map.fitBounds(L.latLngBounds(h.centerline),{padding:[60,60],maxZoom:19}); }
