@@ -171,7 +171,8 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 /* dialogs, toasts, network badge, provenance, history */
 #dlg{position:fixed;inset:0;z-index:3000;background:rgba(30,42,34,.42);display:none;align-items:center;justify-content:center;padding:20px}
 #dlg.show{display:flex}
-.dlgbox{background:var(--paper);border:1px solid var(--line);border-radius:12px;max-width:440px;width:100%;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.dlgbox{background:var(--paper);border:1px solid var(--line);border-radius:12px;max-width:440px;width:100%;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-height:calc(100vh - 40px);display:flex;flex-direction:column}
+#dlgB{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .dlgbox h3{margin:0 0 8px;font-size:17px}
 .dlgA{justify-content:flex-end;margin-top:14px;gap:8px}
 .dlgA button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
@@ -1929,7 +1930,7 @@ function renderRanchSettingsBody(sfx){ sfx=sfx||''; const r=R();
     <p class="small mute cloudStatusEl"></p>
     <div class="peopleAccessEl"></div>`; }
 function openSettingsDialog(){
-  UI.open('Settings','<div style="max-height:70vh;overflow:auto">'+renderRanchSettingsBody('Dlg')+'</div>',
+  UI.open('Settings',renderRanchSettingsBody('Dlg'),
     [{label:'Cancel',value:'cancel'},{label:'OK',primary:true,value:'ok'}])
     .then(async v=>{
       if(v==='ok'){
@@ -2355,7 +2356,7 @@ function refreshRanchesSavesView(){ const d=document.getElementById('dlg'); cons
   else renderStart(); }
 function openRanchesSavesDialog(returnToSettings){
   const actions=returnToSettings?[{label:'← Settings',value:'back'},{label:'Close',primary:true,value:null}]:[{label:'Close',primary:true,value:null}];
-  UI.open('Ranches & saves','<div style="max-height:70vh;overflow:auto">'+renderRanchesSavesBody()+'</div>',actions).then(v=>{ if(v==='back') openSettingsDialog(); }); }
+  UI.open('Ranches & saves',renderRanchesSavesBody(),actions).then(v=>{ if(v==='back') openSettingsDialog(); }); }
 function renderStart(){ const html=`<div class="stitle"><h1>HedgeRight</h1></div>
   <p class="mute">California native hedgerows, planned by goal and grown on paper first.</p>
   <div class="scards">
