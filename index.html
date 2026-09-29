@@ -2319,25 +2319,40 @@ function renderStart(){ const html=`<div class="stitle"><h1>HedgeRight</h1></div
 function startNew(){ const r=blankRanch('New ranch',R()?R().center:[38.889326,-123.162412],R()?R().zoom:15); S.ranches.push(r); S.active=r.id; curSave=null;
   hideStart(); if(map){ map.setView(r.center,r.zoom); drawAll(); } renderPanels(); showTab('ranch'); }
 function finishWizard(){ hideStart(); }
-(async function boot(){
-  loadAutoSavePref();
-  let loaded=false;
-  if(cloudConfigured()){ const cloud=await cloudPull(); if(cloud){ S=cloud; loaded=true; } cloudWhoAmI(); }
-  if(!loaded){
-    try{ const saved=localStorage.getItem('hedgeright.autosave'); S=saved?JSON.parse(saved):defaultState(); }
-    catch(e){ S=defaultState(); }
-  }
-  normalizeState();
-  if(typeof L==='undefined'||!L.map){
-    document.getElementById('start').classList.add('show');
-    setHtml('startBody',`<h1 style="font-size:21px">The map library did not load</h1>
-      <p class="small">HedgeRight draws on Leaflet and Esri imagery from the internet. Something blocked that — no connection, a firewall, or a viewer that will not fetch outside files.</p>
-      <p class="small">Try reloading. Your saved designs are untouched either way, and JSON import/export still works.</p>
-      <div class="row"><button class="small" onclick="location.reload()">Try again</button>
-        <button class="small" onclick="document.getElementById('impStart').click()">Import JSON</button>
-        <input id="impStart" type="file" accept="application/json" style="display:none" onchange="if(this.files[0]) importJSON(this.files[0])"></div>`);
-    return;
-  }
+/* First-run gate: if cloud sync is set up for this deployment but this device has
+   never been given an access code, don't show ANYTHING about the ranch — no name, no
+   location, no map — until someone proves they belong here. Skipped entirely if this
+   build has no Worker configured (CLOUD_SYNC_BASE still the placeholder), so the app
+   still works standalone for anyone who forks it without wiring up cloud sync. */
+function renderSignIn(msg){
+  document.getElementById('start').classList.add('show');
+  setHtml('startBody',`<div class="stitle"><h1>HedgeRight</h1></div>
+    <p class="mute">Sign in to sync with the shared ranch design.</p>
+    ${msg?`<p class="small alert">${esc(msg)}</p>`:''}
+    <form onsubmit="event.preventDefault();trySignIn();">
+      <label>Access code</label>
+      <input type="password" id="signInCode" name="hedgeright-access-code" autocomplete="current-password" placeholder="your access code">
+      <div class="row" style="margin-top:10px"><button type="submit" class="primary">Sign in</button></div>
+    </form>
+    <p class="small mute" id="signInStatus"></p>`); }
+async function trySignIn(){
+  const inp=document.getElementById('signInCode'); if(!inp) return;
+  const code=inp.value.trim(); if(!code) return;
+  const status=document.getElementById('signInStatus'); if(status) status.textContent='Signing in…';
+  setAccessCode(code);
+  const data=await cloudPull(); await cloudWhoAmI();
+  if(!cloudIdentity.role){ setAccessCode(''); if(status) status.textContent="That code wasn't recognized. Check it and try again."; return; }
+  S=data||defaultState(); normalizeState();
+  hideStart(); finishBoot(); }
+function showMapLoadError(){
+  document.getElementById('start').classList.add('show');
+  setHtml('startBody',`<h1 style="font-size:21px">The map library did not load</h1>
+    <p class="small">HedgeRight draws on Leaflet and Esri imagery from the internet. Something blocked that — no connection, a firewall, or a viewer that will not fetch outside files.</p>
+    <p class="small">Try reloading. Your saved designs are untouched either way, and JSON import/export still works.</p>
+    <div class="row"><button class="small" onclick="location.reload()">Try again</button>
+      <button class="small" onclick="document.getElementById('impStart').click()">Import JSON</button>
+      <input id="impStart" type="file" accept="application/json" style="display:none" onchange="if(this.files[0]) importJSON(this.files[0])"></div>`); }
+function finishBoot(){
   try{ initMap(); }
   catch(e){
     document.getElementById('start').classList.add('show');
@@ -2349,7 +2364,19 @@ function finishWizard(){ hideStart(); }
   renderPanels();
   showTab('ranch');
   renderCloudStatus();
-  window.addEventListener('beforeunload',()=>{ try{ localStorage.setItem('hedgeright.autosave',JSON.stringify(S)); }catch(e){} });
+  window.addEventListener('beforeunload',()=>{ try{ localStorage.setItem('hedgeright.autosave',JSON.stringify(S)); }catch(e){} }); }
+(async function boot(){
+  loadAutoSavePref();
+  if(typeof L==='undefined'||!L.map){ showMapLoadError(); return; }
+  if(cloudDeployed()&&!accessCode()){ renderSignIn(); return; }
+  let loaded=false;
+  if(cloudConfigured()){ const cloud=await cloudPull(); if(cloud){ S=cloud; loaded=true; } cloudWhoAmI(); }
+  if(!loaded){
+    try{ const saved=localStorage.getItem('hedgeright.autosave'); S=saved?JSON.parse(saved):defaultState(); }
+    catch(e){ S=defaultState(); }
+  }
+  normalizeState();
+  finishBoot();
 })();
 </script>
 </body>
