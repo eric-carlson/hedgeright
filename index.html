@@ -124,6 +124,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .sp{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1px solid transparent}
 .sp:hover{background:#fff}
 .sp.on{border-color:var(--ink);background:#fff}
+.sp.excluded{opacity:.5}
+.sp.excluded .n{color:var(--mute)}
 .sp .n{flex:1;min-width:0}
 .sp .n i{color:var(--mute);font-size:12px;display:block;font-style:italic}
 .bigbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 14px;border-radius:12px;
@@ -385,14 +387,14 @@ body.wide{--panelW:560px}
   <div id="mapWrap">
     <div id="map"></div>
     <div id="modebar">
-      <button id="m-select" onclick="setMode('select')" class="on">Select</button>
-      <button id="m-hedge" onclick="setMode('hedge')">Draw hedgerow</button>
-      <button id="m-paint" onclick="setMode('paint')">Paint</button>
-      <button id="m-erase" onclick="setMode('erase')">Erase</button>
-      <button id="m-wnode" onclick="setMode('wnode')">Place water node</button>
-      <button id="m-wline" onclick="setMode('wline')">Draw pipe</button>
-      <button id="m-aoi" onclick="setMode('aoi')">Study area</button>
-      <button id="m-finish" onclick="finishDraw()" style="display:none">Finish</button>
+      <button id="m-select" onclick="setMode('select')" class="on" title="Tap the map to read an acre, or click a hedgerow or water feature to select it.">Select</button>
+      <button id="m-hedge" onclick="setMode('hedge')" title="Tap along the hedgerow's centreline. Double-tap or Finish to end.">Draw hedgerow</button>
+      <button id="m-paint" onclick="setMode('paint')" title="Pick a species in the Plants tab, then drag along a row on the map to plant it.">Paint</button>
+      <button id="m-erase" onclick="setMode('erase')" title="Drag along a row on the map to remove whatever's planted there.">Erase</button>
+      <button id="m-wnode" onclick="setMode('wnode')" title="Tap the map to place a water node — tank, well, pond, valve, or regulator.">Place water node</button>
+      <button id="m-wline" onclick="setMode('wline')" title="Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.">Draw pipe</button>
+      <button id="m-aoi" onclick="setMode('aoi')" title="Outline the ground you want read and ranked — three corners is enough. Double-tap or Finish to close it.">Study area</button>
+      <button id="m-finish" onclick="finishDraw()" style="display:none" title="Close the shape you're drawing.">Finish</button>
     </div>
     <div id="modeBanner"></div>
     <div id="busy"><svg class="hrlogo" viewBox="0 0 96 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -451,6 +453,7 @@ function downloadApp(){
 const CLOUD_SYNC_BASE='https://hedgeright-sync.eric-carlson.workers.dev';
 let cloudStatus={state:'unconfigured',msg:'',at:null};
 let cloudIdentity={role:null,name:null};
+let _cloudUpdatedAt=null; /* what we believe the server's current version is, from our last successful pull or push */
 function accessCode(){ try{ return localStorage.getItem('hedgeright.accessCode')||''; }catch(e){ return ''; } }
 function setAccessCode(t){ try{ localStorage.setItem('hedgeright.accessCode',t); }catch(e){} }
 function cloudDeployed(){ return !!(CLOUD_SYNC_BASE&&!CLOUD_SYNC_BASE.includes('YOUR-WORKER-SUBDOMAIN')); }
@@ -460,19 +463,36 @@ async function cloudPull(){
   try{ const r=await fetch(CLOUD_SYNC_BASE+'/design',{headers:{'Authorization':'Bearer '+accessCode()}});
     if(r.status===401){ cloudStatus={state:'error',msg:'invalid access code',at:Date.now()}; renderCloudStatus(); return null; }
     if(!r.ok) throw new Error('HTTP '+r.status);
-    const txt=await r.text(); cloudStatus={state:'ok',msg:'synced',at:Date.now()}; renderCloudStatus();
-    if(!txt||txt==='null') return null; return JSON.parse(txt); }
+    const js=await r.json(); cloudStatus={state:'ok',msg:'synced',at:Date.now()}; _cloudUpdatedAt=js.updatedAt!==undefined?js.updatedAt:null; renderCloudStatus();
+    return js.data||null; }
   catch(e){ cloudStatus={state:'error',msg:(e&&e.message)||String(e),at:Date.now()}; renderCloudStatus(); return null; } }
 async function cloudPush(){
   if(!cloudConfigured()) return;
   if(cloudIdentity.role==='viewer'){ cloudStatus={state:'error',msg:"view-only access — this change wasn't saved to the shared design",at:Date.now()}; renderCloudStatus(); return; }
-  try{ const r=await fetch(CLOUD_SYNC_BASE+'/design',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify(S)});
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/design',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify({data:S,expectedUpdatedAt:_cloudUpdatedAt})});
     if(r.status===403){ cloudStatus={state:'error',msg:"view-only access — this change wasn't saved to the shared design",at:Date.now()}; renderCloudStatus(); return; }
     if(r.status===401){ cloudStatus={state:'error',msg:'invalid access code',at:Date.now()}; renderCloudStatus(); return; }
     if(!r.ok) throw new Error('HTTP '+r.status);
-    cloudStatus={state:'ok',msg:'synced',at:Date.now()}; }
+    const js=await r.json(); _cloudUpdatedAt=js.updatedAt; cloudStatus={state:'ok',msg:'synced',at:Date.now()}; }
   catch(e){ cloudStatus={state:'error',msg:(e&&e.message)||String(e),at:Date.now()}; }
   renderCloudStatus(); }
+/* Reloading replaces S with whatever is currently on the server — only ever triggered
+   by the person explicitly clicking "Reload" on a conflict/staleness toast, never
+   automatically, since it discards whatever unsaved local edit prompted the warning. */
+async function reloadFromCloud(){
+  const data=await cloudPull();
+  if(data){ S=data; normalizeState(); if(map){ map.setView(R().center,R().zoom); drawAll(); if(hexOn) drawHexes(); if(heatOn) drawHeat(); } renderPanels(); UI.toast('Reloaded from the shared design.'); } }
+/* Opportunistic check, not a poll loop: whenever the tab regains focus, ask the server
+   what its current version is (cheap — one GET) and compare against what we last saw.
+   If it's newer, someone else has saved since we loaded — say so and offer to reload,
+   without touching S until the person chooses to. */
+async function checkStale(){
+  if(!cloudConfigured()) return;
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/design',{headers:{'Authorization':'Bearer '+accessCode()}});
+    if(!r.ok) return; const js=await r.json();
+    if(_cloudUpdatedAt!==null&&js.updatedAt!==null&&js.updatedAt>_cloudUpdatedAt){
+      UI.toast((js.updatedBy?js.updatedBy+' updated':'Someone updated')+' the shared design since this loaded.',{label:'Reload',fn:reloadFromCloud}); } }
+  catch(e){} }
 async function cloudWhoAmI(){
   if(!cloudConfigured()){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); return; }
   try{ const r=await fetch(CLOUD_SYNC_BASE+'/whoami',{headers:{'Authorization':'Bearer '+accessCode()}});
@@ -839,8 +859,8 @@ function plantRadius(){ const z=map.getZoom(); return z>=20?7:z>=19?5:z>=18?4:z>
 function drawPlants(){ plantLayer.clearLayers(); if(map.getZoom()<15) return; const rad=plantRadius();
   R().hedgerows.forEach(h=>{ const lines=rowLines(h); h.rows.forEach((r,i)=>{ r.plants.forEach(p=>{ const sp=SP(p.sp); if(!sp) return; const ll=pointAtFt(lines[i],p.ft);
     const m=L.circleMarker(ll,{pane:'plantP',renderer:canvasR,radius:rad,color:'#111',weight:.6,fillColor:sp.color,fillOpacity:.95,interactive:mode==='select'}).addTo(plantLayer);
-    if(mode==='select'){ m.bindTooltip(sp.common+' · '+Math.round(p.ft)+' ft · '+r.name+' — double-click for the record',{sticky:true});
-      m.on('dblclick',e=>{ L.DomEvent.stop(e); openPlant(h.id,i,p.ft,sp.id); });
+    if(mode==='select'){ m.bindTooltip(sp.common+' · '+Math.round(p.ft)+' ft · '+r.name+' — click for more info',{sticky:true});
+      m.on('dblclick',e=>{ L.DomEvent.stop(e); }); /* swallow it so a fast double-click doesn't fall through to the map's zoom */
       m.on('click',e=>{ L.DomEvent.stop(e); clearTimeout(m._t); m._t=setTimeout(()=>openPlant(h.id,i,p.ft,sp.id),220); }); } }); }); });
 }
 
@@ -909,7 +929,7 @@ function openPlant(hid,rowIdx,ft,spId){
     <div class="refs">${refLinksHtml(sp)}</div>`;
   UI.open(sp.common,body,[
     {label:'Remove this plant',danger:true,value:'del'},
-    {label:'Swap the species here',value:'swap'},
+    {label:'Change this plant…',value:'swap'},
     {label:'Close',primary:true,value:null}]).then(v=>{
       if(v==='del') removePlantAt(hid,rowIdx,ft,spId);
       if(v==='swap') swapPlantAt(hid,rowIdx,ft,spId); }); }
@@ -937,7 +957,7 @@ function setMode(m){ if(mode==='hedge'||mode==='wline'||mode==='pond'||mode==='a
   map.getContainer().style.cursor=(m==='select')?'':'crosshair';
   handleLayer.clearLayers();
   const hints={select:'',hedge:'Tap along the hedgerow centreline. Double-tap or Finish to end.',paint:S.sel.species?('Painting '+SP(S.sel.species).common+' — drag along a row.'):'Pick a species in the Plants tab, then drag along a row.',erase:'Drag along a row to remove plants.',wnode:'Tap the map to place a '+WKINDS[wnodeKind].label.toLowerCase()+'.',aoi:'Tap a loose outline around the ground you want ranked — three corners is enough. Double-tap or Finish to close it.',creek:'Trace the creek, ditch or swale down its channel. Double-tap or Finish to end.',wline:'Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.',pond:'Tap around the pond edge at full pool. Finish to close the outline.',aoi:'Tap a loose outline around the ground you want ranked. Double-tap or Finish to close it.'};
-  readout(hints[m]); modeBanner(); if(m==='paint') showTab('paint'); if(m==='wnode'||m==='wline'||m==='pond'||m==='creek') showTab('water'); if(m==='aoi') showTab('goals'); if(m==='hedge') showTab('rows'); drawAll(); }
+  readout(hints[m]); modeBanner(); if(m==='paint'||m==='erase') showTab('paint'); if(m==='wnode'||m==='wline'||m==='pond'||m==='creek') showTab('water'); if(m==='aoi') showTab('goals'); if(m==='hedge') showTab('rows'); drawAll(); }
 let wnodeKind='tank';
 let _selClickTimer=null;
 function onMapClick(e){ const ll=[e.latlng.lat,e.latlng.lng];
@@ -1096,9 +1116,10 @@ async function openHedge(h){ S.sel.hedge=h.id; S.sel.row=0;
   readout(h.name+' — '+Math.round(pathLenFt(h.centerline))+' ft, '+h.rows.length+' rows'
     +(site.length?' · '+site.length+' acre'+(site.length===1?'':'s')+' read, moisture '+Math.min(...ms).toFixed(2)+'–'+Math.max(...ms).toFixed(2):''));
   if(!h.rows.some(r=>r.plants.length)){
-    const ready=planSet().length||Object.values(R().goals||{}).some(v=>+v>0);
+    const excluded=planExcluded().length;
+    const ready=excluded||Object.values(R().goals||{}).some(v=>+v>0);
     const go=await UI.confirm(ready
-        ? 'Fill '+h.name+' now from '+(planSet().length?'your '+planSet().length+' chosen plants':'your goals')+' and the ground you just read? You can change anything afterwards, and it is undoable.'
+        ? 'Fill '+h.name+' now from your goals and the ground you just read'+(excluded?' (ruling out '+excluded+' species you excluded)':'')+'? You can change anything afterwards, and it is undoable.'
         : 'Fill '+h.name+' now? Nothing is weighted yet, so the tool will choose on site fit alone — setting goals first gives a better row.',
       {title:'Fill the rows?',ok:ready?'Fill it':'Fill it anyway',cancel:ready?'I will paint it myself':'Set goals first'});
     if(go) doPopulate(); else if(!ready) showTab('goals');
@@ -1659,7 +1680,7 @@ function siteSummaryFit(sp){ const h=curHedge(); if(!h) return null;
   return {score:Math.max(mean,best.score*0.85),why:best.why,best:best.score,mean};
 }
 function shortlist(){ return S.species.map(sp=>{ const g=goalScore(sp), f=siteSummaryFit(sp); let total=null; if(g!=null&&f) total=0.6*g+0.4*f.score; else if(g!=null) total=g; else if(f) total=f.score; return {sp,g,f,total}; }).sort((a,b)=>(b.total||0)-(a.total||0)); }
-function planSet(){ R().plan=R().plan||{}; R().plan.set=R().plan.set||[]; return R().plan.set; }
+function planExcluded(){ R().plan=R().plan||{}; R().plan.excluded=R().plan.excluded||[]; return R().plan.excluded; }
 function bloomCoverage(ids){ const cov=new Array(12).fill(0); ids.forEach(id=>{ const sp=SP(id); if(sp) (sp.bloom||[]).forEach(m=>cov[m-1]++); }); return cov; }
 function storyCoverage(ids){ const st={over:0,mid:0,ground:0,nurse:0,vine:0}; ids.forEach(id=>{ const sp=SP(id); if(sp) st[sp.story]++; }); return st; }
 function plantsXY(h){ const out=[]; const xs=rowOffsetsFt(h); h.rows.forEach((r,i)=>{ const x=xs[i]; r.plants.forEach((p,pi)=>{ const s=SP(p.sp); if(s) out.push({h,r,i,p,pi,sp:s,x,ft:p.ft}); }); }); return out; }
@@ -1744,7 +1765,7 @@ function regimeForMoisture(m,i,n,isDriest){ if(n===1) return 'perm'; if(m<0.33) 
 function shadeUnder(dom){ return !!dom&&(dom.cast==='dense'||(dom.cast==='light'&&dom.rad>=6)); }
 function fitForRow(sp,h,i,moist,regime){ const L=rowLenFt(h,i); const info=Object.assign({soil:null,waterFt:null,aspectDeg:null,slopePct:0},stationInfo(h,i,L/2)); info.wet=moist; return speciesFit(sp,info,{regime}); }
 function fitAtStation(sp,h,i,ft,regime){ if(!hedgeHexes(h).length&&!ponds().length) return null; return speciesFit(sp,stationInfo(h,i,ft),{regime}); }
-function candidatePool(){ const set=planSet(); if(set.length>=4) return set.map(SP).filter(Boolean); const sl=shortlist(); return sl.slice(0,16).map(x=>x.sp); }
+function candidatePool(){ const excluded=new Set(planExcluded()); return shortlist().filter(x=>!excluded.has(x.sp.id)).slice(0,16).map(x=>x.sp); }
 function regimeOk(sp,regime){ if(regime==='wean') return sp.regime==='wean'||sp.story==='nurse'; if(regime==='reduce') return sp.regime!=='perm'; return sp.regime!=='wean'; }
 function buildComp(h,i,moist,regime,pool,coveredMonths,usedDom){ usedDom=usedDom||new Set(); const scoreOf=sp=>{ const g=goalScore(sp), f=fitForRow(sp,h,i,moist,regime); const gapBonus=(sp.bloom||[]).some(m=>!coveredMonths.has(m))?0.12:0; return {sp,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+gapBonus-(usedDom.has(sp.id)?0.12:0),f}; };
   const inPool=new Set(pool.map(x=>x.id)); const scores=S.species.filter(sp=>regimeOk(sp,regime)).map(scoreOf).map(x=>{ if(!inPool.has(x.sp.id)) x.s-=0.25; return x; }).sort((a,b)=>b.s-a.s);
@@ -1875,7 +1896,7 @@ const STAGE_ORDER=['ranch','water','goals','rows','paint','build','shop','report
 function stageDone(t){ const r=R(); switch(t){
   case 'ranch': return !!(r.hedgerows.length||r.name!=='New ranch');
   case 'water': return r.water.nodes.length>0||(r.creeks||[]).length>0;
-  case 'goals': return Object.values(r.goals||{}).some(v=>+v>0)||planSet().length>0;
+  case 'goals': return Object.values(r.goals||{}).some(v=>+v>0)||planExcluded().length>0;
   case 'rows': return r.hedgerows.length>0;
   case 'paint': return r.hedgerows.some(h=>h.rows.some(rr=>rr.plants.length));
   case 'build': return r.hedgerows.some(h=>h.rows.some(rr=>rr.plants.length));
@@ -1896,7 +1917,7 @@ const STAGE_NEXT={ranch:'water',water:'goals',goals:'rows',rows:'paint',paint:'b
 function renderStageBar(t){ const el=document.getElementById('stageBar'); if(!el) return;
   const nx=STAGE_NEXT[t]; const r=R();
   const why={ranch:'',water:r.water.nodes.length?'':'Not required, but irrigation and seep modelling need it.',
-    goals:planSet().length||Object.values(r.goals||{}).some(v=>+v>0)?'':'Skippable — fills on site fit alone if you move on.',
+    goals:planExcluded().length||Object.values(r.goals||{}).some(v=>+v>0)?'':'Skippable — fills on site fit alone if you move on.',
     rows:r.hedgerows.length?'':'Draw at least one hedgerow to continue.',
     paint:r.hedgerows.some(h=>h.rows.some(rr=>rr.plants.length))?'':'Paint by hand, or auto-fill from the Rows tab.',
     build:'',shop:'',report:''}[t];
@@ -1998,7 +2019,7 @@ function renderRows(){ const h=curHedge(); const r=R(); let html='';
   html+=h.rows.map((r0,i)=>{ const sel=S.sel.row===i; const st=rowStats(h,i); const m=moist[i];
     return `<div class="card${sel?' sel':''}" onclick="S.sel.row=${i};drawAll();renderPanels()">
       <div class="row"><input type="text" class="grow" value="${esc(r0.name)}" onclick="event.stopPropagation()" onchange="commit('Rename row',()=>{curHedge().rows[${i}].name=this.value});drawAll();renderPanels()">
-        <select onclick="event.stopPropagation()" onchange="commit('Set regime',()=>curHedge().rows[${i}].regime=this.value);renderPanels();saveSoon()">${Object.keys(REGIMES).map(k=>`<option value="${k}"${r0.regime===k?' selected':''}>${REGIMES[k]}</option>`).join('')}</select></div>
+        <label style="margin:0">Regime</label><select style="width:104px" title="${esc(REGIMES[r0.regime])}" onclick="event.stopPropagation()" onchange="commit('Set regime',()=>curHedge().rows[${i}].regime=this.value);renderPanels();saveSoon()">${Object.keys(REGIMES).map(k=>`<option value="${k}"${r0.regime===k?' selected':''}>${REGIMES[k]}</option>`).join('')}</select></div>
       <p class="small mute">${Math.round(rowLenFt(h,i))} ft · ${st.n} plants · ${st.gpm.toFixed(2)} gpm${site.length?' · moisture '+m.toFixed(2):''}</p>
       ${i<h.rows.length-1?`<label style="margin:4px 0 0">Gap to next row, ft</label><input type="number" min="3" max="30" value="${(h.gapsFt&&h.gapsFt[i])||h.rowSpacingFt||8}" onclick="event.stopPropagation()" onchange="commit('Set row gap',()=>{curHedge().gapsFt=curHedge().gapsFt||[];curHedge().gapsFt[${i}]=+this.value;clampPlants(curHedge())});drawAll();renderPanels()">`:''}
     </div>`; }).join('');
@@ -2021,7 +2042,8 @@ function renderWater(){ const r=R(); const sol=solveNet();
     <button class="small primary" onclick="findAllWater()">Find both at once</button>
     ${(foundPonds.length||foundCreeks.length)?`<p class="small">${foundPonds.length} pond${foundPonds.length===1?'':'s'}/wetland${foundPonds.length===1?'':'s'}, ${foundCreeks.length} stream${foundCreeks.length===1?'':'s'} found in view — tap one on the map, or:</p>
       <div class="row">${foundPonds.length?`<button class="small" onclick="adoptAllPonds(true)">Add all ponds</button><button class="small" onclick="adoptAllPonds(false)">Add every water feature</button>`:''}${foundCreeks.length?`<button class="small" onclick="adoptAllCreeks()">Add all streams</button>`:''}</div>`:''}
-    <h2>Nodes</h2><div class="row">${Object.keys(WKINDS).filter(k=>k!=='pond').map(k=>`<button class="small${wnodeKind===k?' on':''}" onclick="wnodeKind='${k}';setMode('wnode')">${WKINDS[k].label}</button>`).join('')}<button class="small" onclick="setMode('pond')">Draw pond outline</button></div>`;
+    <h2>Add a node</h2><div class="row">${Object.keys(WKINDS).filter(k=>k!=='pond').map(k=>`<button class="small${wnodeKind===k?' on':''}" onclick="wnodeKind='${k}';setMode('wnode')">${WKINDS[k].label}</button>`).join('')}<button class="small" onclick="setMode('pond')">Draw pond outline</button></div>
+    <h2>Nodes</h2>`+nodesHtml();
   const n=r.water.nodes.find(x=>x.id===S.sel.wnode);
   if(n){ const so=sol.nodes[n.id];
     html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(n.name)}" onchange="commit('Rename node',()=>{wnodeById('${n.id}').name=this.value});drawWater();renderPanels()"><button class="small danger" onclick="delNode('${n.id}')">Delete</button></div>
@@ -2041,6 +2063,11 @@ function renderWater(){ const r=R(); const sol=solveNet();
   html+=`<h2>Creeks</h2><div class="row"><button class="small" onclick="setMode('creek')">Trace a creek</button></div>`+creeksHtml();
   html+=`<h2>Network</h2>`+renderIrrigation();
   setHtml('tab-water',html); }
+function nodesHtml(){ const nodes=R().water.nodes;
+  if(!nodes.length) return `<p class="small mute">None yet. Add one above, or draw a pond outline.</p>`;
+  return nodes.map(n=>{ const sel=n.id===S.sel.wnode;
+    return `<div class="card${sel?' sel':''}" onclick="S.sel.wnode='${n.id}';S.sel.wline=null;drawAll();renderPanels()">
+      <b>${esc(n.name)}</b><span class="small mute"> · ${esc((WKINDS[n.kind]||{}).label||n.kind)}${n.elevFt!=null?' · '+n.elevFt.toFixed(0)+' ft':''}</span></div>`; }).join(''); }
 function wnodeById(id){ return R().water.nodes.find(n=>n.id===id); }
 function wlineById(id){ return R().water.lines.find(n=>n.id===id); }
 function delNode(id){ commit('Delete node',()=>{ R().water.nodes=R().water.nodes.filter(n=>n.id!==id); R().water.lines=R().water.lines.filter(l=>l.a!==id&&l.b!==id); }); S.sel.wnode=null; drawAll(); renderPanels(); }
@@ -2097,13 +2124,15 @@ function renderGoals(){ const r=R(); r.goals=r.goals||{}; let html=`<h2>What do 
     <div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`;
   html+=`<h2>Shortlist</h2>`;
   const sl=shortlist().slice(0,24);
-  html+=sl.map(x=>{ const inSet=planSet().includes(x.sp.id);
-    return `<div class="sp${inSet?' on':''}" onclick="openSpeciesInfo('${x.sp.id}')"><span class="swatch" style="background:${x.sp.color}"></span>
+  html+=sl.map(x=>{ const excluded=planExcluded().includes(x.sp.id);
+    return `<div class="sp${excluded?' excluded':''}" onclick="openSpeciesInfo('${x.sp.id}')">
+      <input type="checkbox" onclick="event.stopPropagation();toggleExcluded('${x.sp.id}')" ${excluded?'':'checked'} title="${excluded?'Excluded from auto-fill':'Eligible for auto-fill'}">
+      <span class="swatch" style="background:${x.sp.color}"></span>
       <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))} · ${x.sp.moisture}</i></span>
-      <span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span>
-      <button class="addbtn ${inSet?'in':''}" onclick="event.stopPropagation();togglePlanSet('${x.sp.id}')">${inSet?'✓ in plan':'+ add'}</button></div>`; }).join('');
+      <span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
   setHtml('tab-goals',html); }
-function togglePlanSet(id){ commit((planSet().includes(id)?'Remove ':'Add ')+((SP(id)||{}).common||'species')+' to plan',()=>{ const set=planSet(); const i=set.indexOf(id); if(i>=0) set.splice(i,1); else set.push(id); }); renderPanels(); }
+function toggleExcluded(id){ const was=planExcluded().includes(id); const label=(was?'Include ':'Exclude ')+((SP(id)||{}).common||'species')+(was?' in auto-fill again':' from auto-fill');
+  commit(label,()=>{ const set=planExcluded(); const i=set.indexOf(id); if(i>=0) set.splice(i,1); else set.push(id); }); renderPanels(); }
 async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=siteSummaryFit(sp); const g=goalScore(sp);
   const body=`<p class="small"><i>${esc(sp.sci)}</i> ${prov('lib')}<br>${esc(sp.notes||'')}</p>
     <p class="small"><span class="pill">${esc(sp.story)}</span><span class="pill">${sp.ht}×${sp.rad*2} ft</span><span class="pill">bloom ${esc(bloomStr(sp))}</span><span class="pill">${esc(sp.moisture)}</span></p>
@@ -2112,17 +2141,20 @@ async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=si
     <div id="diag_${id}">${diagnosisHtml(id)}</div>
     ${photoStrip(id)}
     <div class="refs">${refLinksHtml(sp)}</div>`;
-  const inSet=planSet().includes(id);
-  UI.open(sp.common,body,[{label:inSet?'Remove from plan':'Add to plan',primary:true,value:'toggle'},{label:'Close',value:null}]).then(v=>{ if(v==='toggle') togglePlanSet(id); }); }
+  const excluded=planExcluded().includes(id);
+  UI.open(sp.common,body,[{label:excluded?'Include in auto-fill':'Exclude from auto-fill',primary:true,value:'toggle'},{label:'Close',value:null}]).then(v=>{ if(v==='toggle') toggleExcluded(id); }); }
 function renderPaint(){ const h=curHedge(); let html='';
   if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`); return; }
   const r=h.rows[S.sel.row||0];
-  html+=`<p class="small">Painting into <b>${esc(r?r.name:'')}</b> — pick a species, then drag along the row on the map.</p>`;
-  html+=`<div class="row"><button class="small${mode==='paint'?' on':''}" onclick="setMode('paint')">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="setMode('erase')">Erase mode</button></div>`;
+  html+=`<div class="row"><button class="small" onclick="doPopulate()">Auto-fill</button><button class="small${mode==='paint'?' on':''}" onclick="setMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="setMode('erase');renderPaint()">Erase mode</button></div>`;
+  if(mode==='paint') html+=`<p class="small">Painting into <b>${esc(r?r.name:'')}</b> — pick a species, then drag along the row on the map.</p>`;
+  else if(mode==='erase') html+=`<p class="small">Erasing from <b>${esc(r?r.name:'')}</b> — drag along the row on the map to clear whatever's planted there.</p>`;
   const site=r?stationInfo(h,S.sel.row||0,rowLenFt(h,S.sel.row||0)/2):null;
   const sl=shortlist();
-  html+=`<h2>Species</h2>`+sl.map(x=>{ const on=S.sel.species===x.sp.id;
-    return `<div class="sp${on?' on':''}" onclick="S.sel.species='${x.sp.id}';setMode('paint');renderPaint()"><span class="swatch" style="background:${x.sp.color}"></span>
+  html+=`<h2>Species</h2>`+sl.map(x=>{ const on=S.sel.species===x.sp.id; const excluded=planExcluded().includes(x.sp.id);
+    return `<div class="sp${on?' on':''}${excluded?' excluded':''}" onclick="S.sel.species='${x.sp.id}';renderPaint()">
+      <input type="checkbox" onclick="event.stopPropagation();toggleExcluded('${x.sp.id}')" ${excluded?'':'checked'} title="${excluded?'Excluded from auto-fill':'Eligible for auto-fill'}">
+      <span class="swatch" style="background:${x.sp.color}"></span>
       <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))}</i></span><span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
   setHtml('tab-paint',html); }
 let dockPinned=null;
@@ -2415,7 +2447,8 @@ function finishBoot(){
   renderPanels();
   showTab('ranch');
   renderCloudStatus();
-  window.addEventListener('beforeunload',()=>{ try{ localStorage.setItem('hedgeright.autosave',JSON.stringify(S)); }catch(e){} }); }
+  window.addEventListener('beforeunload',()=>{ try{ localStorage.setItem('hedgeright.autosave',JSON.stringify(S)); }catch(e){} });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') checkStale(); }); }
 (async function boot(){
   loadAutoSavePref();
   if(typeof L==='undefined'||!L.map){ showMapLoadError(); return; }
