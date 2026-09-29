@@ -151,6 +151,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .hint{font-size:13px;color:var(--mute);padding:8px 10px;border:1px dashed var(--line);border-radius:8px;margin:8px 0}
 details summary{cursor:pointer;color:var(--mute);font-size:13px}
 .leaflet-container{font-family:inherit}
+/* Leaflet toggles its own grab/grabbing cursor via CSS classes whenever map dragging is
+   enabled — which it needs to be during drawing modes, so you can pan to reach a distant
+   point. That class-based cursor can outrun a plain inline style, so force it here: while
+   actively drawing, the cursor is always crosshair, never a hand implying a point can be
+   dragged (it can't — only Select mode's centerline handles are draggable). */
+#map.hr-drawing,#map.hr-drawing .leaflet-grab,#map.hr-drawing .leaflet-interactive:not(.vh){cursor:crosshair!important}
+.vh{cursor:grab!important}
 .leaflet-tooltip.rowlab{background:rgba(30,42,34,.9);color:#EEF0E8;border:0;font-size:12px;padding:2px 6px;border-radius:4px;box-shadow:none}
 .leaflet-tooltip.rowlab::before{display:none}
 .vh{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -177,10 +184,6 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 #netBadge.show{display:inline-block}
 #netBadge.busy{background:var(--water2);color:var(--water)}
 #netBadge.bad{background:#F1D8CC;color:var(--alert)}
-#fsBadge{display:none;font-size:12px;padding:3px 8px;border-radius:9px;margin-left:6px;cursor:help}
-#fsBadge.show{display:inline-block}
-#fsBadge.ok{background:#DCE9DD;color:var(--ok)}
-#fsBadge.bad{background:#F1D8CC;color:var(--alert)}
 #saveWrap{position:relative;display:inline-flex}
 #saveBtn{font-size:12px;padding:3px 9px;border-radius:7px 0 0 7px;border-right:0}
 #saveBtn.dirty{background:#F6EBD2;border-color:#E4D3A8;color:var(--warn);font-weight:700}
@@ -351,7 +354,7 @@ body.wide{--panelW:560px}
     </g>
   </g>
 </svg>HedgeRight</h1>
-      <div id="histBar"><button onclick="openSettingsDialog()" title="Settings" style="font-size:19px;line-height:1;padding:3px 9px">⚙</button><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span><span id="fsBadge"></span></div>
+      <div id="histBar"><button onclick="openSettingsDialog()" title="Settings" style="font-size:19px;line-height:1;padding:3px 9px">⚙</button><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span></div>
       <div class="sub" id="ranchSub">California native hedgerows, planned by goal and grown on paper first</div>
     </div>
     <div id="grip" title="Drag to resize"></div>
@@ -444,42 +447,86 @@ function downloadApp(){
    One shared JSON blob, gated by a password set once per device. The Worker URL is
    fixed for this deployment; only the password lives in localStorage — recoverable
    from wherever you actually keep it (a password manager), same as any login. */
-const CLOUD_SYNC_URL='https://hedgeright-sync.eric-carlson.workers.dev/design';
+const CLOUD_SYNC_BASE='https://hedgeright-sync.eric-carlson.workers.dev';
 let cloudStatus={state:'unconfigured',msg:'',at:null};
-function cloudToken(){ try{ return localStorage.getItem('hedgeright.cloudToken')||''; }catch(e){ return ''; } }
-function setCloudTokenValue(t){ try{ localStorage.setItem('hedgeright.cloudToken',t); }catch(e){} }
-function cloudDeployed(){ return !!(CLOUD_SYNC_URL&&!CLOUD_SYNC_URL.includes('YOUR-WORKER-SUBDOMAIN')); }
-function cloudConfigured(){ return cloudDeployed()&&!!cloudToken(); }
+let cloudIdentity={role:null,name:null};
+function accessCode(){ try{ return localStorage.getItem('hedgeright.accessCode')||''; }catch(e){ return ''; } }
+function setAccessCode(t){ try{ localStorage.setItem('hedgeright.accessCode',t); }catch(e){} }
+function cloudDeployed(){ return !!(CLOUD_SYNC_BASE&&!CLOUD_SYNC_BASE.includes('YOUR-WORKER-SUBDOMAIN')); }
+function cloudConfigured(){ return cloudDeployed()&&!!accessCode(); }
 async function cloudPull(){
   if(!cloudConfigured()) return null;
-  try{ const r=await fetch(CLOUD_SYNC_URL,{headers:{'Authorization':'Bearer '+cloudToken()}});
-    if(r.status===401){ cloudStatus={state:'error',msg:'wrong password',at:Date.now()}; renderCloudStatus(); return null; }
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/design',{headers:{'Authorization':'Bearer '+accessCode()}});
+    if(r.status===401){ cloudStatus={state:'error',msg:'invalid access code',at:Date.now()}; renderCloudStatus(); return null; }
     if(!r.ok) throw new Error('HTTP '+r.status);
     const txt=await r.text(); cloudStatus={state:'ok',msg:'synced',at:Date.now()}; renderCloudStatus();
     if(!txt||txt==='null') return null; return JSON.parse(txt); }
   catch(e){ cloudStatus={state:'error',msg:(e&&e.message)||String(e),at:Date.now()}; renderCloudStatus(); return null; } }
 async function cloudPush(){
   if(!cloudConfigured()) return;
-  try{ const r=await fetch(CLOUD_SYNC_URL,{method:'PUT',headers:{'Authorization':'Bearer '+cloudToken(),'Content-Type':'application/json'},body:JSON.stringify(S)});
-    if(r.status===401){ cloudStatus={state:'error',msg:'wrong password',at:Date.now()}; renderCloudStatus(); return; }
+  if(cloudIdentity.role==='viewer'){ cloudStatus={state:'error',msg:"view-only access — this change wasn't saved to the shared design",at:Date.now()}; renderCloudStatus(); return; }
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/design',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify(S)});
+    if(r.status===403){ cloudStatus={state:'error',msg:"view-only access — this change wasn't saved to the shared design",at:Date.now()}; renderCloudStatus(); return; }
+    if(r.status===401){ cloudStatus={state:'error',msg:'invalid access code',at:Date.now()}; renderCloudStatus(); return; }
     if(!r.ok) throw new Error('HTTP '+r.status);
     cloudStatus={state:'ok',msg:'synced',at:Date.now()}; }
   catch(e){ cloudStatus={state:'error',msg:(e&&e.message)||String(e),at:Date.now()}; }
   renderCloudStatus(); }
+async function cloudWhoAmI(){
+  if(!cloudConfigured()){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); return; }
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/whoami',{headers:{'Authorization':'Bearer '+accessCode()}});
+    if(!r.ok){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); return; }
+    const js=await r.json(); cloudIdentity={role:js.role,name:js.name}; }
+  catch(e){ cloudIdentity={role:null,name:null}; }
+  renderCloudStatus(); renderPeopleAccess(); }
 function renderCloudStatus(){ const els=document.querySelectorAll('.cloudStatusEl'); if(!els.length) return;
   let text;
   if(!cloudDeployed()) text='Worker not deployed yet.';
-  else if(!cloudToken()) text='No password set on this device.';
-  else if(cloudStatus.state==='ok') text='Synced'+(cloudStatus.at?' · '+new Date(cloudStatus.at).toLocaleTimeString():'');
+  else if(!accessCode()) text='No access code set on this device.';
   else if(cloudStatus.state==='error') text='Sync failed: '+cloudStatus.msg;
+  else if(cloudIdentity.role) text='Signed in as '+cloudIdentity.name+' ('+cloudIdentity.role+')'+(cloudStatus.state==='ok'&&cloudStatus.at?' · synced '+new Date(cloudStatus.at).toLocaleTimeString():'');
+  else if(cloudStatus.state==='ok') text='Synced'+(cloudStatus.at?' · '+new Date(cloudStatus.at).toLocaleTimeString():'');
   else text='Not yet synced this session.';
   els.forEach(el=>el.textContent=text); }
-async function saveCloudToken(inputId){ inputId=inputId||'cloudToken'; const inp=document.getElementById(inputId); if(!inp) return; setCloudTokenValue(inp.value.trim());
-  renderCloudStatus(); const data=await cloudPull();
-  if(data){ commit('Pull cloud sync',()=>{ S=data; normalizeState(); }); if(map){ map.setView(R().center,R().zoom); drawAll(); } renderPanels(); } }
-function clearCloudToken(){ setCloudTokenValue(''); cloudStatus={state:'unconfigured',msg:'',at:null};
-  ['cloudToken','cloudTokenDlg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  renderCloudStatus(); renderPanels(); }
+async function saveAccessCode(inputId){ inputId=inputId||'accessCode'; const inp=document.getElementById(inputId); if(!inp) return; setAccessCode(inp.value.trim());
+  renderCloudStatus(); const data=await cloudPull(); await cloudWhoAmI();
+  if(data){ commit('Pull cloud sync',()=>{ S=data; normalizeState(); }); if(map){ map.setView(R().center,R().zoom); drawAll(); } }
+  renderPanels(); }
+function clearAccessCode(){ setAccessCode(''); cloudStatus={state:'unconfigured',msg:'',at:null}; cloudIdentity={role:null,name:null};
+  ['accessCode','accessCodeDlg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  renderCloudStatus(); renderPeopleAccess(); renderPanels(); }
+/* ---- People with access: owner-only. The owner's own bootstrap secret (the wrangler
+   SYNC_PASSWORD) never appears here — it isn't part of this list, it's what makes you
+   the owner in the first place. Every entry below is an editor or viewer, added and
+   removed freely without touching anyone else's code. ---- */
+let _peopleList=[];
+const ACCESS_WORDS=['oak','ridge','creek','hollow','meadow','grove','bramble','willow','fern','stone','maple','thicket','sparrow','otter','bracken','heron','alder','vale'];
+function genAccessCode(){ const w=()=>ACCESS_WORDS[Math.floor(Math.random()*ACCESS_WORDS.length)]; return w()+'-'+w()+'-'+Math.floor(10+Math.random()*90); }
+async function fetchUsers(){ if(!cloudConfigured()||cloudIdentity.role!=='owner') return null;
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/users',{headers:{'Authorization':'Bearer '+accessCode()}}); if(!r.ok) return null; return await r.json(); }
+  catch(e){ return null; } }
+async function saveUsers(list){
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/users',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify(list)});
+    if(!r.ok){ UI.toast('Could not save access list: HTTP '+r.status); return false; } return true; }
+  catch(e){ UI.toast('Could not save access list: '+((e&&e.message)||e)); return false; } }
+async function renderPeopleAccess(){ const els=document.querySelectorAll('.peopleAccessEl'); if(!els.length) return;
+  if(cloudIdentity.role!=='owner'){ els.forEach(el=>el.innerHTML=''); return; }
+  els.forEach(el=>el.innerHTML='<h2>People with access</h2><p class="small mute">Loading…</p>');
+  _peopleList=(await fetchUsers())||[]; paintPeopleAccess(); }
+function paintPeopleAccess(){ document.querySelectorAll('.peopleAccessEl').forEach(el=>el.innerHTML=peopleAccessHtml(_peopleList)); }
+function peopleAccessHtml(list){
+  return `<h2>People with access</h2>
+    <p class="small mute">Each person gets their own code. Removing someone here cuts off their access immediately — nobody else's code changes.</p>
+    ${list.map((u,i)=>`<div class="card"><div class="row">
+        <input type="text" class="grow" placeholder="name" value="${esc(u.name)}" onchange="updatePersonField(${i},'name',this.value)">
+        <select onchange="updatePersonField(${i},'role',this.value)"><option value="editor"${u.role==='editor'?' selected':''}>Editor</option><option value="viewer"${u.role==='viewer'?' selected':''}>Viewer</option></select>
+        <button class="small danger" onclick="removePerson(${i})">Remove</button></div>
+      <p class="small mute">Code: <code>${esc(u.code)}</code></p></div>`).join('')}
+    ${list.length?'':'<p class="small mute">Nobody added yet.</p>'}
+    <div class="row" style="margin-top:8px"><button class="small" onclick="addPerson()">Add someone</button></div>`; }
+function updatePersonField(i,field,val){ _peopleList[i][field]=val; paintPeopleAccess(); saveUsers(_peopleList); }
+function removePerson(i){ _peopleList.splice(i,1); paintPeopleAccess(); saveUsers(_peopleList); }
+function addPerson(){ _peopleList.push({name:'',code:genAccessCode(),role:'editor'}); paintPeopleAccess(); saveUsers(_peopleList); }
 
 /* ---------------- HexRow — map-based hedgerow planner
    Structure: state → geometry → map render → modes → hex info →
@@ -610,13 +657,12 @@ function commit(label,fn){ const before=JSON.stringify(S); const r=fn?fn():undef
   if(JSON.stringify(S)===before) return r;
   HIST.stack.push({label,state:before}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0;
   UI.toast(label, {label:'Undo', fn:undo}); updateHistButtons(); markDirty(); saveSoon();
-  if(FS.handle){ FS.dirty=true; fsBadge(); clearTimeout(HIST._fs); HIST._fs=setTimeout(()=>fsWrite(true),900); }
   return r; }
 function undo(){ const h=HIST.stack.pop(); if(!h){ UI.toast('Nothing to undo'); return; }
   HIST.redo.push({label:h.label,state:JSON.stringify(S)}); applyState(h.state); UI.toast('Undid: '+h.label,{label:'Redo',fn:redo}); }
 function redo(){ const h=HIST.redo.pop(); if(!h){ UI.toast('Nothing to redo'); return; }
   HIST.stack.push({label:h.label,state:JSON.stringify(S)}); applyState(h.state); UI.toast('Redid: '+h.label,{label:'Undo',fn:undo}); }
-function applyState(json){ S=JSON.parse(json); normalizeState(); if(FS.handle){ FS.dirty=true; fsBadge(); clearTimeout(HIST._fs); HIST._fs=setTimeout(()=>fsWrite(true),900); } if(map){ drawAll(); if(hexOn) drawHexes(); if(heatOn) drawHeat(); } renderPanels(); updateHistButtons(); saveSoon(); }
+function applyState(json){ S=JSON.parse(json); normalizeState(); if(map){ drawAll(); if(hexOn) drawHexes(); if(heatOn) drawHeat(); } renderPanels(); updateHistButtons(); saveSoon(); }
 function updateHistButtons(){ const u=document.getElementById('btnUndo'), r=document.getElementById('btnRedo');
   if(u){ u.disabled=!HIST.stack.length; u.title=HIST.stack.length?'Undo '+HIST.stack[HIST.stack.length-1].label+' (Ctrl+Z)':'Nothing to undo'; }
   if(r){ r.disabled=!HIST.redo.length; r.title=HIST.redo.length?'Redo '+HIST.redo[HIST.redo.length-1].label+' (Ctrl+Shift+Z)':'Nothing to redo'; } }
@@ -647,44 +693,6 @@ const SRC_LABEL={ssurgo:'USDA SSURGO map unit — representative values for the 
   dem:'USGS 3DEP elevation, 1/3 arc-second',nhd:'USGS NHD hydrography',model:'Modelled by HedgeRight from the values above',
   lib:'Library default — horticultural reference, not measured here',obs:'You marked this as observed on the ranch',inat:'iNaturalist, CC0 and CC-BY photos only'};
 function prov(kind,extra){ return `<span class="prov" title="${esc((SRC_LABEL[kind]||kind)+(extra?' · '+extra:''))}">${kind==='obs'?'observed':kind==='model'?'modelled':kind}</span>`; }
-const FS={supported:(typeof window!=='undefined'&&!!window.showSaveFilePicker),handle:null,name:null,lastAt:null,dirty:false,err:null};
-const FS_TYPES=[{description:'HedgeRight design',accept:{'application/json':['.hedgeright.json','.json']}}];
-function fsFileName(){ const n=(curSave&&curSave.name)||R().name||'hedgeright'; return n.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').toLowerCase()+'.hedgeright.json'; }
-async function fsLink(){ if(!FS.supported){ UI.alert('This browser cannot write straight to a file. Chrome and Edge on the desktop can; Safari, Firefox and iOS cannot. Export JSON works everywhere.','Not available here'); return false; }
-  try{ FS.handle=await window.showSaveFilePicker({suggestedName:fsFileName(),types:FS_TYPES});
-    FS.name=FS.handle.name; FS.err=null; await fsWrite(true);
-    UI.toast('Linked to '+FS.name+' — saving there on every change'); renderPanels(); return true; }
-  catch(e){ if(e.name!=='AbortError'){ FS.err=e.message||String(e); UI.alert(FS.err,'Could not link that file'); } return false; } }
-async function fsOpen(){ if(!FS.supported){ document.getElementById('impStart')?document.getElementById('impStart').click():null; return; }
-  try{ const [h]=await window.showOpenFilePicker({types:FS_TYPES,multiple:false});
-    const txt=await (await h.getFile()).text(); const st=JSON.parse(txt);
-    if(!st.ranches) throw new Error('That is not a HedgeRight design file.');
-    commit('Open '+h.name,()=>{ S=st; normalizeState(); });
-    FS.handle=h; FS.name=h.name; FS.err=null; FS.lastAt=Date.now(); curSave={id:uid(),name:h.name.replace(/\.hedgeright\.json$|\.json$/,'')};
-    if(typeof hideStart==='function') hideStart(); if(map) map.setView(R().center,R().zoom);
-    drawAll(); renderPanels(); UI.toast('Opened '+h.name); }
-  catch(e){ if(e.name!=='AbortError') UI.alert(e.message||String(e),'Could not open that file'); } }
-async function fsWrite(quiet){ if(!FS.handle) return false;
-  try{ const w=await FS.handle.createWritable(); await w.write(JSON.stringify(S,null,1)); await w.close();
-    FS.lastAt=Date.now(); FS.dirty=false; FS.err=null; fsBadge(); if(!quiet) UI.toast('Saved to '+FS.name); return true; }
-  catch(e){ FS.err=e.message||String(e); FS.dirty=true; fsBadge();
-    if(!quiet) UI.alert('Could not write to '+FS.name+': '+FS.err+'. The file may have moved, or permission lapsed — link it again.','Save failed'); return false; } }
-function fsUnlink(){ FS.handle=null; FS.name=null; FS.err=null; fsBadge(); renderPanels(); UI.toast('Unlinked — saving to app storage only'); }
-function fsBadge(){ const b=document.getElementById('fsBadge'); if(!b) return;
-  if(!FS.handle){ b.className=''; b.textContent=''; return; }
-  if(FS.err){ b.className='show bad'; b.textContent='File save failed'; b.title=FS.err; return; }
-  b.className='show ok'; b.textContent=FS.dirty?'saving…':'saved to file';
-  b.title=FS.name+(FS.lastAt?' · last written '+new Date(FS.lastAt).toLocaleTimeString():''); }
-function fsStatusHtml(){
-  const cloudNote=cloudConfigured()
-    ?`<p class="small mute">Cloud sync is on for this device — this design is also written to your Cloudflare Worker on every change (see Cloud sync below), so that's a real second copy outside this browser.</p>`:'';
-  if(FS.handle) return `<p class="small"><b>${esc(FS.name)}</b> ${prov('obs','on your disk')}<br><span class="mute">Written on every change${FS.lastAt?', last at '+new Date(FS.lastAt).toLocaleTimeString():''}. This file is the real record — app storage is only a cache.</span></p>
-    <div class="row"><button class="small" onclick="fsWrite()">Save now</button><button class="small" onclick="fsLink()">Save to a different file…</button><button class="small" onclick="fsUnlink()">Unlink</button></div>`+cloudNote;
-  if(FS.supported) return `<p class="small">This design lives in the browser's storage, which the app does not control. Link it to a file on your own disk and every change is written straight there.</p>
-    <div class="row"><button onclick="fsLink()">Keep this design in a file…</button><button class="small" onclick="fsOpen()">Open a design file…</button></div>`+cloudNote;
-  return cloudConfigured()
-    ?`<p class="small mute">This browser cannot write straight to a file — that needs Chrome or Edge on a desktop. Cloud sync is on, though, so this design is also written to your Cloudflare Worker on every change — that's your real copy here.</p>`
-    :`<p class="small mute">This browser cannot write straight to a file — that needs Chrome or Edge on a desktop. Turn on Cloud sync below, or export JSON regularly, so you have a copy outside this browser's storage.</p>`; }
 const ICON={
   populate:`<svg viewBox="0 0 64 44" class="ic"><line x1="4" y1="37" x2="60" y2="37" stroke="#8A6B4A" stroke-width="2" stroke-linecap="round"/>
     <ellipse cx="14" cy="30" rx="7" ry="6" fill="#6FAF6A"/><rect x="12.6" y="30" width="2.8" height="7" fill="#3D6B45"/>
@@ -752,7 +760,7 @@ function hexRound(q,r){ let x=q,z=r,y=-x-z, rx=Math.round(x),ry=Math.round(y),rz
 function hexCenter(q,r){ return toLL([HEX_S*(Math.sqrt(3)*q+Math.sqrt(3)/2*r), HEX_S*1.5*r]); }
 function hexPoly(q,r){ const c=toXY(hexCenter(q,r)); const out=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-30); out.push(toLL([c[0]+HEX_S*Math.cos(a),c[1]+HEX_S*Math.sin(a)])); } return out; }
 const hkey=(q,r)=>q+','+r;
-let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, foundLayer, handleLayer, canvasR;
+let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, tmpPtsLayer, foundLayer, handleLayer, canvasR;
 let hexCanvas=null,hexCtx=null,heatCanvasEl=null,heatCtx=null,hexCells=[],heatCells=[],heatBest=null;
 let mode='select', tmpPts=[], painting=false, hoverHex=null;
 function initMap(){
@@ -776,8 +784,8 @@ function initMap(){
   map.getPane('hexP').appendChild(hexCanvas); map.getPane('hexP').appendChild(heatCanvasEl);
   hexCtx=hexCanvas.getContext('2d'); heatCtx=heatCanvasEl.getContext('2d');
   map.createPane('waterP'); map.getPane('waterP').style.zIndex=500;
-  rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); foundLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
-  map.on('click',onMapClick); map.on('dblclick',(e)=>{ if(['hedge','wline','pond','aoi','creek'].includes(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
+  rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); tmpPtsLayer=L.layerGroup().addTo(map); foundLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
+  map.on('click',onMapClick); map.on('dblclick',(e)=>{ clearTimeout(_selClickTimer); if(['hedge','wline','pond','aoi','creek'].includes(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
   map.on('mousedown',onDown); map.on('mousemove',onMove); map.on('mouseup',onUp);
   map.on('moveend',()=>{ const rr=R(); rr.center=[map.getCenter().lat,map.getCenter().lng]; rr.zoom=map.getZoom(); if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); if(soilOn) loadSoilPolys(); if(heatOn&&!aoi()) runHeat(); drawAll(); saveSoon(); });
   map.on('zoomend',()=>{ if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); drawAll(); });
@@ -793,7 +801,11 @@ function busy(on,label){ const el=document.getElementById('busy'); if(!el) retur
   else { _busyN=Math.max(0,_busyN-1); if(_busyN===0){ el.classList.add('done'); document.getElementById('busyText').textContent=label||'Read.'; _busyT=setTimeout(()=>{ el.classList.remove('show','done'); if(mw) mw.classList.remove('busy-active'); },700); } } }
 
 function drawAll(){ drawCreeks(); drawAoi(); drawRows(); drawPlants(); drawWater(); renderTape(); }
-function drawRows(){ rowLayer.clearLayers(); const labels=document.getElementById('lyLabels').checked, z=map.getZoom();
+function drawRows(){ drawRowLines(); R().hedgerows.forEach(h=>{ if(h.id===S.sel.hedge&&mode==='select') drawHandles(h); }); }
+/* Just the row polylines, no handle markers — safe to call on every tick of a handle
+   drag, since it never touches handleLayer and can't interrupt the marker currently
+   being dragged the way calling the full drawRows() (which recreates handles) did. */
+function drawRowLines(){ rowLayer.clearLayers(); const labels=document.getElementById('lyLabels').checked, z=map.getZoom();
   R().hedgerows.forEach(h=>{ const sel=h.id===S.sel.hedge; const lines=rowLines(h);
     L.polyline(h.centerline,{pane:'rowP',color:sel?'#fff':'#d9dccf',weight:1,opacity:.55,dashArray:'4 6',interactive:false}).addTo(rowLayer);
     lines.forEach((pts,i)=>{ const r=h.rows[i]; const rsel=sel&&S.sel.row===i;
@@ -801,12 +813,11 @@ function drawRows(){ rowLayer.clearLayers(); const labels=document.getElementByI
       if(mode==='select') pl.on('click',e=>{ L.DomEvent.stop(e); S.sel.hedge=h.id; S.sel.row=i; drawAll(); renderPanels(); });
       if(labels&&z>=16){ const mid=pointAtFt(pts,pathLenFt(pts)/2); L.tooltip({permanent:true,direction:'center',className:'rowlab',opacity:.9}).setLatLng(mid).setContent(h.name+' · '+r.name).addTo(rowLayer); }
     });
-    if(sel&&mode==='select') drawHandles(h);
   });
 }
 function drawHandles(h){ handleLayer.clearLayers(); h.centerline.forEach((pt,i)=>{ const mk=L.marker(pt,{draggable:true,icon:L.divIcon({className:'vh',iconSize:[18,18]}),keyboard:false,zIndexOffset:900}).addTo(handleLayer);
   let before=null; mk.on('dragstart',()=>{ before=JSON.stringify(S); });
-  mk.on('drag',()=>{ const ll=mk.getLatLng(); h.centerline[i]=[ll.lat,ll.lng]; drawRows(); });
+  mk.on('drag',()=>{ const ll=mk.getLatLng(); h.centerline[i]=[ll.lat,ll.lng]; drawRowLines(); });
   mk.on('dragend',()=>{ clampPlants(h); if(before&&JSON.stringify(S)!==before){ HIST.stack.push({label:'Reshape '+h.name,state:before}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0; updateHistButtons(); UI.toast('Reshape '+h.name,{label:'Undo',fn:undo}); } before=null; drawAll(); renderPanels(); saveSoon(); }); }); }
 function clampPlants(h){ h.rows.forEach((r,i)=>{ const L=rowLenFt(h,i); r.plants=r.plants.filter(p=>p.ft<=L+0.5); }); }
 function plantRadius(){ const z=map.getZoom(); return z>=20?7:z>=19?5:z>=18?4:z>=17?3:2; }
@@ -903,15 +914,17 @@ async function swapPlantAt(hid,rowIdx,ft,spId){ const h=R().hedgerows.find(x=>x.
   commit('Swap '+sp.common+' for '+SP(pick).common,()=>{ const hh=R().hedgerows.find(x=>x.id===hid);
     const p=hh.rows[rowIdx].plants.find(q=>Math.abs(q.ft-ft)<0.01&&q.sp===spId); if(p) p.sp=pick; });
   drawAll(); renderPanels(); }
-function setMode(m){ if(mode==='hedge'||mode==='wline'||mode==='pond'||mode==='aoi'||mode==='creek') tmpPts=[]; { const t=document.getElementById('hexTip'); if(t&&m!=='select') t.classList.remove('show'); } tmpLayer.clearLayers(); mode=m; painting=false;
+function setMode(m){ if(mode==='hedge'||mode==='wline'||mode==='pond'||mode==='aoi'||mode==='creek') tmpPts=[]; { const t=document.getElementById('hexTip'); if(t&&m!=='select') t.classList.remove('show'); } tmpLayer.clearLayers(); tmpPtsLayer.clearLayers(); mode=m; painting=false;
   document.querySelectorAll('#modebar button').forEach(b=>b.classList.toggle('on',b.id==='m-'+m));
   document.getElementById('m-finish').style.display=(m==='hedge'||m==='wline'||m==='pond'||m==='aoi'||m==='creek')?'':'none'; finishButton();
   map.dragging[(m==='paint'||m==='erase')?'disable':'enable']();
+  map.getContainer().classList.toggle('hr-drawing',m!=='select');
   map.getContainer().style.cursor=(m==='select')?'':'crosshair';
   handleLayer.clearLayers();
   const hints={select:'',hedge:'Tap along the hedgerow centreline. Double-tap or Finish to end.',paint:S.sel.species?('Painting '+SP(S.sel.species).common+' — drag along a row.'):'Pick a species in the Plants tab, then drag along a row.',erase:'Drag along a row to remove plants.',wnode:'Tap the map to place a '+WKINDS[wnodeKind].label.toLowerCase()+'.',aoi:'Tap a loose outline around the ground you want ranked — three corners is enough. Double-tap or Finish to close it.',creek:'Trace the creek, ditch or swale down its channel. Double-tap or Finish to end.',wline:'Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.',pond:'Tap around the pond edge at full pool. Finish to close the outline.',aoi:'Tap a loose outline around the ground you want ranked. Double-tap or Finish to close it.'};
   readout(hints[m]); modeBanner(); if(m==='paint') showTab('paint'); if(m==='wnode'||m==='wline'||m==='pond'||m==='creek') showTab('water'); if(m==='aoi') showTab('goals'); if(m==='hedge') showTab('rows'); drawAll(); }
 let wnodeKind='tank';
+let _selClickTimer=null;
 function onMapClick(e){ const ll=[e.latlng.lat,e.latlng.lng];
   if((mode==='pond'||mode==='aoi')&&nearFirstPt(ll)){ finishDraw(); return; }
   if(mode==='aoi'){ tmpPts.push(ll); drawTmp(); readout('Study area: '+tmpPts.length+' corner'+(tmpPts.length===1?'':'s')+(tmpPts.length>=3?' · '+polyAreaAcres(tmpPts).toFixed(1)+' acres':'')+' · Finish to close'); return; }
@@ -919,12 +932,26 @@ function onMapClick(e){ const ll=[e.latlng.lat,e.latlng.lng];
   if(mode==='pond'){ tmpPts.push(ll); drawTmp(); readout('Pond outline: '+tmpPts.length+' corners · Finish to close'); return; }
   if(mode==='hedge'||mode==='wline'){ tmpPts.push(ll); drawTmp(); if(mode==='hedge') readout('Centreline '+Math.round(pathLenFt(tmpPts))+' ft · '+tmpPts.length+' pts · Finish when done'); else updateWlineReadout(); return; }
   if(mode==='wnode'){ addWaterNode(ll); return; }
-  if(mode==='select'){ const k=hexKeyFor(ll); S.sel.hex=k; dockPin(k); highlightHex(k,true); if(hexOn) showHexTip(k[0],k[1]); if(!hexInfo(k[0],k[1])) sampleHex(k[0],k[1]).then(()=>renderGoals()); showTab('goals'); renderGoals(); highlightHex(k); }
+  /* A double-click is preceded by two ordinary 'click' events before Leaflet's own
+     'dblclick' fires — without this delay, double-clicking to zoom was also selecting
+     whichever acre hex sat under the cursor. Hold the single-click action briefly and
+     let the dblclick handler cancel it if a second click arrives in time. */
+  if(mode==='select'){ clearTimeout(_selClickTimer); _selClickTimer=setTimeout(()=>{
+    const k=hexKeyFor(ll); S.sel.hex=k; dockPin(k); highlightHex(k,true); if(hexOn) showHexTip(k[0],k[1]); if(!hexInfo(k[0],k[1])) sampleHex(k[0],k[1]).then(()=>renderGoals()); showTab('goals'); renderGoals(); highlightHex(k); },260); }
 }
-function drawTmp(){ modeBanner(); finishButton(); tmpLayer.clearLayers(); if(tmpPts.length) ((mode==='pond'||mode==='aoi')&&tmpPts.length>=3?L.polygon(tmpPts,{color:'#7FB6E8',weight:2,dashArray:'6 4',fillOpacity:.2}):L.polyline(tmpPts,{color:mode==='wline'?'#7FB6E8':'#fff',weight:2,dashArray:'6 4'})).addTo(tmpLayer); tmpPts.forEach((p,i)=>{ const first=i===0&&tmpPts.length>=3&&(mode==='pond'||mode==='aoi');
-    L.circleMarker(p,{radius:first?8:4,color:'#fff',weight:first?3:1,fillColor:first?'#3D7A4A':'#1E2A22',fillOpacity:1,interactive:false}).addTo(tmpLayer);
-    if(first) L.tooltip({permanent:true,direction:'top',className:'rowlab',offset:[0,-8]}).setLatLng(p).setContent('tap to close').addTo(tmpLayer); }); }
-function finishDraw(){ const m=mode; const pts=tmpPts.slice(); tmpPts=[]; tmpLayer.clearLayers();
+function drawTmp(){ modeBanner(); finishButton(); drawTmpLine(); drawTmpPoints(); }
+/* Just the connecting line/outline — safe to call on every tick of a point drag, since
+   it never touches tmpPtsLayer and can't interrupt the marker currently being dragged. */
+function drawTmpLine(){ tmpLayer.clearLayers(); if(tmpPts.length) ((mode==='pond'||mode==='aoi')&&tmpPts.length>=3?L.polygon(tmpPts,{color:'#7FB6E8',weight:2,dashArray:'6 4',fillOpacity:.2}):L.polyline(tmpPts,{color:mode==='wline'?'#7FB6E8':'#fff',weight:2,dashArray:'6 4'})).addTo(tmpLayer); }
+/* Draggable handles for points already placed in an in-progress shape — lets you fix a
+   misplaced point without cancelling and starting over. Only called when a point is
+   added/removed, never on every drag tick (see drawTmpLine above). */
+function drawTmpPoints(){ tmpPtsLayer.clearLayers(); tmpPts.forEach((p,i)=>{ const first=i===0&&tmpPts.length>=3&&(mode==='pond'||mode==='aoi');
+    const mk=L.marker(p,{draggable:true,icon:L.divIcon({className:'vh',iconSize:first?[22,22]:[14,14]}),keyboard:false,zIndexOffset:950}).addTo(tmpPtsLayer);
+    mk.on('drag',()=>{ const ll=mk.getLatLng(); tmpPts[i]=[ll.lat,ll.lng]; drawTmpLine(); modeBanner(); finishButton(); });
+    mk.on('dragend',()=>{ modeBanner(); finishButton(); });
+    if(first){ mk.on('click',e=>{ L.DomEvent.stop(e); finishDraw(); }); L.tooltip({permanent:true,direction:'top',className:'rowlab',offset:[0,-8]}).setLatLng(p).setContent('tap to close').addTo(tmpPtsLayer); } }); }
+function finishDraw(){ const m=mode; const pts=tmpPts.slice(); tmpPts=[]; tmpLayer.clearLayers(); tmpPtsLayer.clearLayers();
   const short=(n,what)=>{ setMode('select'); readout('Need at least '+n+' '+what+' — nothing was added.'); };
   if(m==='aoi'){ if(pts.length<3) return short('three','corners');
     commit('Draw study area',()=>setAoi(pts)); const n=(hexesInAoi()||[]).length; setMode('select');
@@ -980,7 +1007,7 @@ document.addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!inField){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'&&!inField){ e.preventDefault(); manualSaveClick(); return; }
   if(inField) return;
-  if(e.key==='Escape'){ if(['hedge','pond','aoi','wline','creek'].includes(mode)&&tmpPts.length){ tmpPts=[]; tmpLayer.clearLayers(); modeBanner(); readout('Cancelled.'); }
+  if(e.key==='Escape'){ if(['hedge','pond','aoi','wline','creek'].includes(mode)&&tmpPts.length){ tmpPts=[]; tmpLayer.clearLayers(); tmpPtsLayer.clearLayers(); modeBanner(); readout('Cancelled.'); }
     else if(mode!=='select'){ setMode('select'); } return; }
   if(e.key==='Enter'&&['hedge','pond','aoi','wline','creek'].includes(mode)){ e.preventDefault(); finishDraw(); return; }
   if((e.key==='Backspace'||e.key==='Delete')&&['hedge','pond','aoi','wline','creek'].includes(mode)&&tmpPts.length){ e.preventDefault(); tmpPts.pop(); drawTmp(); modeBanner(); return; }
@@ -1862,27 +1889,28 @@ function renderStageBar(t){ const el=document.getElementById('stageBar'); if(!el
   el.innerHTML=nx?`<span class="why">${esc(why)}</span><span class="grow"></span><button class="nxt" onclick="showTab('${nx}')" ${(nx==='rows'&&!r.hedgerows.length)?'':''}>${esc(label)} →</button>`
                  :`<span class="why">That is every stage — jump back to any tab above to keep refining.</span>`; }
 function renderRanchSettingsBody(sfx){ sfx=sfx||''; const r=R();
-  return `<label>Ranch name</label><input type="text" value="${esc(r.name)}" onchange="commit('Rename ranch',()=>{R().name=this.value});renderPanels()">
+  return `<h2>Ranch <span class="mute" style="font-size:12px;font-weight:400">— shared, everyone with access sees this</span></h2>
+    <label>Name</label><input type="text" value="${esc(r.name)}" onchange="commit('Rename ranch',()=>{R().name=this.value});renderPanels()">
     <div class="row" style="margin-top:10px"><button class="small" onclick="openRanchesSavesDialog(true)">Ranches &amp; saves</button></div>
-    <h2>Location <span class="mute geoNoteEl" style="font-size:13px;font-weight:400">— centred at ${r.center[0].toFixed(5)}, ${r.center[1].toFixed(5)}</span></h2>
+    <h3>Location <span class="mute geoNoteEl" style="font-size:13px;font-weight:400">— centred at ${r.center[0].toFixed(5)}, ${r.center[1].toFixed(5)}</span></h3>
     <p class="small mute">Type an address, place name, or coordinates as <code>lat, lng</code>.</p>
     <div class="row"><input type="text" id="geo${sfx}" class="grow" placeholder="e.g. 31165 Hwy 128, Yorkville, CA  or  39.045, -123.208" onkeydown="if(event.key==='Enter'){event.preventDefault();geocode('geo${sfx}');}">
       <button class="small" onclick="geocode('geo${sfx}')">Go</button></div>
-    <h2>Cloud sync</h2>
-    <p class="small mute">Syncs this design across your devices via a Cloudflare Worker. One password, set once per device — recover it from your password manager if a device gets wiped.</p>
-    <form class="row" onsubmit="event.preventDefault();saveCloudToken('cloudToken${sfx}');"><input type="password" id="cloudToken${sfx}" name="hedgeright-sync-password" class="grow" placeholder="sync password" value="${esc(cloudToken())}" autocomplete="current-password">
+    <h2>Your access <span class="mute" style="font-size:12px;font-weight:400">— personal, this device only</span></h2>
+    <p class="small mute">One access code per person, set once per device — recover it from your password manager if a device gets wiped.</p>
+    <form class="row" onsubmit="event.preventDefault();saveAccessCode('accessCode${sfx}');"><input type="password" id="accessCode${sfx}" name="hedgeright-access-code" class="grow" placeholder="access code" value="${esc(accessCode())}" autocomplete="current-password">
       <button type="submit" class="small">Save</button>
-      ${cloudToken()?`<button type="button" class="small danger" onclick="clearCloudToken()">Clear</button>`:''}</form>
+      ${accessCode()?`<button type="button" class="small danger" onclick="clearAccessCode()">Clear</button>`:''}</form>
     <p class="small mute cloudStatusEl"></p>
-    ${cloudConfigured()?'':`<h2>File</h2>${fsStatusHtml()}`}`; }
-function openSettingsDialog(){ UI.open('Settings','<div style="max-height:70vh;overflow:auto">'+renderRanchSettingsBody('Dlg')+'</div>',[{label:'Close',primary:true,value:null}]); }
+    <div class="peopleAccessEl"></div>`; }
+function openSettingsDialog(){ UI.open('Settings','<div style="max-height:70vh;overflow:auto">'+renderRanchSettingsBody('Dlg')+'</div>',[{label:'Close',primary:true,value:null}]); renderCloudStatus(); renderPeopleAccess(); }
 function renderRanch(){ const r=R();
   document.getElementById('ranchSub').textContent=r.name+' · '+r.hedgerows.length+' hedgerow'+(r.hedgerows.length===1?'':'s');
   let html=`<h2>Study area</h2>`;
   if(aoi()){ html+=`<p class="small">${aoiAcres().toFixed(1)} acres outlined, ${(hexesInAoi()||[]).length} acre hexes.</p><div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`; }
   else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="setMode('aoi')">Draw study area</button></p>`;
   html+=`<p class="small mute">Lost track of what you've drawn? <button class="small" onclick="fitAllView()">Zoom to everything</button> frames every hedgerow and water node on the ranch.</p>`;
-  setHtml('tab-ranch',html); renderCloudStatus(); }
+  setHtml('tab-ranch',html); renderCloudStatus(); renderPeopleAccess(); }
 /* Accepts either "lat, lng" (jumps instantly, no network) or a free-text place/address
    (geocoded via Nominatim — needs a real browser tab, not the sandboxed preview). */
 function geocode(inputId){ inputId=inputId||'geo'; const input=document.getElementById(inputId); const q=(input&&input.value||'').trim(); if(!q) return;
@@ -2205,7 +2233,7 @@ function normalizeState(){ if(!S.species) S.species=JSON.parse(JSON.stringify(SP
     r.origin=r.origin||r.center.slice();
     r.hedgerows.forEach(h=>{ h.rows.forEach(rr=>{ rr.plants=rr.plants||[]; }); }); });
   if(!S.sel) S.sel={hedge:null,row:null,species:null,wnode:null,wline:null}; }
-function renderPanels(){ const t=currentTab(); renderTabIfNeeded(t); renderStageHint(t); updateHistButtons(); saveBadge(); fsBadge(); netBadge();
+function renderPanels(){ const t=currentTab(); renderTabIfNeeded(t); renderStageHint(t); updateHistButtons(); saveBadge(); netBadge();
 }
 let curSave=null;
 function saveIndexKey(){ return 'hedgeright.saves.index'; }
@@ -2219,7 +2247,7 @@ async function openSave(name){ try{ const txt=localStorage.getItem('hedgeright.s
     S=JSON.parse(txt); normalizeState(); curSave={id:name,name}; hideStart(); if(map){ map.setView(R().center,R().zoom); drawAll(); } renderPanels(); }
   catch(e){ UI.alert('Could not open "'+name+'": '+(e.message||e)); } }
 function deleteSave(name){ localStorage.removeItem('hedgeright.save.'+name); putIndex(saveIndex().filter(x=>x.name!==name)); if(curSave&&curSave.name===name) curSave=null; refreshRanchesSavesView(); }
-function saveNow(){ if(curSave) saveAs(curSave.name); else promptSaveAs(); if(FS.handle) fsWrite(); }
+function saveNow(){ if(curSave) saveAs(curSave.name); else promptSaveAs(); }
 async function promptSaveAs(){ const name=await UI.prompt('Name this design',curSave?curSave.name:R().name,{title:'Save as'}); if(name) saveAs(name); }
 function snapListKey(){ return 'hedgeright.snaps.'+(curSave?curSave.name:'unsaved'); }
 function snapList(){ try{ return JSON.parse(localStorage.getItem(snapListKey())||'[]'); }catch(e){ return []; } }
@@ -2253,8 +2281,6 @@ function toggleSaveMenu(e){ if(e) e.stopPropagation(); const w=document.getEleme
     <div class="sep"></div>
     <button onclick="exportJSON();toggleSaveMenu()">Export JSON</button>
     <button onclick="document.getElementById('impInput').click();toggleSaveMenu()">Import JSON…</button>
-    <div class="sep"></div>
-    <button onclick="fsLink();toggleSaveMenu()">${FS.handle?'Re-link file…':'Link to a file on disk…'}</button>
   </div>`:''; }
 document.addEventListener('click',e=>{ const w=document.getElementById('saveWrap'); if(w&&w.classList.contains('open')&&!w.contains(e.target)) w.classList.remove('open'); });
 function savesHtml(){ const idx=saveIndex().sort((a,b)=>b.at-a.at);
@@ -2273,8 +2299,7 @@ function renderRanchesSavesBody(){
   </div>
   <h2>Saved designs</h2>${savesHtml()}
   <input type="file" id="impInputDlg" accept=".json,.hedgeright.json" style="display:none" onchange="if(this.files[0]){ importJSON(this.files[0]); }">
-  <div class="row" style="margin-top:10px"><button class="small" onclick="document.getElementById('impInputDlg').click()">Import JSON…</button>
-    <button class="small" onclick="fsOpen()">Open a file from disk…</button></div>`; }
+  <div class="row" style="margin-top:10px"><button class="small" onclick="document.getElementById('impInputDlg').click()">Import JSON…</button></div>`; }
 function refreshRanchesSavesView(){ const d=document.getElementById('dlg'); const t=document.getElementById('dlgT');
   if(d&&d.classList.contains('show')&&t&&t.textContent==='Ranches & saves'){ const b=document.getElementById('dlgB'); if(b) b.innerHTML=renderRanchesSavesBody(); }
   else renderStart(); }
@@ -2289,8 +2314,7 @@ function renderStart(){ const html=`<div class="stitle"><h1>HedgeRight</h1></div
   </div>
   <h2>Saved designs</h2>${savesHtml()}
   <input type="file" id="impInput" accept=".json,.hedgeright.json" style="display:none" onchange="if(this.files[0]) importJSON(this.files[0])">
-  <div class="row" style="margin-top:10px"><button class="small" onclick="document.getElementById('impInput').click()">Import JSON…</button>
-    <button class="small" onclick="fsOpen()">Open a file from disk…</button></div>`;
+  <div class="row" style="margin-top:10px"><button class="small" onclick="document.getElementById('impInput').click()">Import JSON…</button></div>`;
   setHtml('startBody',html); }
 function startNew(){ const r=blankRanch('New ranch',R()?R().center:[38.889326,-123.162412],R()?R().zoom:15); S.ranches.push(r); S.active=r.id; curSave=null;
   hideStart(); if(map){ map.setView(r.center,r.zoom); drawAll(); } renderPanels(); showTab('ranch'); }
@@ -2298,7 +2322,7 @@ function finishWizard(){ hideStart(); }
 (async function boot(){
   loadAutoSavePref();
   let loaded=false;
-  if(cloudConfigured()){ const cloud=await cloudPull(); if(cloud){ S=cloud; loaded=true; } }
+  if(cloudConfigured()){ const cloud=await cloudPull(); if(cloud){ S=cloud; loaded=true; } cloudWhoAmI(); }
   if(!loaded){
     try{ const saved=localStorage.getItem('hedgeright.autosave'); S=saved?JSON.parse(saved):defaultState(); }
     catch(e){ S=defaultState(); }
