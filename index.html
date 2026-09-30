@@ -388,12 +388,12 @@ body.wide{--panelW:560px}
     <div id="map"></div>
     <div id="modebar">
       <button id="m-select" onclick="setMode('select')" class="on" title="Tap the map to read an acre, or click a hedgerow or water feature to select it.">Select</button>
-      <button id="m-hedge" onclick="setMode('hedge')" title="Tap along the hedgerow's centreline. Double-tap or Finish to end.">Draw hedgerow</button>
-      <button id="m-paint" onclick="setMode('paint')" title="Pick a species in the Plants tab, then drag along a row on the map to plant it.">Paint</button>
-      <button id="m-erase" onclick="setMode('erase')" title="Drag along a row on the map to remove whatever's planted there.">Erase</button>
-      <button id="m-wnode" onclick="setMode('wnode')" title="Tap the map to place a water node — tank, well, pond, valve, or regulator.">Place water node</button>
-      <button id="m-wline" onclick="setMode('wline')" title="Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.">Draw pipe</button>
-      <button id="m-aoi" onclick="setMode('aoi')" title="Outline the ground you want read and ranked — three corners is enough. Double-tap or Finish to close it.">Study area</button>
+      <button id="m-hedge" onclick="toggleMode('hedge')" title="Tap along the hedgerow's centreline. Double-tap or Finish to end.">Draw hedgerow</button>
+      <button id="m-paint" onclick="toggleMode('paint')" title="Pick a species in the Plants tab, then drag along a row on the map to plant it.">Paint</button>
+      <button id="m-erase" onclick="toggleMode('erase')" title="Drag along a row on the map to remove whatever's planted there.">Erase</button>
+      <button id="m-wnode" onclick="toggleMode('wnode')" title="Tap the map to place a water node — tank, well, pond, valve, or regulator.">Place water node</button>
+      <button id="m-wline" onclick="toggleMode('wline')" title="Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.">Draw pipe</button>
+      <button id="m-aoi" onclick="toggleMode('aoi')" title="Outline the ground you want read and ranked — three corners is enough. Double-tap or Finish to close it.">Study area</button>
       <button id="m-finish" onclick="finishDraw()" style="display:none" title="Close the shape you're drawing.">Finish</button>
     </div>
     <div id="modeBanner"></div>
@@ -481,7 +481,7 @@ async function cloudPush(){
    automatically, since it discards whatever unsaved local edit prompted the warning. */
 async function reloadFromCloud(){
   const data=await cloudPull();
-  if(data){ S=data; normalizeState(); if(map){ map.setView(R().center,R().zoom); drawAll(); if(hexOn) drawHexes(); if(heatOn) drawHeat(); } renderPanels(); UI.toast('Reloaded from the shared design.'); } }
+  if(data){ S=data; normalizeState(); if(map){ const lv=myViewFor(R().id); map.setView(lv?lv.center:R().center,lv?lv.zoom:R().zoom); drawAll(); if(hexOn) drawHexes(); if(heatOn) drawHeat(); } renderPanels(); UI.toast('Reloaded from the shared design.'); } }
 /* Opportunistic check, not a poll loop: whenever the tab regains focus, ask the server
    what its current version is (cheap — one GET) and compare against what we last saw.
    If it's newer, someone else has saved since we loaded — say so and offer to reload,
@@ -494,12 +494,12 @@ async function checkStale(){
       UI.toast((js.updatedBy?js.updatedBy+' updated':'Someone updated')+' the shared design since this loaded.',{label:'Reload',fn:reloadFromCloud}); } }
   catch(e){} }
 async function cloudWhoAmI(){
-  if(!cloudConfigured()){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); return; }
+  if(!cloudConfigured()){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); return; }
   try{ const r=await fetch(CLOUD_SYNC_BASE+'/whoami',{headers:{'Authorization':'Bearer '+accessCode()}});
-    if(!r.ok){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); return; }
+    if(!r.ok){ cloudIdentity={role:null,name:null}; renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); return; }
     const js=await r.json(); cloudIdentity={role:js.role,name:js.name}; }
   catch(e){ cloudIdentity={role:null,name:null}; }
-  renderCloudStatus(); renderPeopleAccess(); }
+  renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); }
 function renderCloudStatus(){ const els=document.querySelectorAll('.cloudStatusEl'); if(!els.length) return;
   let text;
   if(!cloudDeployed()) text='Worker not deployed yet.';
@@ -562,6 +562,114 @@ function addPerson(){ const nameInp=document.getElementById('newPersonName'); co
   const code=(codeInp&&codeInp.value||'').trim()||genAccessCode();
   _peopleList.push({name,code,role:(roleInp&&roleInp.value)||'editor'});
   _selectedPerson=_peopleList.length-1; paintPeopleAccess(); }
+
+/* ---- Species library: owner-only. Harvests what it can from a Cal Flora Nursery
+   plant page and leaves everything else for a human. The library itself is a
+   separate, genuinely shared resource on the Worker (a fourth KV key, alongside
+   design/users/view) — not baked into any one design's saved blob. Every device
+   fetches it fresh at boot/sign-in and it overrides whatever normalizeState()'s
+   SPECIES_DEFAULT fallback set, so adding a species here makes it visible to anyone
+   with access, immediately, the next time they load or refresh. conf:'draft'
+   distinguishes these from conf:'lib' (the original curated set) and conf:'obs'
+   (ranch-observed) —
+   freshly harvested and not yet vetted by anyone. ---- */
+let _harvestDraft=null;
+function mapSun(s){ s=(s||'').toLowerCase(); if(s.includes('shade')&&!s.includes('sun')) return 'shade'; if(s.includes('sun')&&s.includes('shade')) return 'any'; if(s.includes('sun')) return 'hot'; return null; }
+function mapMoisture(s){ s=(s||'').toLowerCase(); if(s.includes('dry')) return 'dry'; if(s.includes('regular')||s.includes('moist')||s.includes('wet')) return 'wet'; if(s.includes('moderate')) return 'moderate'; return null; }
+function mapDrainage(text){ text=(text||'').toLowerCase(); if(text.includes('clay')) return 'tolerant'; if(text.includes('well-drain')||text.includes('well drain')||text.includes('sandy')||text.includes('sharp')) return 'sharp'; return null; }
+function mapBloomMonths(s){ const seasons={winter:[12,1,2],spring:[3,4,5],summer:[6,7,8],fall:[9,10,11],autumn:[9,10,11]}; s=(s||'').toLowerCase(); let months=[]; Object.keys(seasons).forEach(k=>{ if(s.includes(k)) months=months.concat(seasons[k]); }); return months.length?Array.from(new Set(months)).sort((a,b)=>a-b):null; }
+function parseSizeMid(s){ if(!s) return null; const m=s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/); if(m) return Math.round(((+m[1]+ +m[2])/2)*10)/10; const m2=s.match(/(\d+(?:\.\d+)?)/); return m2?+m2[1]:null; }
+function slugifyId(s){ const base=(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,12); return base||uid().slice(0,8); }
+function mapHarvestToDraft(h){
+  const tags=((h.tolerances||'')+' '+(h.habitatValues||'')+' '+(h.specialUses||'')).toLowerCase();
+  const widthMid=parseSizeMid(h.width);
+  return { id:slugifyId(h.commonName||h.botanicalName), common:h.commonName||'', sci:h.botanicalName||'',
+    color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
+    moisture:mapMoisture(h.water), drainage:mapDrainage(h.rawText), sun:mapSun(h.exposure),
+    riparianFt:null, bloom:mapBloomMonths(h.bloomTime), risk:null, story:null,
+    ht:parseSizeMid(h.height), rad:widthMid?Math.round(widthMid/2*10)/10:null,
+    T:null, cast:null, tol:null, root:{cls:null,depth:null,lat:null}, spreads:null, allelo:0,
+    goals:{poll:/pollinat|bee|butterfl/.test(tags)?2:0, wild:/wildlife|bird/.test(tags)?2:0, screen:0, barrier:0, bank:0,
+      fire:/fire resist/.test(tags)?2:0, lowWater:/drought/.test(tags)?2:0, fodder:0, fast:0, lowMaint:0},
+    replace:null, fail:'', trigger:'', notes:(h.rawText||'').split('\n').find(l=>l.length>80)||'',
+    conf:'draft', source:h.sourceUrl||null }; }
+async function harvestSpecies(){
+  const inp=document.getElementById('harvestUrl'); const status=document.getElementById('harvestStatus'); if(!inp) return;
+  const u=(inp.value||'').trim(); if(!u){ if(status) status.textContent='Paste a calfloranursery.com plant page URL first.'; return; }
+  if(status) status.textContent='Fetching…';
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/harvest?url='+encodeURIComponent(u),{headers:{'Authorization':'Bearer '+accessCode()}});
+    if(!r.ok){ const t=await r.text().catch(()=>''); if(status) status.textContent='Harvest failed: '+(t||('HTTP '+r.status)); return; }
+    const h=await r.json(); h.sourceUrl=u;
+    _harvestDraft=mapHarvestToDraft(h);
+    if(status) status.textContent="Harvested — review below, fill in what's blank, then Add to library.";
+    paintSpeciesAdmin(); }
+  catch(e){ if(status) status.textContent='Harvest failed: '+((e&&e.message)||e); } }
+function startBlankDraft(){ _harvestDraft=mapHarvestToDraft({}); paintSpeciesAdmin(); }
+function updateDraftField(path,val){ const parts=path.split('.'); let o=_harvestDraft; for(let i=0;i<parts.length-1;i++) o=o[parts[i]]; o[parts[parts.length-1]]=val; }
+function updateDraftGoal(g,val){ _harvestDraft.goals[g]=+val||0; }
+function discardDraftSpecies(){ _harvestDraft=null; paintSpeciesAdmin(); }
+function saveDraftSpecies(){
+  if(!_harvestDraft.common||!_harvestDraft.id){ UI.toast('Needs at least a name'); return; }
+  if(S.species.some(sp=>sp.id===_harvestDraft.id)){ UI.toast('A species with this id already exists — change the id'); return; }
+  const entry=JSON.parse(JSON.stringify(_harvestDraft));
+  commit('Add species: '+entry.common,()=>{ S.species.push(entry); });
+  pushSharedSpecies();
+  _harvestDraft=null; paintSpeciesAdmin(); renderPanels(); UI.toast('Added to the library.'); }
+function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=cloudIdentity.role==='owner'?speciesAdminHtml():''; }); }
+function paintSpeciesAdmin(){ renderSpeciesAdmin(); }
+function speciesAdminHtml(){
+  let html=`<h2>Species library</h2>
+    <p class="small mute">Harvests what it can from a Cal Flora Nursery plant page (e.g. calfloranursery.com/plants/romneya-coulteri/) and leaves the rest for you to fill in. Added species go into the shared library — visible to everyone with access, not just this design.</p>
+    <div class="row"><input type="text" id="harvestUrl" class="grow" placeholder="https://www.calfloranursery.com/plants/...">
+      <button class="small" onclick="harvestSpecies()">Harvest</button></div>
+    <p class="small mute" id="harvestStatus"></p>
+    <div class="row" style="margin-top:6px"><button class="small" onclick="startBlankDraft()">Or start blank</button></div>`;
+  if(_harvestDraft) html+=speciesDraftFormHtml(_harvestDraft);
+  return html; }
+function speciesDraftFormHtml(d){
+  const selOpt=(val,opts)=>`<option value="">—</option>`+opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="card" style="margin-top:10px">
+    <h3>Draft — review before saving</h3>
+    ${d.source?`<p class="small mute">Source: <a href="${esc(d.source)}" target="_blank" rel="noopener">${esc(d.source)}</a></p>`:''}
+    <label>Id (short, unique, used internally)</label><input type="text" value="${esc(d.id)}" onchange="updateDraftField('id',this.value)">
+    <label>Common name</label><input type="text" value="${esc(d.common)}" onchange="updateDraftField('common',this.value)">
+    <label>Scientific name</label><input type="text" value="${esc(d.sci)}" onchange="updateDraftField('sci',this.value)">
+    <label>Color (for map/legend)</label><input type="color" value="${esc(d.color||'#7C8D6B')}" onchange="updateDraftField('color',this.value)">
+    <h3>Size &amp; site</h3>
+    <label>Mature height, ft</label><input type="number" value="${d.ht!=null?d.ht:''}" onchange="updateDraftField('ht',+this.value)">
+    <label>Mature radius, ft</label><input type="number" value="${d.rad!=null?d.rad:''}" onchange="updateDraftField('rad',+this.value)">
+    <label>Years to target size (T)</label><input type="number" value="${d.T!=null?d.T:''}" onchange="updateDraftField('T',+this.value)">
+    <label>Sun</label><select onchange="updateDraftField('sun',this.value)">${selOpt(d.sun,['hot','any','shade'])}</select>
+    <label>Moisture</label><select onchange="updateDraftField('moisture',this.value)">${selOpt(d.moisture,['dry','moderate','wet'])}</select>
+    <label>Drainage</label><select onchange="updateDraftField('drainage',this.value)">${selOpt(d.drainage,['sharp','any','tolerant'])}</select>
+    <label>Bloom months (comma-separated, e.g. 3,4,5)</label><input type="text" value="${d.bloom?d.bloom.join(','):''}" onchange="updateDraftField('bloom',this.value.split(',').map(x=>+x.trim()).filter(Boolean))">
+    <h3>Layer &amp; structure</h3>
+    <label>Story (canopy layer)</label><select onchange="updateDraftField('story',this.value)">${selOpt(d.story,['over','mid','ground','nurse','vine'])}</select>
+    <label>Shade cast</label><select onchange="updateDraftField('cast',this.value)">${selOpt(d.cast,['dense','light','open'])}</select>
+    <label>Tolerance</label><select onchange="updateDraftField('tol',this.value)">${selOpt(d.tol,['sun','part','shade'])}</select>
+    <label><input type="checkbox" ${d.spreads?'checked':''} onchange="updateDraftField('spreads',this.checked)"> Spreads (rhizomatous — can colonize beyond its own footprint)</label>
+    <h3>Roots</h3>
+    <label>Root class</label><select onchange="updateDraftField('root.cls',this.value)">${selOpt(d.root.cls,['tap','fibrous','mid'])}</select>
+    <label>Root depth, ft</label><input type="number" value="${d.root.depth!=null?d.root.depth:''}" onchange="updateDraftField('root.depth',+this.value)">
+    <label>Lateral spread ratio</label><input type="number" step="0.1" value="${d.root.lat!=null?d.root.lat:''}" onchange="updateDraftField('root.lat',+this.value)">
+    <h3>Irrigation</h3>
+    <label>Regime</label><select onchange="updateDraftField('regime',this.value)">${selOpt(d.regime,['wean','reduce','perm'])}</select>
+    <label>Drip rate, gph</label><input type="number" step="0.1" value="${d.gph!=null?d.gph:''}" onchange="updateDraftField('gph',+this.value)">
+    <label>Emitters</label><input type="number" value="${d.emitters!=null?d.emitters:''}" onchange="updateDraftField('emitters',+this.value)">
+    <label><input type="checkbox" ${d.basket?'checked':''} onchange="updateDraftField('basket',this.checked)"> Needs a basket/berm at planting</label>
+    <label>Riparian buffer, ft (creek-adjacent only)</label><input type="number" value="${d.riparianFt!=null?d.riparianFt:''}" onchange="updateDraftField('riparianFt',+this.value)">
+    <label>Spacing, ft</label><input type="number" value="${d.spacingFt!=null?d.spacingFt:''}" onchange="updateDraftField('spacingFt',+this.value)">
+    <h3>Risk &amp; guidance <span class="mute" style="font-size:12px;font-weight:400">— hardest to source, most worth getting right</span></h3>
+    <label>Expected loss by yr 3, %</label><input type="number" value="${d.risk!=null?d.risk:''}" onchange="updateDraftField('risk',+this.value)">
+    <label>Allelopathy score (0 = none)</label><input type="number" value="${d.allelo!=null?d.allelo:0}" onchange="updateDraftField('allelo',+this.value)">
+    <label>Replace with (species id, if it fails)</label><input type="text" value="${esc(d.replace||'')}" onchange="updateDraftField('replace',this.value||null)">
+    <label>Failure mode</label><input type="text" value="${esc(d.fail||'')}" onchange="updateDraftField('fail',this.value)">
+    <label>Trigger to watch for</label><input type="text" value="${esc(d.trigger||'')}" onchange="updateDraftField('trigger',this.value)">
+    <label>Notes</label><input type="text" value="${esc(d.notes||'')}" onchange="updateDraftField('notes',this.value)">
+    <h3>Goals (0–3 each)</h3>
+    <div class="row" style="flex-wrap:wrap">${Object.keys(GOALS).map(g=>`<div style="width:48%"><label style="margin:0">${esc(GOALS[g])}</label><input type="number" min="0" max="3" style="width:48px" value="${d.goals[g]||0}" onchange="updateDraftGoal('${g}',this.value)"></div>`).join('')}</div>
+    <div class="row" style="margin-top:10px"><button class="small primary" onclick="saveDraftSpecies()">Add to library</button><button class="small danger" onclick="discardDraftSpecies()">Discard</button></div>
+  </div>`; }
 
 /* ---------------- HexRow — map-based hedgerow planner
    Structure: state → geometry → map render → modes → hex info →
@@ -659,7 +767,7 @@ const CLIMATE_DEFAULT=[{m:'Jan',hi:53,lo:36,rain:7.2},{m:'Feb',hi:54,lo:35,rain:
 const WATER_NEED=[0,0,0,2.3,3.3,4.0,4.75,4.25,3.3,2.1,0,0], RUNS_WK=[0,0,0,1,3,3,3,3,3,1,0,0];
 function spSummer(sp){ return sp.summerPlant||'default'; }
 const REGIMES={wean:'Wean (off end yr 2)',reduce:'Reduce (taper yr 3)',perm:'Permanent'};
-const WKINDS={well:{label:'Well',glyph:'W'},tank:{label:'Tank',glyph:'T'},valve:{label:'Shutoff',glyph:'V'},reg:{label:'Pressure regulator',glyph:'R'},outlet:{label:'Zone valve',glyph:'Z'},pond:{label:'Pond (site water)',glyph:'~'}};
+const WKINDS={well:{label:'Well',glyph:'W'},tank:{label:'Tank',glyph:'T'},valve:{label:'Shutoff',glyph:'V'},reg:{label:'Pressure Regulator',glyph:'R'},outlet:{label:'Zone Valve',glyph:'Z'},pond:{label:'Pond (site water)',glyph:'~'}};
 const UI={
   _resolve:null,
   el(){ let d=document.getElementById('dlg'); if(!d){ d=document.createElement('div'); d.id='dlg';
@@ -693,6 +801,20 @@ function commit(label,fn){ const before=JSON.stringify(S); const r=fn?fn():undef
   HIST.stack.push({label,state:before}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0;
   UI.toast(label, {label:'Undo', fn:undo}); updateHistButtons(); markDirty(); saveSoon();
   return r; }
+/* A render that replaces the DOM of the very control the user is still interacting
+   with — most notably a number input's native up/down spinner, which fires onchange
+   on every click — can break further clicks on it, since the browser's own click
+   handling gets interrupted mid-event by the element disappearing out from under it.
+   A flat one-tick defer isn't enough on its own: a fast second click can still land
+   inside that tiny window before the deferred render fires. So this debounces
+   properly instead — every call cancels whatever render was still pending and
+   reschedules it, meaning nothing destroys the input until clicking actually stops,
+   however fast the clicks come in. The underlying commit() still runs immediately on
+   every click either way; only the destructive redraw is held back. Any onchange
+   whose render call recreates its own input (drawAll/drawWater/renderPanels) should
+   route through this rather than calling them directly. */
+let _afterChangeT=null;
+function afterChange(fn){ clearTimeout(_afterChangeT); _afterChangeT=setTimeout(fn,350); }
 function undo(){ const h=HIST.stack.pop(); if(!h){ UI.toast('Nothing to undo'); return; }
   HIST.redo.push({label:h.label,state:JSON.stringify(S)}); applyState(h.state); UI.toast('Undid: '+h.label,{label:'Redo',fn:redo}); }
 function redo(){ const h=HIST.redo.pop(); if(!h){ UI.toast('Nothing to redo'); return; }
@@ -798,9 +920,43 @@ const hkey=(q,r)=>q+','+r;
 let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, tmpPtsLayer, foundLayer, handleLayer, canvasR;
 let hexCanvas=null,hexCtx=null,heatCanvasEl=null,heatCtx=null,hexCells=[],heatCells=[],heatBest=null;
 let mode='select', tmpPts=[], painting=false, hoverHex=null;
+/* Where the map is scrolled to is personal, not shared. It's stored per-person on the
+   server now — a separate KV key the Worker's /view route reads and writes,
+   completely apart from the design blob and its updatedAt, so panning around to look
+   at something can never push a "change" that shows up as a staleness warning for
+   anyone else. One blob per person, keyed inside it by ranch id, so each person
+   remembers their own last-viewed spot on each ranch independently. Falls back to a
+   small localStorage entry only when there's no Worker configured to talk to at all
+   (a standalone/no-cloud build) — deliberately minimal, not a cache of server data. */
+let _myViews=null;
+async function loadMyViews(){
+  if(!cloudConfigured()){ try{ const raw=localStorage.getItem('hedgeright.myViews'); _myViews=raw?JSON.parse(raw):{}; }catch(e){ _myViews={}; } return; }
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/view',{headers:{'Authorization':'Bearer '+accessCode()}});
+    const js=r.ok?await r.json():null; _myViews=(js&&typeof js==='object')?js:{}; }
+  catch(e){ _myViews={}; } }
+function myViewFor(rid){ return (_myViews&&_myViews[rid])||null; }
+/* The shared species library, fetched from the Worker at boot/sign-in and applied
+   over whatever normalizeState()'s SPECIES_DEFAULT fallback set — so every device
+   sees the same library, not each ranch's own frozen copy from whenever it was
+   created. Returns null (and S.species stays whatever it already was) if cloud isn't
+   configured, the fetch fails, or nothing's been pushed to the server yet. */
+async function loadSharedSpecies(){
+  if(!cloudConfigured()) return null;
+  try{ const r=await fetch(CLOUD_SYNC_BASE+'/species',{headers:{'Authorization':'Bearer '+accessCode()}});
+    if(!r.ok) return null; const js=await r.json(); return (Array.isArray(js)&&js.length)?js:null; }
+  catch(e){ return null; } }
+async function pushSharedSpecies(){ if(!cloudConfigured()) return;
+  try{ await fetch(CLOUD_SYNC_BASE+'/species',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify(S.species)}); }
+  catch(e){ UI.toast("Added locally, but couldn't save it to the shared library: "+((e&&e.message)||e)); } }
+let _viewPushT=null;
+function saveMyView(){ if(!map||!_myViews) return; const r=R(); if(!r) return;
+  _myViews[r.id]={center:[map.getCenter().lat,map.getCenter().lng],zoom:map.getZoom()};
+  if(!cloudConfigured()){ try{ localStorage.setItem('hedgeright.myViews',JSON.stringify(_myViews)); }catch(e){} return; }
+  clearTimeout(_viewPushT);
+  _viewPushT=setTimeout(()=>{ fetch(CLOUD_SYNC_BASE+'/view',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify(_myViews)}).catch(()=>{}); },800); }
 function initMap(){
-  const r=R();
-  map=L.map('map',{zoomControl:true,doubleClickZoom:false,tap:false}).setView(r.center,r.zoom);
+  const r=R(); const lv=myViewFor(r.id);
+  map=L.map('map',{zoomControl:true,doubleClickZoom:false,tap:false}).setView(lv?lv.center:r.center,lv?lv.zoom:r.zoom);
   imagery=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19,attribution:'Esri World Imagery'}).addTo(map);
   map.createPane('hexP'); map.getPane('hexP').style.zIndex=350; map.getPane('hexP').style.pointerEvents='none';
   map.createPane('rowP'); map.getPane('rowP').style.zIndex=400;
@@ -822,7 +978,7 @@ function initMap(){
   rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); tmpPtsLayer=L.layerGroup().addTo(map); foundLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
   map.on('click',onMapClick); map.on('dblclick',(e)=>{ clearTimeout(_selClickTimer); if(['hedge','wline','pond','aoi','creek'].includes(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
   map.on('mousedown',onDown); map.on('mousemove',onMove); map.on('mouseup',onUp);
-  map.on('moveend',()=>{ const rr=R(); rr.center=[map.getCenter().lat,map.getCenter().lng]; rr.zoom=map.getZoom(); if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); if(soilOn) loadSoilPolys(); if(heatOn&&!aoi()) runHeat(); drawAll(); saveSoon(); });
+  map.on('moveend',()=>{ saveMyView(); if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); if(soilOn) loadSoilPolys(); if(heatOn&&!aoi()) runHeat(); drawAll(); });
   map.on('zoomend',()=>{ if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); drawAll(); });
   const c=map.getContainer();
   c.addEventListener('touchstart',e=>{ if(mode==='paint'||mode==='erase'){ const t=e.touches[0]; onDown({latlng:map.mouseEventToLatLng(t),originalEvent:e}); } },{passive:false});
@@ -958,6 +1114,15 @@ function setMode(m){ if(mode==='hedge'||mode==='wline'||mode==='pond'||mode==='a
   handleLayer.clearLayers();
   const hints={select:'',hedge:'Tap along the hedgerow centreline. Double-tap or Finish to end.',paint:S.sel.species?('Painting '+SP(S.sel.species).common+' — drag along a row.'):'Pick a species in the Plants tab, then drag along a row.',erase:'Drag along a row to remove plants.',wnode:'Tap the map to place a '+WKINDS[wnodeKind].label.toLowerCase()+'.',aoi:'Tap a loose outline around the ground you want ranked — three corners is enough. Double-tap or Finish to close it.',creek:'Trace the creek, ditch or swale down its channel. Double-tap or Finish to end.',wline:'Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.',pond:'Tap around the pond edge at full pool. Finish to close the outline.',aoi:'Tap a loose outline around the ground you want ranked. Double-tap or Finish to close it.'};
   readout(hints[m]); modeBanner(); if(m==='paint'||m==='erase') showTab('paint'); if(m==='wnode'||m==='wline'||m==='pond'||m==='creek') showTab('water'); if(m==='aoi') showTab('goals'); if(m==='hedge') showTab('rows'); drawAll(); }
+/* Every mode-entry button (Draw hedgerow, Paint, Erase, Draw pipe, Study area, Draw
+   pond outline, Trace a creek, the generic "Place water node") is a toggle: clicking
+   the one that's already active exits back to Select instead of doing nothing. */
+function toggleMode(m){ setMode(mode===m?'select':m); }
+/* The per-kind water-node buttons (Well/Tank/Valve/Regulator) layer a "which kind"
+   choice on top of the single shared 'wnode' mode. Clicking the kind that's currently
+   both selected AND active exits the mode; clicking a different kind just switches
+   what you're about to place without leaving the mode. */
+function toggleWnodeKind(k){ if(mode==='wnode'&&wnodeKind===k) setMode('select'); else { wnodeKind=k; setMode('wnode'); } }
 let wnodeKind='tank';
 let _selClickTimer=null;
 function onMapClick(e){ const ll=[e.latlng.lat,e.latlng.lng];
@@ -1268,8 +1433,8 @@ async function waterDistance(ll){ let best=null; R().water.nodes.filter(n=>n.kin
   const url=(await nhdLayerUrl())+'/query?'+new URLSearchParams({geometry:JSON.stringify({xmin:sw[1],ymin:sw[0],xmax:ne[1],ymax:ne[0],spatialReference:{wkid:4326}}),geometryType:'esriGeometryEnvelope',inSR:'4326',spatialRel:'esriSpatialRelIntersects',outFields:'GNIS_NAME,FTYPE,FCODE',returnGeometry:'true',outSR:'4326',f:'json',resultRecordCount:'200'});
   const js=await fetchJSON(url,null,{label:'Hydrography (NHD)'}); (js.features||[]).forEach(f=>{ const g=f.geometry; if(!g||!g.paths) return; g.paths.forEach(path=>{ const pts=path.map(p=>[p[1],p[0]]); const pr=projectToLine(ll,pts); if(!best||pr.distFt<best.ft) best={ft:pr.distFt,src:(f.attributes&&f.attributes.gnis_name)||'NHD flowline',pt:pr.ll}; }); });
   return best; }
-const POND_FILL={year:'full year-round',summer:'full through the irrigation season (spring–summer)',winter:'full in winter, drawn down by summer'};
-const CREEK_FLOW={perennial:'runs all year',seasonal:'runs into early summer',ephemeral:'runs only after rain'};
+const POND_FILL={year:'Full Year-Round',summer:'Full Through the Irrigation Season (Spring–Summer)',winter:'Full in Winter, Drawn Down by Summer'};
+const CREEK_FLOW={perennial:'Runs All Year',seasonal:'Runs Into Early Summer',ephemeral:'Runs Only After Rain'};
 function creeks(){ return (R().creeks||[]).filter(c=>c.pts&&c.pts.length>=2); }
 function creekBandFt(c,soil){ let w=seepWidthFt({lined:false},soil)*1.35;
   if(c.flow==='seasonal') w*=0.75; if(c.flow==='ephemeral') w*=0.45;
@@ -1474,7 +1639,7 @@ function creeksHtml(){ const cs=R().creeks||[];
     return `<div class="card${sel?' sel':''}" onclick="S.sel.creek='${c.id}';drawAll();renderPanels()">
       <div class="row"><input type="text" class="grow" value="${esc(c.name)}" onclick="event.stopPropagation()" onchange="commit('Rename creek',()=>{creekById('${c.id}').name=this.value});drawAll();renderPanels()"><span class="small mute">${Math.round(pathLenFt(c.pts))} ft</span></div>
       <div class="row" style="margin-top:6px"><div><label>Flow</label><select onclick="event.stopPropagation()" onchange="commit('Set creek flow',()=>{creekById('${c.id}').flow=this.value});drawAll();renderPanels()">${Object.keys(CREEK_FLOW).map(k=>`<option value="${k}"${c.flow===k?' selected':''}>${CREEK_FLOW[k]}</option>`).join('')}</select></div>
-        <div><label>Bank above summer water, ft</label><input type="number" step="0.5" min="0" max="20" value="${c.incisedFt}" onclick="event.stopPropagation()" onchange="commit('Set bank height',()=>{creekById('${c.id}').incisedFt=+this.value});drawAll();renderPanels()"></div>
+        <div><label>Bank above summer water, ft</label><input type="number" step="0.5" min="0" max="20" value="${c.incisedFt}" onclick="event.stopPropagation()" onchange="commit('Set bank height',()=>{creekById('${c.id}').incisedFt=+this.value});afterChange(()=>{drawAll();renderPanels();})"></div>
         <div><label>Channel width ft</label><input type="number" step="1" min="1" value="${c.widthFt}" onclick="event.stopPropagation()" onchange="commit('Set channel width',()=>{creekById('${c.id}').widthFt=+this.value})"></div></div>
       <p class="small mute">Riparian band reaches about <b>${band} ft</b> each side here ${prov('model')}. ${c.incisedFt>=6?'<span class="warn">A bank this high strands a row above the water table — the band is cut back accordingly.</span>':''}</p>
       <button class="small danger" onclick="event.stopPropagation();delCreek('${c.id}')">Delete</button></div>`; }).join('');
@@ -1747,7 +1912,7 @@ function justify(h){ const A=assessAll(h); const out=[];
         canopyNotes:HORIZONS.map(y=>({y,notes:notesBy[y].filter(x=>x.k!=='root'&&x.k!=='rootok')})).filter(x=>x.notes.length),
         replace:sp.replace?SP(sp.replace):null,fail:sp.fail,trigger:sp.trigger}); });
     out.push({row:r,i,items,stats:rowStats(h,i)}); }); return out; }
-const DENSITY={closed:{k:1.7,label:'closed canopy (overlapping)'},touching:{k:2.0,label:'canopies touching at maturity'},open:{k:2.6,label:'open, room between crowns'}};
+const DENSITY={closed:{k:1.7,label:'Closed Canopy (Overlapping)'},touching:{k:2.0,label:'Canopies Touching at Maturity'},open:{k:2.6,label:'Open, Room Between Crowns'}};
 function densityK(h){ return (DENSITY[h.density||'touching']||DENSITY.touching).k; }
 function rowMoistures(h){ const n=h.rows.length; const lines=rowLines(h); const infos=lines.map(pts=>{ const k=hexKeyFor(pointAtFt(pts,pathLenFt(pts)/2)); return hexInfo(k[0],k[1]); });
   const stat=h.rows.map((r,i)=>{ const sm=stationMoistures(h,i,10); return sm.reduce((a,b)=>a+b.wet,0)/Math.max(1,sm.length); });
@@ -1949,7 +2114,8 @@ function renderRanchSettingsBody(sfx){ sfx=sfx||''; const r=R();
     <p class="small mute">One access code per person, set once per device — recover it from your password manager if a device gets wiped. Applied when you click OK below.</p>
     <form onsubmit="event.preventDefault();"><label>Access code</label><input type="password" id="accessCode${sfx}" name="hedgeright-access-code" placeholder="access code" value="${esc(codeVal)}" autocomplete="current-password" onchange="_dlgPendingCode=this.value"></form>
     <p class="small mute cloudStatusEl"></p>
-    <div class="peopleAccessEl"></div>`; }
+    <div class="peopleAccessEl"></div>
+    <div class="speciesAdminEl"></div>`; }
 function openSettingsDialog(){
   UI.open('Settings',renderRanchSettingsBody('Dlg'),
     [{label:'Cancel',value:'cancel'},{label:'OK',primary:true,value:'ok'}])
@@ -1961,28 +2127,28 @@ function openSettingsDialog(){
            switch is treated as happening first, name/location edits second. */
         if(_dlgPendingCode!==null&&_dlgPendingCode!==accessCode()){
           setAccessCode(_dlgPendingCode);
-          if(_dlgPendingCode){ const data=await cloudPull(); await cloudWhoAmI(); if(data){ S=data; normalizeState(); } }
+          if(_dlgPendingCode){ const data=await cloudPull(); await cloudWhoAmI(); const [,sharedSpecies]=await Promise.all([loadMyViews(),loadSharedSpecies()]); if(data){ S=data; normalizeState(); } if(sharedSpecies) S.species=sharedSpecies; }
           else { cloudStatus={state:'unconfigured',msg:'',at:null}; cloudIdentity={role:null,name:null}; }
         }
         if(_dlgPendingName!==null&&_dlgPendingName!==R().name) commit('Rename ranch',()=>{ R().name=_dlgPendingName; });
         if(_dlgPendingCenter!==null) commit('Move ranch location',()=>{ R().center=_dlgPendingCenter; });
         if(_peopleListPristine&&JSON.stringify(_peopleList)!==JSON.stringify(_peopleListPristine)) saveUsers(_peopleList);
-        if(map){ map.setView(R().center,R().zoom); drawAll(); }
+        if(map){ const lv=_dlgPendingCenter===null?myViewFor(R().id):null; map.setView(lv?lv.center:R().center,lv?lv.zoom:R().zoom); drawAll(); }
         renderPanels();
       } else {
         if(_dlgOriginalCenter&&map) map.setView(_dlgOriginalCenter,map.getZoom());
         if(_peopleListPristine) _peopleList=JSON.parse(JSON.stringify(_peopleListPristine));
       }
-      _dlgPendingName=null; _dlgPendingCenter=null; _dlgOriginalCenter=null; _dlgPendingCode=null; _selectedPerson=null;
+      _dlgPendingName=null; _dlgPendingCenter=null; _dlgOriginalCenter=null; _dlgPendingCode=null; _selectedPerson=null; _harvestDraft=null;
     });
-  renderCloudStatus(); renderPeopleAccess(); }
+  renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); }
 function renderRanch(){ const r=R();
   document.getElementById('ranchSub').textContent=r.name+' · '+r.hedgerows.length+' hedgerow'+(r.hedgerows.length===1?'':'s');
   let html=`<h2>Study area</h2>`;
   if(aoi()){ html+=`<p class="small">${aoiAcres().toFixed(1)} acres outlined, ${(hexesInAoi()||[]).length} acre hexes.</p><div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`; }
-  else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="setMode('aoi')">Draw study area</button></p>`;
+  else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="toggleMode('aoi')">Draw study area</button></p>`;
   html+=`<p class="small mute">Lost track of what you've drawn? <button class="small" onclick="fitAllView()">Zoom to everything</button> frames every hedgerow and water node on the ranch.</p>`;
-  setHtml('tab-ranch',html); renderCloudStatus(); renderPeopleAccess(); }
+  setHtml('tab-ranch',html); renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); }
 /* Accepts either "lat, lng" (jumps instantly, no network) or a free-text place/address
    (geocoded via Nominatim — needs a real browser tab, not the sandboxed preview). */
 function geocode(inputId){ inputId=inputId||'geo'; const input=document.getElementById(inputId); const q=(input&&input.value||'').trim(); if(!q) return;
@@ -2014,14 +2180,14 @@ function renderRows(){ const h=curHedge(); const r=R(); let html='';
     <div class="row" style="margin-top:4px"><button class="small" onclick="applyEdgeOffer(${rec})">Align row 1 at ${rec} ft</button><button class="small" onclick="setMode('select')">Ignore</button></div></div>`; }
   if(h.pondEdge||h.creekEdge){ const edge=h.pondEdge?'pondEdge':'creekEdge'; const objs=h.pondEdge?R().water.nodes:creeks(); const obj=objs.find(o=>o.id===h[edge][h.pondEdge?'pondId':'creekId']);
     html+=`<div class="issue good">Row 1 held ${h[edge].offsetFt} ft from ${obj?esc(obj.name):(h.pondEdge?'the pond':'the creek')}<button class="small" style="float:right" onclick="commit('Unlink from water',()=>{${h.pondEdge?'clearPondEdge':'clearCreekEdge'}(curHedge())});drawAll();renderPanels()">Unlink</button></div>`; }
-  html+=`<h2>Rows</h2><div class="row"><label style="margin:0">Count</label><input type="number" min="1" max="8" value="${h.rows.length}" style="width:56px" onchange="commit('Set row count',()=>setRowCount(curHedge(),+this.value));drawAll();renderPanels();saveSoon()">
+  html+=`<h2>Rows</h2><div class="row"><label style="margin:0">Count</label><input type="number" min="1" max="8" value="${h.rows.length}" style="width:56px" onchange="commit('Set row count',()=>setRowCount(curHedge(),+this.value));afterChange(()=>{drawAll();renderPanels();saveSoon();})">
     <label style="margin:0">Density</label><select onchange="commit('Set density',()=>{curHedge().density=this.value;relayoutHedge(curHedge());});drawAll();renderPanels();saveSoon()">${Object.keys(DENSITY).map(k=>`<option value="${k}"${(h.density||'touching')===k?' selected':''}>${DENSITY[k].label}</option>`).join('')}</select></div>`;
   html+=h.rows.map((r0,i)=>{ const sel=S.sel.row===i; const st=rowStats(h,i); const m=moist[i];
     return `<div class="card${sel?' sel':''}" onclick="S.sel.row=${i};drawAll();renderPanels()">
       <div class="row"><input type="text" class="grow" value="${esc(r0.name)}" onclick="event.stopPropagation()" onchange="commit('Rename row',()=>{curHedge().rows[${i}].name=this.value});drawAll();renderPanels()">
         <label style="margin:0">Regime</label><select style="width:104px" title="${esc(REGIMES[r0.regime])}" onclick="event.stopPropagation()" onchange="commit('Set regime',()=>curHedge().rows[${i}].regime=this.value);renderPanels();saveSoon()">${Object.keys(REGIMES).map(k=>`<option value="${k}"${r0.regime===k?' selected':''}>${REGIMES[k]}</option>`).join('')}</select></div>
       <p class="small mute">${Math.round(rowLenFt(h,i))} ft · ${st.n} plants · ${st.gpm.toFixed(2)} gpm${site.length?' · moisture '+m.toFixed(2):''}</p>
-      ${i<h.rows.length-1?`<label style="margin:4px 0 0">Gap to next row, ft</label><input type="number" min="3" max="30" value="${(h.gapsFt&&h.gapsFt[i])||h.rowSpacingFt||8}" onclick="event.stopPropagation()" onchange="commit('Set row gap',()=>{curHedge().gapsFt=curHedge().gapsFt||[];curHedge().gapsFt[${i}]=+this.value;clampPlants(curHedge())});drawAll();renderPanels()">`:''}
+      ${i<h.rows.length-1?`<label style="margin:4px 0 0">Gap to next row, ft</label><input type="number" min="3" max="30" value="${(h.gapsFt&&h.gapsFt[i])||h.rowSpacingFt||8}" onclick="event.stopPropagation()" onchange="commit('Set row gap',()=>{curHedge().gapsFt=curHedge().gapsFt||[];curHedge().gapsFt[${i}]=+this.value;clampPlants(curHedge())});afterChange(()=>{drawAll();renderPanels();})">`:''}
     </div>`; }).join('');
   html+=`<div class="row" style="margin-top:8px"><button class="small primary" onclick="doPopulate()">${h.rows.some(r=>r.plants.length)?'Re-run auto-fill':'Auto-fill from goals'}</button>
     <button class="small" onclick="commit('Clear all plants',()=>h.rows.forEach(r=>r.plants=[]));drawAll();renderPanels();saveSoon()">Clear plants</button></div>`;
@@ -2036,31 +2202,31 @@ async function doPopulate(){ busy(true,'Filling the hedgerow…'); const h=curHe
   commit('Fill '+h.name,()=>populateHedge(h)); drawAll(); renderPanels(); showTab('rows'); busy(false,'Filled'); readout(h.name+' filled — see “Why it filled this way” below, or open Build to walk the row.'); }
 function renderWater(){ const r=R(); const sol=solveNet();
   let html=`<div class="row"><label style="margin:0">Feed</label><select onchange="commit('Set water feed',()=>{R().feed=this.value});drawAll();renderPanels()"><option value="gravity"${r.feed==='gravity'?' selected':''}>Gravity</option><option value="pumped"${r.feed==='pumped'?' selected':''}>Pumped</option></select>
-    ${r.feed==='pumped'?`<label style="margin:0">psi</label><input type="number" style="width:60px" value="${r.feedPsi||0}" onchange="commit('Set feed psi',()=>{R().feedPsi=+this.value});drawAll();renderPanels()">`:''}</div>
+    ${r.feed==='pumped'?`<label style="margin:0">psi</label><input type="number" style="width:60px" value="${r.feedPsi||0}" onchange="commit('Set feed psi',()=>{R().feedPsi=+this.value});afterChange(()=>{drawAll();renderPanels();})">`:''}</div>
     <h2>Find the water on this ranch</h2>
     <div class="row">${bigBtn('pond','Find ponds','NWI + NHD waterbodies in view',"findPonds()")}${bigBtn('creek','Find creeks','NHD flowlines in view',"findCreeks()")}</div>
     <button class="small primary" onclick="findAllWater()">Find both at once</button>
     ${(foundPonds.length||foundCreeks.length)?`<p class="small">${foundPonds.length} pond${foundPonds.length===1?'':'s'}/wetland${foundPonds.length===1?'':'s'}, ${foundCreeks.length} stream${foundCreeks.length===1?'':'s'} found in view — tap one on the map, or:</p>
       <div class="row">${foundPonds.length?`<button class="small" onclick="adoptAllPonds(true)">Add all ponds</button><button class="small" onclick="adoptAllPonds(false)">Add every water feature</button>`:''}${foundCreeks.length?`<button class="small" onclick="adoptAllCreeks()">Add all streams</button>`:''}</div>`:''}
-    <h2>Add a node</h2><div class="row">${Object.keys(WKINDS).filter(k=>k!=='pond').map(k=>`<button class="small${wnodeKind===k?' on':''}" onclick="wnodeKind='${k}';setMode('wnode')">${WKINDS[k].label}</button>`).join('')}<button class="small" onclick="setMode('pond')">Draw pond outline</button></div>
+    <h2>Add a node</h2><div class="row">${Object.keys(WKINDS).filter(k=>k!=='pond').map(k=>`<button class="small${(mode==='wnode'&&wnodeKind===k)?' on':''}" onclick="toggleWnodeKind('${k}')">${WKINDS[k].label}</button>`).join('')}<button class="small${mode==='pond'?' on':''}" onclick="toggleMode('pond')">Draw pond outline</button></div>
     <h2>Nodes</h2>`+nodesHtml();
   const n=r.water.nodes.find(x=>x.id===S.sel.wnode);
   if(n){ const so=sol.nodes[n.id];
     html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(n.name)}" onchange="commit('Rename node',()=>{wnodeById('${n.id}').name=this.value});drawWater();renderPanels()"><button class="small danger" onclick="delNode('${n.id}')">Delete</button></div>
-      <label>Elevation, ft</label><input type="number" value="${n.elevFt!=null?n.elevFt.toFixed(1):''}" onchange="commit('Set elevation',()=>{wnodeById('${n.id}').elevFt=+this.value});drawWater();renderPanels()">
-      ${n.kind==='tank'?`<label>Tank height, ft</label><input type="number" value="${n.tankHt||0}" onchange="commit('Set tank height',()=>{wnodeById('${n.id}').tankHt=+this.value});drawWater();renderPanels()"><label>Tank size, gal</label><input type="number" value="${n.tankGal||0}" onchange="commit('Set tank size',()=>{wnodeById('${n.id}').tankGal=+this.value})">`:''}
-      ${n.kind==='reg'?`<label>Set to, psi</label><input type="number" value="${n.regPsi||0}" onchange="commit('Set regulator psi',()=>{wnodeById('${n.id}').regPsi=+this.value});drawWater();renderPanels()">`:''}
+      <label>Elevation, ft</label><input type="number" value="${n.elevFt!=null?n.elevFt.toFixed(1):''}" onchange="commit('Set elevation',()=>{wnodeById('${n.id}').elevFt=+this.value});afterChange(()=>{drawWater();renderPanels();})">
+      ${n.kind==='tank'?`<label>Tank height, ft</label><input type="number" value="${n.tankHt||0}" onchange="commit('Set tank height',()=>{wnodeById('${n.id}').tankHt=+this.value});afterChange(()=>{drawWater();renderPanels();})"><label>Tank size, gal</label><input type="number" value="${n.tankGal||0}" onchange="commit('Set tank size',()=>{wnodeById('${n.id}').tankGal=+this.value})">`:''}
+      ${n.kind==='reg'?`<label>Set to, psi</label><input type="number" value="${n.regPsi||0}" onchange="commit('Set regulator psi',()=>{wnodeById('${n.id}').regPsi=+this.value});afterChange(()=>{drawWater();renderPanels();})">`:''}
       ${n.kind==='pond'?`<label><input type="checkbox" ${n.lined?'checked':''} onchange="commit('Set pond lined',()=>{wnodeById('${n.id}').lined=this.checked});drawAll();renderPanels()"> Lined (no seep)</label>
         <label>Fill regime</label><select onchange="commit('Set fill regime',()=>{wnodeById('${n.id}').fill=this.value});drawAll();renderPanels()">${Object.keys(POND_FILL).map(k=>`<option value="${k}"${n.fill===k?' selected':''}>${POND_FILL[k]}</option>`).join('')}</select>
-        <label>Pool elevation, ft</label><input type="number" value="${pondPoolFt(n)!=null?pondPoolFt(n).toFixed(1):''}" onchange="commit('Set pool elevation',()=>{wnodeById('${n.id}').poolFt=+this.value});drawAll();renderPanels()">
+        <label>Pool elevation, ft</label><input type="number" value="${pondPoolFt(n)!=null?pondPoolFt(n).toFixed(1):''}" onchange="commit('Set pool elevation',()=>{wnodeById('${n.id}').poolFt=+this.value});afterChange(()=>{drawAll();renderPanels();})">
         ${n.acres?`<p class="small mute">${n.acres.toFixed(2)} acres${n.source?' · '+esc(n.source):''}</p>`:''}`:''}
-      <label>Measured psi (optional, checks the model)</label><input type="number" value="${n.measPsi!=null?n.measPsi:''}" onchange="commit('Set measured psi',()=>{wnodeById('${n.id}').measPsi=this.value===''?null:+this.value});renderPanels()">
+      <label>Measured psi (optional, checks the model)</label><input type="number" value="${n.measPsi!=null?n.measPsi:''}" onchange="commit('Set measured psi',()=>{wnodeById('${n.id}').measPsi=this.value===''?null:+this.value});afterChange(renderPanels)">
       ${so&&so.psi!=null?`<p class="small">Modelled: <b>${so.psi.toFixed(1)} psi</b>${so.measPsi!=null?` · measured ${so.measPsi} psi ${Math.abs(so.measPsi-so.psi)>8?'<span class="alert">— check pipe size/elevation</span>':'<span class="ok">— close match</span>'}`:''}${so.freeGpm!=null?` · ~${so.freeGpm.toFixed(1)} gpm free flow`:''}</p>`:''}</div>`; }
   const wl=r.water.lines.find(x=>x.id===S.sel.wline);
   if(wl){ html+=`<div class="card sel"><div class="row"><input type="text" class="grow" value="${esc(wl.name)}" onchange="commit('Rename pipe',()=>{wlineById('${wl.id}').name=this.value});drawWater();renderPanels()"><button class="small danger" onclick="delLine('${wl.id}')">Delete</button></div>
     <label>Diameter</label><select onchange="commit('Set pipe diameter',()=>{wlineById('${wl.id}').dIn=+this.value});drawWater();renderPanels()">${PIPE_SIZES.map(p=>`<option value="${p.id}"${Math.abs(wl.dIn-p.id)<0.01?' selected':''}>${p.label}</option>`).join('')}</select>
     <p class="small mute">${Math.round(pathLenFt(wl.pts))} ft · C=${wl.C}</p></div>`; }
-  html+=`<h2>Creeks</h2><div class="row"><button class="small" onclick="setMode('creek')">Trace a creek</button></div>`+creeksHtml();
+  html+=`<h2>Creeks</h2><div class="row"><button class="small${mode==='creek'?' on':''}" onclick="toggleMode('creek')">Trace a creek</button></div>`+creeksHtml();
   html+=`<h2>Network</h2>`+renderIrrigation();
   setHtml('tab-water',html); }
 function nodesHtml(){ const nodes=R().water.nodes;
@@ -2119,7 +2285,7 @@ function heatBreakdown(q,r){ const info=hexInfo(q,r); if(!info) return ''; const
 function renderGoals(){ const r=R(); r.goals=r.goals||{}; let html=`<h2>What do you want from it?</h2>`
     +Object.keys(GOALS).map(g=>`<div class="goal"><span>${esc(GOALS[g])}</span><input type="range" min="0" max="3" value="${r.goals[g]||0}" onpointerdown="_goalBefore=JSON.stringify(S)" oninput="R().goals['${g}']=+this.value;this.nextElementSibling.textContent=['none','a little','a lot','defining'][+this.value]" onchange="renderGoals();if(_goalBefore&&JSON.stringify(S)!==_goalBefore){HIST.stack.push({label:'Adjust goal weight',state:_goalBefore});if(HIST.stack.length>HIST.max)HIST.stack.shift();HIST.redo.length=0;updateHistButtons();UI.toast('Adjust goal weight',{label:'Undo',fn:undo});}_goalBefore=null;saveSoon()"><span class="mute small">${['none','a little','a lot','defining'][r.goals[g]||0]}</span></div>`).join('');
   html+=`<h2>Study area</h2>`;
-  if(!aoi()) html+=`<p class="small mute">Outline the ground you're considering and every acre gets read and ranked by fit. <button class="small" onclick="setMode('aoi')">Draw study area</button></p>`;
+  if(!aoi()) html+=`<p class="small mute">Outline the ground you're considering and every acre gets read and ranked by fit. <button class="small" onclick="toggleMode('aoi')">Draw study area</button></p>`;
   else html+=`<p class="small">${aoiAcres().toFixed(1)} acres, ${(hexesInAoi()||[]).length} hexes.</p><label><input type="checkbox" ${heatOn?'checked':''} onchange="document.getElementById('lyHeat').checked=this.checked;heatToggle()"> Show suitability heat map</label>
     <div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`;
   html+=`<h2>Shortlist</h2>`;
@@ -2146,7 +2312,7 @@ async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=si
 function renderPaint(){ const h=curHedge(); let html='';
   if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`); return; }
   const r=h.rows[S.sel.row||0];
-  html+=`<div class="row"><button class="small" onclick="doPopulate()">Auto-fill</button><button class="small${mode==='paint'?' on':''}" onclick="setMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="setMode('erase');renderPaint()">Erase mode</button></div>`;
+  html+=`<div class="row"><button class="small" onclick="doPopulate()">Auto-fill</button><button class="small${mode==='paint'?' on':''}" onclick="toggleMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="toggleMode('erase');renderPaint()">Erase mode</button></div>`;
   if(mode==='paint') html+=`<p class="small">Painting into <b>${esc(r?r.name:'')}</b> — pick a species, then drag along the row on the map.</p>`;
   else if(mode==='erase') html+=`<p class="small">Erasing from <b>${esc(r?r.name:'')}</b> — drag along the row on the map to clear whatever's planted there.</p>`;
   const site=r?stationInfo(h,S.sel.row||0,rowLenFt(h,S.sel.row||0)/2):null;
@@ -2358,9 +2524,9 @@ let _saveT=null;
 function saveSoon(){ markDirty(true); if(!autoSaveOn) return; clearTimeout(_saveT); _saveT=setTimeout(persistNow,1200); }
 function toggleSaveMenu(e){ if(e) e.stopPropagation(); const w=document.getElementById('saveWrap'); w.classList.toggle('open');
   document.getElementById('saveMenuHolder').innerHTML=w.classList.contains('open')?`<div class="menu">
-    <button onclick="promptSaveAs();toggleSaveMenu()">Save as… <kbd>Ctrl+S</kbd></button>
-    <button onclick="toggleSaveMenu();openRanchesSavesDialog(false)">Open a saved design…</button>
-    <button onclick="snapTake();toggleSaveMenu()">Take a snapshot</button>
+    <button onclick="promptSaveAs();toggleSaveMenu()">Save As… <kbd>Ctrl+S</kbd></button>
+    <button onclick="toggleSaveMenu();openRanchesSavesDialog(false)">Open a Saved Design…</button>
+    <button onclick="snapTake();toggleSaveMenu()">Take a Snapshot</button>
     <div class="sep"></div>
     <button onclick="exportJSON();toggleSaveMenu()">Export JSON</button>
     <button onclick="document.getElementById('impInput').click();toggleSaveMenu()">Import JSON…</button>
@@ -2425,7 +2591,9 @@ async function trySignIn(){
   setAccessCode(code);
   const data=await cloudPull(); await cloudWhoAmI();
   if(!cloudIdentity.role){ setAccessCode(''); if(status) status.textContent="That code wasn't recognized. Check it and try again."; return; }
+  const [,sharedSpecies]=await Promise.all([loadMyViews(),loadSharedSpecies()]);
   S=data||defaultState(); normalizeState();
+  if(sharedSpecies) S.species=sharedSpecies;
   hideStart(); finishBoot(); }
 function showMapLoadError(){
   document.getElementById('start').classList.add('show');
@@ -2453,13 +2621,15 @@ function finishBoot(){
   loadAutoSavePref();
   if(typeof L==='undefined'||!L.map){ showMapLoadError(); return; }
   if(cloudDeployed()&&!accessCode()){ renderSignIn(); return; }
-  let loaded=false;
-  if(cloudConfigured()){ const cloud=await cloudPull(); if(cloud){ S=cloud; loaded=true; } cloudWhoAmI(); }
+  let loaded=false; let sharedSpecies=null;
+  if(cloudConfigured()){ const [cloud,,species]=await Promise.all([cloudPull(),loadMyViews(),loadSharedSpecies()]); if(cloud){ S=cloud; loaded=true; } sharedSpecies=species; cloudWhoAmI(); }
+  else await loadMyViews();
   if(!loaded){
     try{ const saved=localStorage.getItem('hedgeright.autosave'); S=saved?JSON.parse(saved):defaultState(); }
     catch(e){ S=defaultState(); }
   }
   normalizeState();
+  if(sharedSpecies) S.species=sharedSpecies;
   finishBoot();
 })();
 </script>
