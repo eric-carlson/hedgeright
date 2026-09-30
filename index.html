@@ -580,19 +580,127 @@ function mapDrainage(text){ text=(text||'').toLowerCase(); if(text.includes('cla
 function mapBloomMonths(s){ const seasons={winter:[12,1,2],spring:[3,4,5],summer:[6,7,8],fall:[9,10,11],autumn:[9,10,11]}; s=(s||'').toLowerCase(); let months=[]; Object.keys(seasons).forEach(k=>{ if(s.includes(k)) months=months.concat(seasons[k]); }); return months.length?Array.from(new Set(months)).sort((a,b)=>a-b):null; }
 function parseSizeMid(s){ if(!s) return null; const m=s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/); if(m) return Math.round(((+m[1]+ +m[2])/2)*10)/10; const m2=s.match(/(\d+(?:\.\d+)?)/); return m2?+m2[1]:null; }
 function slugifyId(s){ const base=(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,12); return base||uid().slice(0,8); }
+function parseBloomRange(s){ if(!s) return null;
+  const MONTHS={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+  const nums=(s.toLowerCase().match(/[a-z]+/g)||[]).map(w=>MONTHS[w]).filter(Boolean);
+  if(nums.length<2) return null;
+  const a=nums[0], b=nums[nums.length-1]; const months=[]; let m=a;
+  while(true){ months.push(m); if(m===b) break; m=m===12?1:m+1; if(months.length>12) break; }
+  return months; }
+function mapDrainageFromTextures(textures){ if(!textures) return null; const t=textures.toLowerCase();
+  const sandy=/sand/.test(t), clay=/clay/.test(t);
+  if(sandy&&clay) return 'any'; if(sandy) return 'sharp'; if(clay) return 'tolerant'; return null; }
 function mapHarvestToDraft(h){
   const tags=((h.tolerances||'')+' '+(h.habitatValues||'')+' '+(h.specialUses||'')).toLowerCase();
   const widthMid=parseSizeMid(h.width);
+  const refKeys={precipitation:'Annual precip',wetSeason:'Wet season',elevation:'Elevation',hardiness:'Hardiness',soilPh:'Soil pH',soilTextures:'Soil textures',lifeform:'Life form',family:'Family'};
+  const ref=Object.keys(refKeys).map(k=>h[k]?(refKeys[k]+': '+h[k]):null).filter(Boolean).join(' · ');
   return { id:slugifyId(h.commonName||h.botanicalName), common:h.commonName||'', sci:h.botanicalName||'',
     color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
-    moisture:mapMoisture(h.water), drainage:mapDrainage(h.rawText), sun:mapSun(h.exposure),
-    riparianFt:null, bloom:mapBloomMonths(h.bloomTime), risk:null, story:null,
+    moisture:mapMoisture(h.water), drainage:mapDrainageFromTextures(h.soilTextures)||mapDrainage(h.siteConditions||h.rawText), sun:mapSun(h.exposure),
+    riparianFt:null, bloom:parseBloomRange(h.bloomPeriod)||mapBloomMonths(h.bloomTime), risk:null, story:null,
     ht:parseSizeMid(h.height), rad:widthMid?Math.round(widthMid/2*10)/10:null,
     T:null, cast:null, tol:null, root:{cls:null,depth:null,lat:null}, spreads:null, allelo:0,
     goals:{poll:/pollinat|bee|butterfl/.test(tags)?2:0, wild:/wildlife|bird/.test(tags)?2:0, screen:0, barrier:0, bank:0,
       fire:/fire resist/.test(tags)?2:0, lowWater:/drought/.test(tags)?2:0, fodder:0, fast:0, lowMaint:0},
-    replace:null, fail:'', trigger:'', notes:(h.rawText||'').split('\n').find(l=>l.length>80)||'',
+    replace:null, fail:'', trigger:'', notes:((h.rawText||'').split('\n').find(l=>l.length>80)||'')+(ref?(' — '+ref):''),
     conf:'draft', source:h.sourceUrl||null }; }
+/* Same field-pattern-matching the Worker's /harvest route does, but run client-side
+   against HTML the person copied from their own browser's dev tools. Works for any
+   site regardless of CORS or bot-detection — by the time they copy it, their browser
+   already rendered it, JavaScript included, which a server-side fetch can't do for
+   Calscape or Calflora's Plant Characteristics page. Casts a wide net of labels from
+   all three known sources; whatever doesn't match stays blank for manual entry, and
+   the raw text is preserved so nothing found-but-unmapped is actually lost. */
+function extractFieldsFromHtml(html){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  doc.querySelectorAll('script,style,nav,footer').forEach(el=>el.remove());
+  const generic=extractGenericFields(doc);
+  if(doc.getElementById('cpcharSlot')||doc.getElementById('taxonSlot')){
+    const cf=extractCalfloraCharacteristics(doc);
+    Object.keys(cf).forEach(k=>{ if(cf[k]!=null) generic[k]=cf[k]; });
+  }
+  return generic; }
+function extractGenericFields(doc){
+  const lines=(doc.body?doc.body.textContent:doc.documentElement.textContent||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const plain=lines.join('\n');
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  /* Tries label-and-value on one line ("Average Height: 4 - 8 ft") first, then
+     label alone on its own line with the value on the next ("Exposures" / "Sun") —
+     anchored to whole lines, and tries the label both singular and plural, so a
+     plural label can't accidentally match as a prefix of the singular form and
+     capture garbage trailing text (the bug the Worker's harvester hit). */
+  const field=(label)=>{
+    for(const lb of [label,label+'s']){
+      const mSame=plain.match(new RegExp('^'+esc(lb)+'\\s*:\\s*(\\S[^\\n]*)$','im'));
+      if(mSame) return mSame[1].trim();
+    }
+    for(const lb of [label,label+'s']){
+      const idx=lines.findIndex(l=>l.toLowerCase()===lb.toLowerCase());
+      if(idx>=0&&idx+1<lines.length) return lines[idx+1];
+    }
+    return null; };
+  return {
+    botanicalName: field('Botanical Name'),
+    commonName: field('Common Name(s)')||field('Common Name'),
+    height: field('Average Height')||field('Height'),
+    width: field('Average Width')||field('Width'),
+    exposure: field('Exposure'),
+    water: field('Water Requirement'),
+    bloomTime: field('Bloom Time'),
+    bloomPeriod: field('Bloom Period'),
+    tolerances: field('Tolerances'),
+    habitatValues: field('Habitat Values'),
+    specialUses: field('Special Uses'),
+    precipitation: field('Annual Precipitation'),
+    wetSeason: field('Wet Season'),
+    elevation: field('Elevation'),
+    hardiness: field('Hardiness Zones'),
+    rawText: plain.slice(0,8000),
+  }; }
+/* Calflora's Plant Characteristics page (rareplants.cnps.org-style JS app) has clean,
+   consistent markup once rendered — #taxonSlot/#commonSlot/#familySlot for identity,
+   and a table of .charNameCell/.charValueCell pairs for every climate/soil factor —
+   so this reads it with real selectors instead of guessing at label text. Anything it
+   finds overrides the generic text-scan above for the same field. */
+function extractCalfloraCharacteristics(doc){
+  const txt=(el)=>el?el.textContent.replace(/\s+/g,' ').trim():null;
+  const rows={};
+  /* Calflora uses two different sets of class names for what's semantically the same
+     table — charNameCell/charValueCell/metricValueCell on the Plant Characteristics
+     page, charNameCellCompare/compareCellPlant on the Plant Location Suitability page
+     — and isn't even consistent within one page (that page's "Textures" row uses
+     charNameCell while every row around it uses charNameCellCompare). Checking both
+     covers either page through the same parser. */
+  doc.querySelectorAll('.charNameCell,.charNameCellCompare').forEach(nameCell=>{
+    const label=nameCell.textContent.trim().replace(/:$/,'');
+    const row=nameCell.closest('tr'); if(!row) return;
+    const vals=Array.from(row.querySelectorAll('.charValueCell,.metricValueCell,.compareCellPlant')).map(c=>c.textContent.replace(/\s+/g,' ').trim()).filter(Boolean);
+    if(vals.length) rows[label]=vals.join(' / ');
+  });
+  let bloomPeriod=null;
+  doc.querySelectorAll('td').forEach(td=>{ if(!bloomPeriod&&/Bloom Period:/i.test(td.textContent)){ const p=td.querySelector('p'); if(p) bloomPeriod=p.textContent.trim(); } });
+  return {
+    botanicalName: txt(doc.getElementById('taxonSlot')),
+    commonName: txt(doc.getElementById('commonSlot')),
+    lifeform: txt(doc.getElementById('lifeformSlot')),
+    family: txt(doc.getElementById('familySlot')),
+    elevation: rows['Elevation']||null,
+    precipitation: rows['Annual Precipitation']||rows['Precipitation']||null,
+    wetSeason: rows['Wet Season']||null,
+    hardiness: rows['Hardiness Zones']||null,
+    soilPh: rows['pH']||null,
+    soilTextures: rows['Textures']||null,
+    bloomPeriod,
+  }; }
+function extractFromPaste(){
+  const ta=document.getElementById('harvestPaste'); const status=document.getElementById('harvestStatus');
+  const html=(ta&&ta.value||'').trim();
+  if(!html){ if(status) status.textContent='Paste some page HTML first.'; return; }
+  const h=extractFieldsFromHtml(html);
+  _harvestDraft=mapHarvestToDraft(h);
+  if(status) status.textContent="Extracted — review below, fill in what's blank, then Add to library.";
+  paintSpeciesAdmin(); }
 async function harvestSpecies(){
   const inp=document.getElementById('harvestUrl'); const status=document.getElementById('harvestStatus'); if(!inp) return;
   const u=(inp.value||'').trim(); if(!u){ if(status) status.textContent='Paste a calfloranursery.com plant page URL first.'; return; }
@@ -619,11 +727,14 @@ function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forE
 function paintSpeciesAdmin(){ renderSpeciesAdmin(); }
 function speciesAdminHtml(){
   let html=`<h2>Species library</h2>
-    <p class="small mute">Harvests what it can from a Cal Flora Nursery plant page (e.g. calfloranursery.com/plants/romneya-coulteri/) and leaves the rest for you to fill in. Added species go into the shared library — visible to everyone with access, not just this design.</p>
+    <p class="small mute">Harvests what it can from a Cal Flora Nursery plant page and leaves the rest for you to fill in. Added species go into the shared library — visible to everyone with access, not just this design.</p>
     <div class="row"><input type="text" id="harvestUrl" class="grow" placeholder="https://www.calfloranursery.com/plants/...">
       <button class="small" onclick="harvestSpecies()">Harvest</button></div>
     <p class="small mute" id="harvestStatus"></p>
-    <div class="row" style="margin-top:6px"><button class="small" onclick="startBlankDraft()">Or start blank</button></div>`;
+    <p class="small mute" style="margin-top:10px">For a page the Worker can't fetch itself (Calscape, Calflora's Plant Characteristics — both JavaScript-rendered, so a server-side fetch just gets an empty shell): open it yourself, copy the rendered page — right-click → Inspect → on the &lt;html&gt; element, Copy → Copy outerHTML, or run <code>document.documentElement.outerHTML</code> in the console and copy the result — and paste it below instead.</p>
+    <textarea id="harvestPaste" rows="4" style="width:100%;font-family:monospace;font-size:11px" placeholder="Paste copied page HTML here"></textarea>
+    <div class="row" style="margin-top:6px"><button class="small" onclick="extractFromPaste()">Extract from pasted HTML</button>
+      <button class="small" onclick="startBlankDraft()">Or start blank</button></div>`;
   if(_harvestDraft) html+=speciesDraftFormHtml(_harvestDraft);
   return html; }
 function speciesDraftFormHtml(d){
