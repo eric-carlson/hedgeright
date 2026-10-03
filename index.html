@@ -235,6 +235,31 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 #start{position:fixed;inset:0;z-index:2000;background:var(--paper);display:none;overflow:auto;padding:28px 16px 40px}
 #start.show{display:block}
 #startInner{max-width:620px;margin:0 auto}
+/* Full-page species spreadsheet editor. The action bar sits outside the scrolling
+   area entirely (a separate flex child, not a sticky element within it) so it's
+   always visible with zero stacking-context fuss; the table's own header row uses
+   position:sticky relative to the scroll container beneath it, landing right under
+   the bar with no overlap. */
+#speciesGrid{position:fixed;inset:0;z-index:2500;background:var(--paper);display:none;flex-direction:column}
+#speciesGrid.show{display:flex}
+#sgBar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper2);border-bottom:1px solid var(--line)}
+#sgBar h2{margin:0;font-size:16px}
+#sgScroll{flex:1 1 auto;overflow:auto}
+#sgTable{border-collapse:collapse;white-space:nowrap;font-size:12px}
+#sgTable th{position:sticky;top:0;background:var(--paper2);border:1px solid var(--line);padding:4px 6px;text-align:left;z-index:5}
+#sgTable td{border:1px solid var(--line);padding:1px 3px;vertical-align:top}
+#sgTable td.sgId{font-family:monospace;color:var(--mute);white-space:nowrap;padding:3px 6px}
+#sgTable input,#sgTable select,#sgTable textarea{width:100%;min-width:50px;font-size:12px;border:1px solid transparent;background:transparent;padding:2px;font-family:inherit}
+#sgTable input:focus,#sgTable select:focus,#sgTable textarea:focus{border-color:var(--ink);background:#fff}
+#sgTable textarea{resize:vertical;min-height:26px;min-width:140px}
+#sgTable td.sgColor{text-align:center;vertical-align:middle}
+#sgTable input[type=color]{width:28px;height:20px;min-width:0;padding:0;display:inline-block;vertical-align:middle;border:1px solid var(--line)}
+/* Non-editable elements — column headers (even though they carry a title tooltip),
+   the read-only Id cells, and the grid bar's static title/count text — should read
+   as plain text, not as something clickable or typeable. */
+#sgTable th, #sgTable td.sgId, #sgBar h2, #sgCount{cursor:default}
+#sgTable td.sgBool{text-align:center;vertical-align:middle}
+#sgTable input[type=checkbox]{width:auto;margin:0;display:inline-block;vertical-align:middle}
 .stitle{display:flex;gap:12px;align-items:center;margin-bottom:14px}
 .scards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .scard{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;cursor:pointer}
@@ -335,6 +360,17 @@ body.wide{--panelW:560px}
 </head>
 <body>
 <div id="start"><div id="startInner"><div id="startBody"></div></div></div>
+<div id="speciesGrid">
+  <div id="sgBar">
+    <h2>Edit species library</h2>
+    <span class="small mute" id="sgCount"></span>
+    <span class="grow"></span>
+    <button class="small" onclick="downloadSpeciesJSON()" title="Downloads what's currently shown here, edits included, whether or not you've saved yet">Download</button>
+    <button class="small danger" onclick="cancelSpeciesGrid()">Cancel</button>
+    <button class="small primary" onclick="saveSpeciesGrid()">Save</button>
+  </div>
+  <div id="sgScroll"><table id="sgTable"></table></div>
+</div>
 <div id="app">
   <div id="panel">
     <div id="panelHead">
@@ -590,12 +626,30 @@ function parseBloomRange(s){ if(!s) return null;
 function mapDrainageFromTextures(textures){ if(!textures) return null; const t=textures.toLowerCase();
   const sandy=/sand/.test(t), clay=/clay/.test(t);
   if(sandy&&clay) return 'any'; if(sandy) return 'sharp'; if(clay) return 'tolerant'; return null; }
+function findExistingSpecies(h,id){
+  if(h.botanicalName){ const m=S.species.find(sp=>sp.sci&&sp.sci.trim().toLowerCase()===h.botanicalName.trim().toLowerCase()); if(m) return m; }
+  let m=S.species.find(sp=>sp.id===id); if(m) return m;
+  if(h.commonName){ m=S.species.find(sp=>sp.common&&sp.common.trim().toLowerCase()===h.commonName.trim().toLowerCase()); if(m) return m; }
+  return null; }
+/* Fills blanks on `existing` from `fresh` without overwriting anything it already has
+   — a harvest should never clobber a hand-edited or originally-curated value, only add
+   what was missing. Recurses one level into root/goals. Treats 0 as fillable for goals
+   specifically (the default "not scored" state), since a tag-derived suggestion there
+   is still useful signal, not a real score being overwritten. */
+function fillGaps(existing,fresh,isGoals){
+  Object.keys(fresh).forEach(k=>{
+    if(k==='id'||k==='conf'||k==='matchedId') return;
+    const fv=fresh[k]; if(fv==null||fv==='') return;
+    const ev=existing[k];
+    if(fv&&typeof fv==='object'&&!Array.isArray(fv)&&ev&&typeof ev==='object'){ fillGaps(ev,fv,k==='goals'); return; }
+    const empty=ev==null||ev===''||(isGoals&&ev===0);
+    if(empty) existing[k]=fv; }); }
 function mapHarvestToDraft(h){
   const tags=((h.tolerances||'')+' '+(h.habitatValues||'')+' '+(h.specialUses||'')).toLowerCase();
   const widthMid=parseSizeMid(h.width);
-  const refKeys={precipitation:'Annual precip',wetSeason:'Wet season',elevation:'Elevation',hardiness:'Hardiness',soilPh:'Soil pH',soilTextures:'Soil textures',lifeform:'Life form',family:'Family'};
+  const refKeys={precipitation:'Annual precip',wetSeason:'Wet season',elevation:'Elevation',hardiness:'Hardiness',soilPh:'Soil pH',soilTextures:'Soil textures',lifeform:'Life form',family:'Family',genus:'Genus',rarityRank:'CA Rare Plant Rank',communities:'Plant communities'};
   const ref=Object.keys(refKeys).map(k=>h[k]?(refKeys[k]+': '+h[k]):null).filter(Boolean).join(' · ');
-  return { id:slugifyId(h.commonName||h.botanicalName), common:h.commonName||'', sci:h.botanicalName||'',
+  const fresh={ id:slugifyId(h.commonName||h.botanicalName), common:h.commonName||'', sci:h.botanicalName||'',
     color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
     moisture:mapMoisture(h.water), drainage:mapDrainageFromTextures(h.soilTextures)||mapDrainage(h.siteConditions||h.rawText), sun:mapSun(h.exposure),
     riparianFt:null, bloom:parseBloomRange(h.bloomPeriod)||mapBloomMonths(h.bloomTime), risk:null, story:null,
@@ -604,7 +658,15 @@ function mapHarvestToDraft(h){
     goals:{poll:/pollinat|bee|butterfl/.test(tags)?2:0, wild:/wildlife|bird/.test(tags)?2:0, screen:0, barrier:0, bank:0,
       fire:/fire resist/.test(tags)?2:0, lowWater:/drought/.test(tags)?2:0, fodder:0, fast:0, lowMaint:0},
     replace:null, fail:'', trigger:'', notes:((h.rawText||'').split('\n').find(l=>l.length>80)||'')+(ref?(' — '+ref):''),
-    conf:'draft', source:h.sourceUrl||null }; }
+    conf:'draft', source:h.sourceUrl||null };
+  const existing=findExistingSpecies(h,fresh.id);
+  if(!existing) return fresh;
+  const merged=JSON.parse(JSON.stringify(existing));
+  if(!merged.notes) merged.notes=fresh.notes;
+  else if(ref&&!merged.notes.includes(ref)) merged.notes=merged.notes+' | '+ref;
+  fillGaps(merged,fresh);
+  merged.matchedId=existing.id;
+  return merged; }
 /* Same field-pattern-matching the Worker's /harvest route does, but run client-side
    against HTML the person copied from their own browser's dev tools. Works for any
    site regardless of CORS or bot-detection — by the time they copy it, their browser
@@ -612,31 +674,71 @@ function mapHarvestToDraft(h){
    Calscape or Calflora's Plant Characteristics page. Casts a wide net of labels from
    all three known sources; whatever doesn't match stays blank for manual entry, and
    the raw text is preserved so nothing found-but-unmapped is actually lost. */
-function extractFieldsFromHtml(html){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  doc.querySelectorAll('script,style,nav,footer').forEach(el=>el.remove());
-  const generic=extractGenericFields(doc);
-  if(doc.getElementById('cpcharSlot')||doc.getElementById('taxonSlot')){
-    const cf=extractCalfloraCharacteristics(doc);
+/* Fixes a real corruption pattern, not a hypothetical one: pasting a console result by
+   copying its escaped string *display* (rather than the raw value) leaves literal
+   backslash-quote sequences in place of plain quotes throughout every attribute —
+   class="foo" becomes class=\"foo\" — which breaks HTML attribute parsing completely,
+   since \ isn't a valid character to open a quoted value. A no-op on already-clean
+   HTML (nothing to replace), so safe to always run. Loops to also undo doubled
+   escaping (\\\" etc.) from going through more than one layer of this. */
+/* Switched from copying rendered HTML to copying rendered TEXT (element.innerText) —
+   this kills the escaping-corruption bug class at the root, since there's no HTML
+   syntax in the pasted content for a lossy copy-paste to mangle. No DOMParser needed
+   either; this works directly off the lines of text innerText produces. Browsers
+   insert a tab between adjacent cells in the same table row and a newline between
+   rows when rendering innerText, which the table parser below leans on — more
+   robust than chasing class names, which already turned out to differ between two
+   of Calflora's own page types and weren't even consistent within one of them. */
+function extractFieldsFromText(text){
+  const lines=text.split('\n').map(l=>l.trim());
+  const nonEmpty=lines.filter(Boolean);
+  const plain=nonEmpty.join('\n');
+  const generic=extractGenericFields(plain,nonEmpty);
+  console.log('[harvest] text length',text.length,'non-empty lines',nonEmpty.length);
+  const isCalfloraTable=/TOLERANCES/.test(plain)||/SOIL:/.test(plain)||/Location count:/.test(plain);
+  const isTaxonReport=/California Rare Plant Rank/.test(plain)||/Taxon Report/.test(plain);
+  console.log('[harvest] detect characteristics table',isCalfloraTable,'taxon report',isTaxonReport);
+  if(isCalfloraTable){
+    const cf=extractCalfloraTableText(lines);
+    console.log('[harvest] table extraction result',cf);
     Object.keys(cf).forEach(k=>{ if(cf[k]!=null) generic[k]=cf[k]; });
   }
+  if(isTaxonReport){
+    const tr=extractCalfloraTaxonReportText(lines,plain);
+    console.log('[harvest] taxon report extraction result',tr);
+    Object.keys(tr).forEach(k=>{ if(tr[k]!=null) generic[k]=tr[k]; });
+  }
+  /* Both Calflora page types we've seen have no "Botanical Name:"/"Common Name:"
+     labels at all — the scientific name is just its own line, common name right
+     after. Runs as a last-resort fallback, filling only whichever of the two the
+     extraction above left blank, regardless of which page type was detected (this
+     pattern isn't specific to the Taxon Report page — it showed up identically on
+     the Characteristics page, where nothing above was looking for it). */
+  if(!generic.botanicalName||!generic.commonName){
+    const nf=extractNameFallback(nonEmpty);
+    if(!generic.botanicalName&&nf.botanicalName) generic.botanicalName=nf.botanicalName;
+    if(!generic.commonName&&nf.commonName) generic.commonName=nf.commonName;
+    if(!generic.lifeform&&nf.lifeform) generic.lifeform=nf.lifeform;
+  }
+  console.log('[harvest] final merged fields',generic);
   return generic; }
-function extractGenericFields(doc){
-  const lines=(doc.body?doc.body.textContent:doc.documentElement.textContent||'').split('\n').map(l=>l.trim()).filter(Boolean);
-  const plain=lines.join('\n');
+function extractGenericFields(plain,lines){
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   /* Tries label-and-value on one line ("Average Height: 4 - 8 ft") first, then
      label alone on its own line with the value on the next ("Exposures" / "Sun") —
      anchored to whole lines, and tries the label both singular and plural, so a
      plural label can't accidentally match as a prefix of the singular form and
-     capture garbage trailing text (the bug the Worker's harvester hit). */
+     capture garbage trailing text. */
   const field=(label)=>{
     for(const lb of [label,label+'s']){
       const mSame=plain.match(new RegExp('^'+esc(lb)+'\\s*:\\s*(\\S[^\\n]*)$','im'));
       if(mSame) return mSame[1].trim();
     }
     for(const lb of [label,label+'s']){
-      const idx=lines.findIndex(l=>l.toLowerCase()===lb.toLowerCase());
+      /* Excludes ALL-CAPS lines — a real Cal Flora Nursery label is Title Case
+         ("Exposures"), but Calflora's section headers ("TOLERANCES", "SOIL:") would
+         otherwise match the same way and grab the wrong next line as their "value". */
+      const idx=lines.findIndex(l=>l.toLowerCase()===lb.toLowerCase()&&l!==l.toUpperCase());
       if(idx>=0&&idx+1<lines.length) return lines[idx+1];
     }
     return null; };
@@ -658,33 +760,21 @@ function extractGenericFields(doc){
     hardiness: field('Hardiness Zones'),
     rawText: plain.slice(0,8000),
   }; }
-/* Calflora's Plant Characteristics page (rareplants.cnps.org-style JS app) has clean,
-   consistent markup once rendered — #taxonSlot/#commonSlot/#familySlot for identity,
-   and a table of .charNameCell/.charValueCell pairs for every climate/soil factor —
-   so this reads it with real selectors instead of guessing at label text. Anything it
-   finds overrides the generic text-scan above for the same field. */
-function extractCalfloraCharacteristics(doc){
-  const txt=(el)=>el?el.textContent.replace(/\s+/g,' ').trim():null;
+/* Calflora's climate/soil table (Plant Characteristics or Plant Location Suitability
+   page — same data, two different class-name schemes neither of which this looks at
+   anymore) renders as one label + value(s) per line via innerText, cells tab-separated. */
+function extractCalfloraTableText(lines){
   const rows={};
-  /* Calflora uses two different sets of class names for what's semantically the same
-     table — charNameCell/charValueCell/metricValueCell on the Plant Characteristics
-     page, charNameCellCompare/compareCellPlant on the Plant Location Suitability page
-     — and isn't even consistent within one page (that page's "Textures" row uses
-     charNameCell while every row around it uses charNameCellCompare). Checking both
-     covers either page through the same parser. */
-  doc.querySelectorAll('.charNameCell,.charNameCellCompare').forEach(nameCell=>{
-    const label=nameCell.textContent.trim().replace(/:$/,'');
-    const row=nameCell.closest('tr'); if(!row) return;
-    const vals=Array.from(row.querySelectorAll('.charValueCell,.metricValueCell,.compareCellPlant')).map(c=>c.textContent.replace(/\s+/g,' ').trim()).filter(Boolean);
-    if(vals.length) rows[label]=vals.join(' / ');
+  lines.forEach(line=>{
+    if(!line.includes('\t')) return;
+    const parts=line.split('\t').map(p=>p.trim()).filter(Boolean);
+    if(parts.length<2) return;
+    rows[parts[0].replace(/:$/,'')]=parts.slice(1).join(' / ');
   });
   let bloomPeriod=null;
-  doc.querySelectorAll('td').forEach(td=>{ if(!bloomPeriod&&/Bloom Period:/i.test(td.textContent)){ const p=td.querySelector('p'); if(p) bloomPeriod=p.textContent.trim(); } });
+  const bpIdx=lines.findIndex(l=>/Bloom Period:/i.test(l));
+  if(bpIdx>=0){ for(let i=bpIdx+1;i<Math.min(lines.length,bpIdx+4);i++){ const l=lines[i].trim(); if(l&&/[A-Za-z]+\s*-\s*[A-Za-z]+/.test(l)){ bloomPeriod=l; break; } } }
   return {
-    botanicalName: txt(doc.getElementById('taxonSlot')),
-    commonName: txt(doc.getElementById('commonSlot')),
-    lifeform: txt(doc.getElementById('lifeformSlot')),
-    family: txt(doc.getElementById('familySlot')),
     elevation: rows['Elevation']||null,
     precipitation: rows['Annual Precipitation']||rows['Precipitation']||null,
     wetSeason: rows['Wet Season']||null,
@@ -693,11 +783,112 @@ function extractCalfloraCharacteristics(doc){
     soilTextures: rows['Textures']||null,
     bloomPeriod,
   }; }
+/* Best-effort against rendered text, not a verified selector, since this page type
+   (Calflora's modern Taxon Report) has no reliable table structure to lean on.
+   Family/Genus/rarity rank are label-anchored and should be solid; the scientific
+   and common name use a binomial-pattern guess (a "Genus species" line followed by a
+   plausible common-name line) that hasn't been checked against real innerText output
+   yet — worth confirming on the first real run. */
+/* Common to both Calflora page types seen so far: the scientific name is its own
+   line ("Genus species"), with the common name right after it — sometimes sharing
+   that next line with other text (a life form, tab-separated from the name itself)
+   rather than being alone on it, which the first version of this missed and ended up
+   folding the life form straight into the common name. */
+function extractNameFallback(nonEmpty){
+  for(let k=0;k<nonEmpty.length-1;k++){
+    const m=nonEmpty[k].match(/^([A-Z][a-z]+(?:\s*[×x]\s*[A-Z]?[a-z]+)?\s+[a-z][a-z-]+(?:\s+(?:ssp\.|var\.|subsp\.)\s*[a-z-]+)?)\b/);
+    if(!m) continue;
+    const nextParts=nonEmpty[k+1].split('\t').map(p=>p.trim()).filter(Boolean);
+    const next=nextParts[0];
+    if(!next||/^(Family|Genus|Click|California|Observations|Accepted|Name Status|HELP)/i.test(next)) continue;
+    return { botanicalName:m[1].trim(), commonName:next, lifeform:nextParts[1]||null };
+  }
+  return {}; }
+function extractCalfloraTaxonReportText(lines,plain){
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const field=(label)=>{ const m=plain.match(new RegExp(esc(label)+'\\s*:?\\s*\\n?\\s*([^\\n]+)','i')); return m?m[1].trim():null; };
+  const rarityMatch=plain.match(/California Rare Plant Rank:\s*([\d.A-Za-z]+)\s*\(([^)]+)\)/i);
+  const lifeformMatch=plain.match(/is an?\s+([a-z ,()]+?)\s+that is/i);
+  const commIdx=lines.findIndex(l=>/^Communities:?$/i.test(l.trim()));
+  const communities=commIdx>=0&&lines[commIdx+1]?lines[commIdx+1].trim():null;
+  return {
+    family: field('Family'),
+    genus: field('Genus'),
+    lifeform: lifeformMatch?lifeformMatch[1].trim():null,
+    rarityRank: rarityMatch?(rarityMatch[1]+' ('+rarityMatch[2]+')'):null,
+    communities,
+  }; }
+/* Turns a species-shaped JSON object (field names matching the schema directly —
+   common, sci, moisture, root:{cls,...}, goals:{...}, etc., null for anything
+   unsourced) straight into a draft, with no text-pattern guessing involved at all.
+   Meant for pasting a JSON blob generated elsewhere (e.g. by Claude in chat, reading
+   a screenshot) rather than scraped page text — unambiguous to parse since there's no
+   real-world site markup inconsistency to account for. Still runs the same
+   merge-into-existing check as a harvested draft, so a JSON paste for a species
+   that's already in the library fills gaps rather than creating a duplicate. */
+function draftFromJSON(obj){
+  const d=Object.assign({ id:null, common:'', sci:'', color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
+    moisture:null, drainage:null, sun:null, riparianFt:null, bloom:null, risk:null, story:null,
+    ht:null, rad:null, T:null, cast:null, tol:null, spreads:false, allelo:0,
+    replace:null, fail:'', trigger:'', notes:'', conf:'draft', source:null }, obj);
+  d.root=Object.assign({cls:null,depth:null,lat:null},obj.root||{});
+  d.goals=Object.assign({poll:0,wild:0,screen:0,barrier:0,bank:0,fire:0,lowWater:0,fodder:0,fast:0,lowMaint:0},obj.goals||{});
+  if(!d.id) d.id=slugifyId(d.common||d.sci);
+  const existing=findExistingSpecies({botanicalName:d.sci,commonName:d.common},d.id);
+  if(!existing) return d;
+  const merged=JSON.parse(JSON.stringify(existing));
+  if(!merged.notes) merged.notes=d.notes;
+  else if(d.notes&&!merged.notes.includes(d.notes)) merged.notes=merged.notes+' | '+d.notes;
+  fillGaps(merged,d);
+  /* fillGaps deliberately never touches conf, so an ordinary harvest/paste can't
+     silently downgrade an already-vetted entry — but that leaves no way to go the
+     other direction either. An explicit conf in the incoming JSON is a deliberate
+     admin action (this path only, never the scraped-text extraction path), so it's
+     allowed through here, validated against the three real values. */
+  if(obj.conf&&['draft','lib','obs'].includes(obj.conf)) merged.conf=obj.conf;
+  merged.matchedId=existing.id;
+  return merged; }
+/* A JSON array of species objects, applied in one pass with no per-item review step
+   — appropriate for a batch of updates to EXISTING entries (gap-filling/notes-append
+   can't overwrite anything, so there's nothing risky to review item by item), less
+   appropriate for a batch that includes brand-new species (those skip the normal
+   single-entry review the "start blank"/single-JSON paths give you — flagged in the
+   status line if any item in the batch didn't match an existing entry). One commit()
+   wraps the whole batch (one undo step for the batch, not one per item); one
+   pushSharedSpecies() at the end rather than once per item. */
+function applyBatchJSON(list){
+  const status=document.getElementById('harvestStatus');
+  const results=[]; let newCount=0;
+  commit('Batch update '+list.length+' species from pasted JSON',()=>{
+    list.forEach(obj=>{
+      const draft=draftFromJSON(obj);
+      if(draft.matchedId){
+        const i=S.species.findIndex(sp=>sp.id===draft.matchedId);
+        const entry=JSON.parse(JSON.stringify(draft)); delete entry.matchedId;
+        if(i>=0){ S.species[i]=entry; results.push(draft.common+': updated'); }
+      } else if(S.species.some(sp=>sp.id===draft.id)){
+        results.push(draft.common+': SKIPPED — id collision with an unrelated entry');
+      } else { S.species.push(draft); results.push(draft.common+': added as new (unreviewed)'); newCount++; }
+    });
+  });
+  pushSharedSpecies();
+  if(status) status.textContent=results.length+' processed'+(newCount?' ('+newCount+' added as new species, not reviewed individually — check them in the library)':'')+': '+results.join('; ');
+  paintSpeciesAdmin(); renderPanels(); UI.toast(results.length+' species processed from batch JSON.'); }
 function extractFromPaste(){
   const ta=document.getElementById('harvestPaste'); const status=document.getElementById('harvestStatus');
-  const html=(ta&&ta.value||'').trim();
-  if(!html){ if(status) status.textContent='Paste some page HTML first.'; return; }
-  const h=extractFieldsFromHtml(html);
+  const text=(ta&&ta.value||'').trim();
+  if(!text){ if(status) status.textContent='Paste something first.'; return; }
+  let parsed=null;
+  try{ parsed=JSON.parse(text); }catch(e){}
+  if(Array.isArray(parsed)&&parsed.length&&parsed.every(x=>x&&typeof x==='object'&&(x.common||x.sci||x.id))){
+    applyBatchJSON(parsed); return;
+  }
+  if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&(parsed.common||parsed.sci||parsed.id)){
+    _harvestDraft=draftFromJSON(parsed);
+    if(status) status.textContent=(_harvestDraft.matchedId?'Loaded from JSON, matched to an existing entry — ':'Loaded from JSON — ')+"review below, then Add to library.";
+    paintSpeciesAdmin(); return;
+  }
+  const h=extractFieldsFromText(text);
   _harvestDraft=mapHarvestToDraft(h);
   if(status) status.textContent="Extracted — review below, fill in what's blank, then Add to library.";
   paintSpeciesAdmin(); }
@@ -718,11 +909,137 @@ function updateDraftGoal(g,val){ _harvestDraft.goals[g]=+val||0; }
 function discardDraftSpecies(){ _harvestDraft=null; paintSpeciesAdmin(); }
 function saveDraftSpecies(){
   if(!_harvestDraft.common||!_harvestDraft.id){ UI.toast('Needs at least a name'); return; }
-  if(S.species.some(sp=>sp.id===_harvestDraft.id)){ UI.toast('A species with this id already exists — change the id'); return; }
-  const entry=JSON.parse(JSON.stringify(_harvestDraft));
+  const entry=JSON.parse(JSON.stringify(_harvestDraft)); const matchedId=entry.matchedId; delete entry.matchedId;
+  if(matchedId){
+    commit('Update species: '+entry.common,()=>{ const i=S.species.findIndex(sp=>sp.id===matchedId); if(i>=0) S.species[i]=entry; });
+    pushSharedSpecies(); _harvestDraft=null; paintSpeciesAdmin(); renderPanels(); UI.toast('Updated in the library.'); return;
+  }
+  if(S.species.some(sp=>sp.id===entry.id)){ UI.toast('A species with this id already exists — change the id'); return; }
   commit('Add species: '+entry.common,()=>{ S.species.push(entry); });
   pushSharedSpecies();
   _harvestDraft=null; paintSpeciesAdmin(); renderPanels(); UI.toast('Added to the library.'); }
+/* ---- Species spreadsheet editor: owner and editor (not viewer), launched from the
+   Plants tab — full-page, one row per species, one column per attribute. Edits a
+   staged deep copy (_speciesGridDraft) — nothing touches S.species or the server
+   until Save. Restricted-value fields get a
+   <select> built from the real vocabulary confirmed against this library's own
+   data; free-form fields get a text input or, for anything that can run long
+   (notes/fail/trigger), a small textarea. id is read-only here — it's how plant
+   records reference a species (r.plants.push({sp:sp.id,...})), so editing it in
+   a grid cell would silently orphan every already-planted instance; renaming a
+   species' id, if ever needed, stays a deliberate action outside this editor. */
+let _speciesGridDraft=null;
+const SG_VOCAB={ sun:['any','shade','hot'], moisture:['dry','moderate','wet'], drainage:['sharp','any','tolerant'],
+  story:['over','mid','ground','nurse','vine'], cast:['dense','light','open'], tol:['sun','part','shade'],
+  'root.cls':['tap','fibrous','mid'], regime:['wean','reduce','perm'], conf:['obs','lib','draft'] };
+/* Display-only relabeling for a stored value that reads oddly in the UI — the
+   underlying value stored on the species object, and everything elsewhere in the
+   app that checks it (mapSun(), speciesFit()'s aspect scoring, SPECIES_DEFAULT
+   itself, SRC_LABEL/prov()'s tooltip text for conf), stays the real stored string;
+   only what the person sees in these dropdowns changes. */
+const SG_VOCAB_LABELS={ sun:{hot:'full'}, conf:{obs:'observed', lib:'literature', draft:'draft'} };
+const SG_COLUMNS=[
+  {path:'id',label:'Id',type:'readonly',title:"Internal identifier. Plant records reference a species by this id, so it isn't editable here — changing it would orphan every already-planted instance."},
+  {path:'common',label:'Common name',type:'text',title:'Common name shown throughout the app.'},
+  {path:'sci',label:'Scientific name',type:'text',w:180,title:'Scientific (binomial) name.'},
+  {path:'conf',label:'Confidence',type:'select',vocab:'conf',title:"How this entry's data should be trusted — observed (confirmed on this ranch), literature (a horticultural reference default), or draft (freshly harvested, not yet reviewed)."},
+  {path:'color',label:'Map color',type:'color',title:'Color used for this species on the map and in the legend.'},
+  {path:'ht',label:'Height ft',type:'number',title:'Mature height, feet.'},
+  {path:'rad',label:'Radius ft',type:'number',title:'Mature canopy radius, feet (half of mature width).'},
+  {path:'T',label:'Yrs to size',type:'number',title:'Years to reach roughly 95% of mature size.'},
+  {path:'sun',label:'Sun',type:'select',vocab:'sun',w:90,title:'Sun exposure this species wants.'},
+  {path:'moisture',label:'Moisture',type:'select',vocab:'moisture',w:100,title:'How much water this species wants once established.'},
+  {path:'drainage',label:'Drainage',type:'select',vocab:'drainage',w:100,title:'Soil drainage this species tolerates.'},
+  {path:'bloom',label:'Bloom months',type:'bloom',title:'Months in bloom, comma-separated numbers (e.g. 3,4,5 for March-May).'},
+  {path:'story',label:'Story',type:'select',vocab:'story',w:90,title:'Canopy layer: over (tallest), mid, ground, nurse (early, short-lived filler), or vine.'},
+  {path:'cast',label:'Shade cast',type:'select',vocab:'cast',title:'How dense the shade this species casts on neighbors is.'},
+  {path:'tol',label:'Tolerance',type:'select',vocab:'tol',title:'Shade tolerance — can it grow under something taller.'},
+  {path:'spreads',label:'Spreads',type:'bool',title:'Spreads beyond its own footprint by rhizome, layering, or similar — not just by seed.'},
+  {path:'root.cls',label:'Root class',type:'select',vocab:'root.cls',title:'Root depth class: tap, fibrous (shallow), or mid.'},
+  {path:'root.depth',label:'Root depth ft',type:'number',title:'Root depth, feet.'},
+  {path:'root.lat',label:'Root lat ratio',type:'number',step:'0.1',title:'Lateral root spread as a ratio of canopy radius (1.0 = same width as the canopy).'},
+  {path:'regime',label:'Regime',type:'select',vocab:'regime',title:'Irrigation plan: wean (off by yr2), reduce (tapered by yr3), or perm (permanent water).'},
+  {path:'gph',label:'GPH',type:'number',step:'0.1',title:'Drip emitter rate, gallons per hour.'},
+  {path:'emitters',label:'Emitters',type:'number',title:'Number of emitters per plant.'},
+  {path:'basket',label:'Basket',type:'bool',title:'Needs a gopher basket at planting.'},
+  {path:'riparianFt',label:'Riparian ft',type:'number',title:'Maximum distance from water this species tolerates, feet — leave blank if not riparian-dependent.'},
+  {path:'spacingFt',label:'Spacing ft',type:'number',title:'Default spacing between plants of this species, feet.'},
+  {path:'risk',label:'Risk yr3 %',type:'number',title:'Expected loss by year 3, percent.'},
+  {path:'allelo',label:'Allelo',type:'number',title:'Allelopathy radius, feet (0 = none) — other plants within this distance are suppressed.'},
+  {path:'replace',label:'Replace with',type:'replace',title:'Species to substitute if this one fails, if any.'},
+  {path:'fail',label:'Failure mode',type:'longtext',title:'How this species typically fails.'},
+  {path:'trigger',label:'Trigger',type:'longtext',title:'What to watch for that signals failure.'},
+  {path:'notes',label:'Notes',type:'longtext',title:'Free-form reference notes.'},
+];
+/* The 10 goal columns are computed lazily (not appended to SG_COLUMNS at load time)
+   because GOALS itself isn't defined until later in the script — referencing it here
+   at top-level execution would throw before the page ever finished loading. */
+/* Short goal-column labels, hand-picked rather than mechanically taking the first
+   word of each GOALS description — "Low maintenance" and "Little or no summer
+   water" both start with a word that reads as just "Low" out of context once
+   truncated, which was genuinely ambiguous. Each column's title attribute (see
+   SG_TITLES) carries the full description for anyone who wants it. */
+const SG_GOAL_LABELS={poll:'Pollinator',wild:'Wildlife',screen:'Screen',barrier:'Barrier',bank:'Bank/erosion',fire:'Fire',lowWater:'Low water',fodder:'Fodder',fast:'Fast estab.',lowMaint:'Low maint.'};
+function sgColumns(){ return SG_COLUMNS.concat(Object.keys(GOALS).map(g=>({path:'goals.'+g,label:SG_GOAL_LABELS[g]||g,type:'goal',title:'Goal weight (0–3): '+GOALS[g]}))); }
+function sgGet(sp,path){ const parts=path.split('.'); let o=sp; for(const p of parts){ if(o==null) return null; o=o[p]; } return o; }
+function updateGridCell(idx,path,val){ const parts=path.split('.'); let o=_speciesGridDraft[idx]; for(let i=0;i<parts.length-1;i++) o=o[parts[i]]; o[parts[parts.length-1]]=val; }
+function sgCellHtml(sp,idx,col){
+  const val=sgGet(sp,col.path);
+  const w=col.w?` style="min-width:${col.w}px"`:'';
+  if(col.type==='readonly') return `<td class="sgId">${esc(val||'')}</td>`;
+  if(col.type==='text') return `<td><input type="text"${w} value="${esc(val||'')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
+  if(col.type==='color') return `<td class="sgColor"><input type="color" value="${esc(val||'#7C8D6B')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
+  if(col.type==='number') return `<td><input type="number"${col.step?` step="${col.step}"`:''} value="${val!=null?val:''}" onchange="updateGridCell(${idx},'${col.path}',this.value===''?null:+this.value)"></td>`;
+  if(col.type==='bool') return `<td class="sgBool"><input type="checkbox" ${val?'checked':''} onchange="updateGridCell(${idx},'${col.path}',this.checked)"></td>`;
+  if(col.type==='goal') return `<td><select onchange="updateGridCell(${idx},'${col.path}',+this.value)">${[0,1,2,3].map(n=>`<option value="${n}"${(val||0)===n?' selected':''}>${n}</option>`).join('')}</select></td>`;
+  if(col.type==='select'){ const opts=SG_VOCAB[col.vocab]; const labels=SG_VOCAB_LABELS[col.vocab]||{};
+    return `<td><select${w} onchange="updateGridCell(${idx},'${col.path}',this.value||null)"><option value="">—</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${esc(labels[o]||o)}</option>`).join('')}</select></td>`; }
+  if(col.type==='bloom') return `<td><input type="text" value="${val?val.join(','):''}" onchange="updateGridCell(${idx},'bloom',this.value.split(',').map(x=>+x.trim()).filter(Boolean))"></td>`;
+  if(col.type==='longtext') return `<td><textarea rows="2" onchange="updateGridCell(${idx},'${col.path}',this.value)">${esc(val||'')}</textarea></td>`;
+  if(col.type==='replace'){ const ids=_speciesGridDraft.map(s=>s.id).filter(id=>id!==sp.id).sort();
+    return `<td><select onchange="updateGridCell(${idx},'replace',this.value||null)"><option value="">—</option>${ids.map(id=>`<option value="${id}"${val===id?' selected':''}>${id}</option>`).join('')}</select></td>`; }
+  return '<td></td>'; }
+function speciesGridHtml(){
+  const cols=sgColumns();
+  let html='<thead><tr>'+cols.map(c=>`<th${c.title?` title="${esc(c.title)}"`:''}>${esc(c.label)}</th>`).join('')+'</tr></thead><tbody>';
+  html+=_speciesGridDraft.map((sp,idx)=>'<tr>'+cols.map(c=>sgCellHtml(sp,idx,c)).join('')+'</tr>').join('');
+  return html+'</tbody>'; }
+function paintSpeciesGrid(){ const t=document.getElementById('sgTable'); if(t) t.innerHTML=speciesGridHtml();
+  const c=document.getElementById('sgCount'); if(c) c.textContent=_speciesGridDraft.length+' species'; }
+/* Downloads whatever's currently in the grid — including edits not yet saved —
+   as a plain JSON array in exactly the shape each entry already has (id/common/sci/
+   .../root:{...}/goals:{...}), the same shape SPECIES_DEFAULT's own array literal
+   uses. Pasting the downloaded content in as the right-hand side of
+   `const SPECIES_DEFAULT = ...;` is a direct drop-in — JSON array syntax is valid JS
+   array-literal syntax for data shaped like this, no reformatting needed. */
+function downloadSpeciesJSON(){
+  const list=_speciesGridDraft||S.species;
+  const blob=new Blob([JSON.stringify(list,null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='species-default.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+function openSpeciesGrid(){ if(cloudIdentity.role!=='owner'&&cloudIdentity.role!=='editor') return;
+  _speciesGridDraft=JSON.parse(JSON.stringify(S.species));
+  document.getElementById('speciesGrid').classList.add('show');
+  paintSpeciesGrid(); }
+/* Cancel discards the staged draft (nothing in it was ever written to S.species) and
+   additionally re-pulls the shared library from the server — a true reset to "what's
+   actually there right now", not just a revert of this session's own edits, in case
+   someone else updated the library while this was open. Falls back to the bundled
+   SPECIES_DEFAULT if the server has nothing (cloud not configured, or never pushed). */
+async function cancelSpeciesGrid(){
+  document.getElementById('speciesGrid').classList.remove('show');
+  _speciesGridDraft=null;
+  const fresh=await loadSharedSpecies();
+  S.species=fresh&&fresh.length?fresh:JSON.parse(JSON.stringify(SPECIES_DEFAULT));
+  renderPanels(); }
+async function saveSpeciesGrid(){ if(!_speciesGridDraft) return;
+  const next=_speciesGridDraft;
+  commit('Edit species library ('+next.length+' species)',()=>{ S.species=next; });
+  document.getElementById('speciesGrid').classList.remove('show');
+  _speciesGridDraft=null;
+  await pushSharedSpecies();
+  renderPanels(); UI.toast('Species library saved.'); }
 function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=cloudIdentity.role==='owner'?speciesAdminHtml():''; }); }
 function paintSpeciesAdmin(){ renderSpeciesAdmin(); }
 function speciesAdminHtml(){
@@ -731,18 +1048,18 @@ function speciesAdminHtml(){
     <div class="row"><input type="text" id="harvestUrl" class="grow" placeholder="https://www.calfloranursery.com/plants/...">
       <button class="small" onclick="harvestSpecies()">Harvest</button></div>
     <p class="small mute" id="harvestStatus"></p>
-    <p class="small mute" style="margin-top:10px">For a page the Worker can't fetch itself (Calscape, Calflora's Plant Characteristics — both JavaScript-rendered, so a server-side fetch just gets an empty shell): open it yourself, copy the rendered page — right-click → Inspect → on the &lt;html&gt; element, Copy → Copy outerHTML, or run <code>document.documentElement.outerHTML</code> in the console and copy the result — and paste it below instead.</p>
-    <textarea id="harvestPaste" rows="4" style="width:100%;font-family:monospace;font-size:11px" placeholder="Paste copied page HTML here"></textarea>
+    <p class="small mute" style="margin-top:10px">For a page the Worker can't fetch itself (Calscape, Calflora's Plant Characteristics — both JavaScript-rendered, so a server-side fetch just gets an empty shell): open it yourself and run <code>copy(document.body.innerText)</code> in the browser console — that puts the page's rendered text straight on your clipboard — then paste it below. Or paste a JSON object with the same field names as this form (<code>common</code>, <code>sci</code>, <code>moisture</code>, <code>root</code>, <code>goals</code>, etc., <code>null</code> for anything unknown) and it loads straight in, no pattern-matching involved — or a JSON <b>array</b> of several such objects, applied all at once with no review step (safe for updates to species already in the library; any brand-new species in the batch get added unreviewed, flagged in the status line afterward).</p>
+    <textarea id="harvestPaste" rows="4" style="width:100%;font-family:monospace;font-size:11px" placeholder="Paste copied page text, or a species JSON object, here"></textarea>
     <div class="row" style="margin-top:6px"><button class="small" onclick="extractFromPaste()">Extract from pasted HTML</button>
       <button class="small" onclick="startBlankDraft()">Or start blank</button></div>`;
   if(_harvestDraft) html+=speciesDraftFormHtml(_harvestDraft);
   return html; }
 function speciesDraftFormHtml(d){
-  const selOpt=(val,opts)=>`<option value="">—</option>`+opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
+  const selOpt=(val,opts,labels)=>`<option value="">—</option>`+opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${esc((labels&&labels[o])||o)}</option>`).join('');
   return `<div class="card" style="margin-top:10px">
-    <h3>Draft — review before saving</h3>
+    ${d.matchedId?`<h3>Matches an existing entry — filling gaps, not replacing it</h3><p class="small mute">This looks like <b>${esc(d.common)}</b>, already in the library (<code>${esc(d.matchedId)}</code>). Anything it already had stays as-is; only fields it was missing get filled in from this source, and the reference notes get appended.</p>`:`<h3>Draft — review before saving</h3>`}
     ${d.source?`<p class="small mute">Source: <a href="${esc(d.source)}" target="_blank" rel="noopener">${esc(d.source)}</a></p>`:''}
-    <label>Id (short, unique, used internally)</label><input type="text" value="${esc(d.id)}" onchange="updateDraftField('id',this.value)">
+    <label>Id (short, unique, used internally)</label><input type="text" value="${esc(d.id)}" onchange="updateDraftField('id',this.value)"${d.matchedId?' disabled':''}>
     <label>Common name</label><input type="text" value="${esc(d.common)}" onchange="updateDraftField('common',this.value)">
     <label>Scientific name</label><input type="text" value="${esc(d.sci)}" onchange="updateDraftField('sci',this.value)">
     <label>Color (for map/legend)</label><input type="color" value="${esc(d.color||'#7C8D6B')}" onchange="updateDraftField('color',this.value)">
@@ -750,7 +1067,7 @@ function speciesDraftFormHtml(d){
     <label>Mature height, ft</label><input type="number" value="${d.ht!=null?d.ht:''}" onchange="updateDraftField('ht',+this.value)">
     <label>Mature radius, ft</label><input type="number" value="${d.rad!=null?d.rad:''}" onchange="updateDraftField('rad',+this.value)">
     <label>Years to target size (T)</label><input type="number" value="${d.T!=null?d.T:''}" onchange="updateDraftField('T',+this.value)">
-    <label>Sun</label><select onchange="updateDraftField('sun',this.value)">${selOpt(d.sun,['hot','any','shade'])}</select>
+    <label>Sun</label><select onchange="updateDraftField('sun',this.value)">${selOpt(d.sun,['any','shade','hot'],{hot:'full'})}</select>
     <label>Moisture</label><select onchange="updateDraftField('moisture',this.value)">${selOpt(d.moisture,['dry','moderate','wet'])}</select>
     <label>Drainage</label><select onchange="updateDraftField('drainage',this.value)">${selOpt(d.drainage,['sharp','any','tolerant'])}</select>
     <label>Bloom months (comma-separated, e.g. 3,4,5)</label><input type="text" value="${d.bloom?d.bloom.join(','):''}" onchange="updateDraftField('bloom',this.value.split(',').map(x=>+x.trim()).filter(Boolean))">
@@ -779,7 +1096,7 @@ function speciesDraftFormHtml(d){
     <label>Notes</label><input type="text" value="${esc(d.notes||'')}" onchange="updateDraftField('notes',this.value)">
     <h3>Goals (0–3 each)</h3>
     <div class="row" style="flex-wrap:wrap">${Object.keys(GOALS).map(g=>`<div style="width:48%"><label style="margin:0">${esc(GOALS[g])}</label><input type="number" min="0" max="3" style="width:48px" value="${d.goals[g]||0}" onchange="updateDraftGoal('${g}',this.value)"></div>`).join('')}</div>
-    <div class="row" style="margin-top:10px"><button class="small primary" onclick="saveDraftSpecies()">Add to library</button><button class="small danger" onclick="discardDraftSpecies()">Discard</button></div>
+    <div class="row" style="margin-top:10px"><button class="small primary" onclick="saveDraftSpecies()">${d.matchedId?'Update in library':'Add to library'}</button><button class="small danger" onclick="discardDraftSpecies()">Discard</button></div>
   </div>`; }
 
 /* ---------------- HexRow — map-based hedgerow planner
@@ -2421,7 +2738,16 @@ async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=si
   const excluded=planExcluded().includes(id);
   UI.open(sp.common,body,[{label:excluded?'Include in auto-fill':'Exclude from auto-fill',primary:true,value:'toggle'},{label:'Close',value:null}]).then(v=>{ if(v==='toggle') toggleExcluded(id); }); }
 function renderPaint(){ const h=curHedge(); let html='';
-  if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`); return; }
+  /* Owner and editor only (not viewer) — matches the Worker's own permission on
+     PUT /species, which allows the same two roles. Shown regardless of whether a
+     hedgerow is currently selected, since editing the library isn't tied to one.
+     Rendered as its own section, bordered off from the main paint/erase/auto-fill
+     tools above it — this is a library-maintenance action, not a row-painting one,
+     and sitting in the same button row as Auto-fill made it read as part of that
+     toolbar rather than a separate thing. */
+  const editBtn=(cloudIdentity.role==='owner'||cloudIdentity.role==='editor')
+    ?`<div class="row" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><button class="small" onclick="openSpeciesGrid()">Edit species library (spreadsheet view)</button></div>`:'';
+  if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`+editBtn); return; }
   const r=h.rows[S.sel.row||0];
   html+=`<div class="row"><button class="small" onclick="doPopulate()">Auto-fill</button><button class="small${mode==='paint'?' on':''}" onclick="toggleMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="toggleMode('erase');renderPaint()">Erase mode</button></div>`;
   if(mode==='paint') html+=`<p class="small">Painting into <b>${esc(r?r.name:'')}</b> — pick a species, then drag along the row on the map.</p>`;
@@ -2433,6 +2759,7 @@ function renderPaint(){ const h=curHedge(); let html='';
       <input type="checkbox" onclick="event.stopPropagation();toggleExcluded('${x.sp.id}')" ${excluded?'':'checked'} title="${excluded?'Excluded from auto-fill':'Eligible for auto-fill'}">
       <span class="swatch" style="background:${x.sp.color}"></span>
       <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))}</i></span><span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
+  html+=editBtn;
   setHtml('tab-paint',html); }
 let dockPinned=null;
 function dockActive(){ return document.getElementById('growDock').classList.contains('show'); }
