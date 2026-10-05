@@ -102,12 +102,21 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dockFacts{flex:0 0 240px;min-width:200px}
 .dockCols{display:flex;gap:16px;flex:1;overflow-x:auto}
 .dockCol h4{margin:0 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);font-weight:400}
-.dockCol{min-width:150px}
+/* A column is as wide as its longest name, up to a cap, and never shrinks below its content —
+   before, min-width was the only rule, so a long name (nowrap) simply painted over the next
+   column. Past the cap the name is cut with an ellipsis (the full name is the tooltip); the
+   swatch and percentage keep their size so only the name gives way. */
+.dockCol{flex:0 0 auto;min-width:150px;max-width:260px}
 .dockSp{display:flex;gap:6px;align-items:center;font-size:13px;padding:2px 5px;border-radius:5px;cursor:pointer;border:1px solid transparent;white-space:nowrap}
 .dockSp:hover{background:#fff;border-color:var(--line)}
 .dockSp.in{background:#fff;border-color:var(--ink)}
-.dockSp .n{flex:1}
-.dockSp .fit{font-variant-numeric:tabular-nums;font-size:12px;color:var(--mute)}
+.dockSeg{display:inline-flex;margin-left:10px}
+.dockSeg button{border-radius:0;margin-left:-1px}
+.dockSeg button:first-child{border-radius:7px 0 0 7px;margin-left:0}
+.dockSeg button:last-child{border-radius:0 7px 7px 0}
+.dockSp .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.dockSp .swatch{flex:0 0 auto}
+.dockSp .fit{flex:0 0 auto;font-variant-numeric:tabular-nums;font-size:12px;color:var(--mute)}
 .dockTab{position:absolute;right:12px;bottom:6px;font-size:12px}
 #growDock:not(.show) .dockTab{display:none}
 @media (max-width:820px){#growDock{max-height:44vh;bottom:0}.dockBody{flex-direction:column;gap:8px}.dockFacts{flex:none}}
@@ -198,6 +207,19 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 #saveWrap .menu button:hover{background:var(--paper2)}
 #saveWrap .menu kbd{color:var(--mute);font-size:11px}
 #saveWrap .menu .sep{height:1px;background:var(--line);margin:4px 6px}
+/* Hedgerow navigator: the ranch subtitle doubles as a menu button. Styled to read as
+   text with a dotted underline until hovered, not as another toolbar button. */
+#hedgeNavWrap{position:relative;display:inline-block}
+#hedgeNavBtn{all:unset;display:inline;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+#hedgeNavBtn:hover{color:var(--ink)}
+#hedgeNavBtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:3px}
+#hedgeNavWrap .menu{position:absolute;top:22px;left:0;z-index:1500;background:var(--paper);border:1px solid var(--line);
+  border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.25);min-width:270px;padding:5px;display:flex;flex-direction:column}
+#hedgeNavWrap .menu button{background:transparent;border:0;text-align:left;padding:7px 10px;border-radius:6px;font-size:13px;display:flex;justify-content:space-between;gap:14px;white-space:nowrap;color:var(--ink)}
+#hedgeNavWrap .menu button:hover{background:var(--paper2)}
+#hedgeNavWrap .menu button.on{font-weight:700}
+#hedgeNavWrap .menu .sep{height:1px;background:var(--line);margin:4px 6px}
+#hedgeNavWrap .menu kbd{color:var(--mute);font-size:11px}
 #saveState{font-size:12px;padding:3px 8px;border-radius:9px;margin-left:2px;cursor:pointer;border:1px solid transparent}
 #saveState.ok{color:var(--mute)}
 #saveState.dirty{background:#F6EBD2;color:var(--warn);border-color:#E4D3A8}
@@ -244,9 +266,19 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 #speciesGrid.show{display:flex}
 #sgBar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper2);border-bottom:1px solid var(--line)}
 #sgBar h2{margin:0;font-size:16px}
+#sgSearch{width:min(280px,34vw);font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit}
+#sgSearch:focus{outline:2px solid var(--ink);outline-offset:1px}
 #sgScroll{flex:1 1 auto;overflow:auto}
 #sgTable{border-collapse:collapse;white-space:nowrap;font-size:12px}
 #sgTable th{position:sticky;top:0;background:var(--paper2);border:1px solid var(--line);padding:4px 6px;text-align:left;z-index:5}
+/* Common name stays visible while scrolling horizontally through the other ~30
+   columns. Data cells need an explicit opaque background or the columns scrolling
+   underneath would show through; the header cell is sticky in both directions at
+   once (top from the rule above, left from here) and needs the highest z-index of
+   anything in the table so it still wins the corner over both an ordinary sticky
+   header cell and an ordinary frozen-column cell scrolling past beneath it. */
+#sgTable td.sgFreeze{position:sticky;left:0;z-index:3;background:var(--paper)}
+#sgTable th.sgFreeze{position:sticky;left:0;z-index:7}
 #sgTable td{border:1px solid var(--line);padding:1px 3px;vertical-align:top}
 #sgTable td.sgId{font-family:monospace;color:var(--mute);white-space:nowrap;padding:3px 6px}
 #sgTable input,#sgTable select,#sgTable textarea{width:100%;min-width:50px;font-size:12px;border:1px solid transparent;background:transparent;padding:2px;font-family:inherit}
@@ -257,7 +289,9 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 /* Non-editable elements — column headers (even though they carry a title tooltip),
    the read-only Id cells, and the grid bar's static title/count text — should read
    as plain text, not as something clickable or typeable. */
-#sgTable th, #sgTable td.sgId, #sgBar h2, #sgCount{cursor:default}
+#sgTable td.sgId, #sgBar h2, #sgCount{cursor:default}
+#sgTable th{cursor:pointer}
+#sgTable th.sorted{background:var(--sel);color:#fff}
 #sgTable td.sgBool{text-align:center;vertical-align:middle}
 #sgTable input[type=checkbox]{width:auto;margin:0;display:inline-block;vertical-align:middle}
 .stitle{display:flex;gap:12px;align-items:center;margin-bottom:14px}
@@ -363,9 +397,12 @@ body.wide{--panelW:560px}
 <div id="speciesGrid">
   <div id="sgBar">
     <h2>Edit species library</h2>
+    <input id="sgSearch" type="search" placeholder="Search any field…" autocomplete="off" spellcheck="false"
+      title="Shows only species where every word you type matches some field: name, notes, moisture, a goal, a bloom month, what it replaces… (space means AND). Esc clears."
+      oninput="setSgFilter(this.value)" onkeydown="if(event.key==='Escape'){ this.value=''; setSgFilter(''); event.stopPropagation(); }">
     <span class="small mute" id="sgCount"></span>
     <span class="grow"></span>
-    <button class="small" onclick="downloadSpeciesJSON()" title="Downloads what's currently shown here, edits included, whether or not you've saved yet">Download</button>
+    <button class="small" onclick="downloadSpeciesJSON()" title="Downloads the whole library, edits included, whether or not you've saved yet. The search box only hides rows; it never limits what is downloaded or saved.">Download</button>
     <button class="small danger" onclick="cancelSpeciesGrid()">Cancel</button>
     <button class="small primary" onclick="saveSpeciesGrid()">Save</button>
   </div>
@@ -427,7 +464,7 @@ body.wide{--panelW:560px}
       <button id="m-hedge" onclick="toggleMode('hedge')" title="Tap along the hedgerow's centreline. Double-tap or Finish to end.">Draw hedgerow</button>
       <button id="m-paint" onclick="toggleMode('paint')" title="Pick a species in the Plants tab, then drag along a row on the map to plant it.">Paint</button>
       <button id="m-erase" onclick="toggleMode('erase')" title="Drag along a row on the map to remove whatever's planted there.">Erase</button>
-      <button id="m-wnode" onclick="toggleMode('wnode')" title="Tap the map to place a water node — tank, well, pond, valve, or regulator.">Place water node</button>
+      <button id="m-wnode" onclick="toggleMode('wnode')" title="Tap the map to position a water node — tank, well, valve, or regulator — then press Enter to place it. Esc cancels.">Place water node</button>
       <button id="m-wline" onclick="toggleMode('wline')" title="Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.">Draw pipe</button>
       <button id="m-aoi" onclick="toggleMode('aoi')" title="Outline the ground you want read and ranked — three corners is enough. Double-tap or Finish to close it.">Study area</button>
       <button id="m-finish" onclick="finishDraw()" style="display:none" title="Close the shape you're drawing.">Finish</button>
@@ -612,6 +649,19 @@ function addPerson(){ const nameInp=document.getElementById('newPersonName'); co
 let _harvestDraft=null;
 function mapSun(s){ s=(s||'').toLowerCase(); if(s.includes('shade')&&!s.includes('sun')) return 'shade'; if(s.includes('sun')&&s.includes('shade')) return 'any'; if(s.includes('sun')) return 'hot'; return null; }
 function mapMoisture(s){ s=(s||'').toLowerCase(); if(s.includes('dry')) return 'dry'; if(s.includes('regular')||s.includes('moist')||s.includes('wet')) return 'wet'; if(s.includes('moderate')) return 'moderate'; return null; }
+/* Calscape lists every water level a plant tolerates ("Very Low, Low, Moderate"), not the one it
+   wants. mapMoisture's substring test would read that as "moderate" because the word appears,
+   so take the middle of the listed range instead (the lower middle when it's an even count). */
+function mapWaterNeeds(s){ const rank={'very low':0,'low':1,'moderate':2,'medium':2,'high':3,'very high':4};
+  const r=((s||'').toLowerCase().match(/very low|very high|low|moderate|medium|high/g)||[]).map(x=>rank[x]).sort((a,b)=>a-b);
+  if(!r.length) return null; const m=r[Math.floor((r.length-1)/2)]; return m<=1?'dry':m===2?'moderate':'wet'; }
+function mapSoilDrainage(s){ s=(s||'').toLowerCase(); const hit=[/fast|rapid|sharp|excellent/.test(s)?'sharp':null,/medium|moderate|average/.test(s)?'any':null,/slow|poor|heavy/.test(s)?'tolerant':null].filter(Boolean);
+  return !hit.length?null:hit.length>1?'any':hit[0]; }
+/* The layer auto-fill places a species in. Left null this was the one field a draft could never
+   recover from by itself: a species with no story matches no role and is never auto-filled. */
+function mapStory(s){ s=(s||'').toLowerCase(); if(!s) return null; if(/\btree\b/.test(s)) return 'over'; if(/vine/.test(s)) return 'vine';
+  if(/subshrub/.test(s)) return 'ground'; if(/shrub/.test(s)) return 'mid';
+  if(/herb|forb|grass|sedge|rush|fern|bulb|perennial|annual|groundcover|succulent/.test(s)) return 'ground'; return null; }
 function mapDrainage(text){ text=(text||'').toLowerCase(); if(text.includes('clay')) return 'tolerant'; if(text.includes('well-drain')||text.includes('well drain')||text.includes('sandy')||text.includes('sharp')) return 'sharp'; return null; }
 function mapBloomMonths(s){ const seasons={winter:[12,1,2],spring:[3,4,5],summer:[6,7,8],fall:[9,10,11],autumn:[9,10,11]}; s=(s||'').toLowerCase(); let months=[]; Object.keys(seasons).forEach(k=>{ if(s.includes(k)) months=months.concat(seasons[k]); }); return months.length?Array.from(new Set(months)).sort((a,b)=>a-b):null; }
 function parseSizeMid(s){ if(!s) return null; const m=s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/); if(m) return Math.round(((+m[1]+ +m[2])/2)*10)/10; const m2=s.match(/(\d+(?:\.\d+)?)/); return m2?+m2[1]:null; }
@@ -647,15 +697,15 @@ function fillGaps(existing,fresh,isGoals){
 function mapHarvestToDraft(h){
   const tags=((h.tolerances||'')+' '+(h.habitatValues||'')+' '+(h.specialUses||'')).toLowerCase();
   const widthMid=parseSizeMid(h.width);
-  const refKeys={precipitation:'Annual precip',wetSeason:'Wet season',elevation:'Elevation',hardiness:'Hardiness',soilPh:'Soil pH',soilTextures:'Soil textures',lifeform:'Life form',family:'Family',genus:'Genus',rarityRank:'CA Rare Plant Rank',communities:'Plant communities'};
+  const refKeys={plantType:'Plant type',growthRate:'Growth rate',dormancy:'Dormancy',summerIrrigation:'Summer irrigation',coldTolerance:'Cold tolerance',precipitation:'Annual precip',wetSeason:'Wet season',elevation:'Elevation',hardiness:'Hardiness',soilPh:'Soil pH',soilTextures:'Soil textures',lifeform:'Life form',family:'Family',genus:'Genus',rarityRank:'CA Rare Plant Rank',communities:'Plant communities'};
   const ref=Object.keys(refKeys).map(k=>h[k]?(refKeys[k]+': '+h[k]):null).filter(Boolean).join(' · ');
   const fresh={ id:slugifyId(h.commonName||h.botanicalName), common:h.commonName||'', sci:h.botanicalName||'',
     color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
-    moisture:mapMoisture(h.water), drainage:mapDrainageFromTextures(h.soilTextures)||mapDrainage(h.siteConditions||h.rawText), sun:mapSun(h.exposure),
-    riparianFt:null, bloom:parseBloomRange(h.bloomPeriod)||mapBloomMonths(h.bloomTime), risk:null, story:null,
+    moisture:h.waterNeeds?mapWaterNeeds(h.waterNeeds):mapMoisture(h.water), drainage:mapSoilDrainage(h.soilDrainage)||mapDrainageFromTextures(h.soilTextures)||mapDrainage(h.siteConditions||h.rawText), sun:mapSun(h.exposure),
+    riparianFt:null, bloom:parseBloomRange(h.bloomPeriod)||mapBloomMonths(h.bloomTime), risk:null, story:mapStory(h.plantType||h.lifeform),
     ht:parseSizeMid(h.height), rad:widthMid?Math.round(widthMid/2*10)/10:null,
     T:null, cast:null, tol:null, root:{cls:null,depth:null,lat:null}, spreads:null, allelo:0,
-    goals:{poll:/pollinat|bee|butterfl/.test(tags)?2:0, wild:/wildlife|bird/.test(tags)?2:0, screen:0, barrier:0, bank:0,
+    goals:{poll:/pollinat|bee|butterfl/.test(tags)?2:0, wild:/wildlife|bird/.test(tags)?2:0, screen:/hedge|screen|windbreak/.test(tags)?2:0, barrier:0, bank:/erosion|bank stabil|slope stabil/.test(tags)?2:0,
       fire:/fire resist/.test(tags)?2:0, lowWater:/drought/.test(tags)?2:0, fodder:0, fast:0, lowMaint:0},
     replace:null, fail:'', trigger:'', notes:((h.rawText||'').split('\n').find(l=>l.length>80)||'')+(ref?(' — '+ref):''),
     conf:'draft', source:h.sourceUrl||null };
@@ -703,6 +753,9 @@ function extractFieldsFromText(text){
     console.log('[harvest] table extraction result',cf);
     Object.keys(cf).forEach(k=>{ if(cf[k]!=null) generic[k]=cf[k]; });
   }
+  const cs=extractCalscapeFields(plain,nonEmpty);
+  ['botanicalName','commonName'].forEach(k=>{ if(cs[k]) generic[k]=cs[k]; }); /* see its comment: the generic name search mis-hits on Calscape */
+  Object.keys(cs).forEach(k=>{ if(cs[k]!=null&&generic[k]==null) generic[k]=cs[k]; });
   if(isTaxonReport){
     const tr=extractCalfloraTaxonReportText(lines,plain);
     console.log('[harvest] taxon report extraction result',tr);
@@ -760,6 +813,38 @@ function extractGenericFields(plain,lines){
     hardiness: field('Hardiness Zones'),
     rawText: plain.slice(0,8000),
   }; }
+/* Calscape's plant pages, in either of the two shapes they arrive in: "Label value" on one line
+   (what you get copying the rendered page) or the label alone on its own line with the value on
+   the next (document.body.innerText, with the blank lines already dropped by the caller). Neither
+   is a shape extractGenericFields accepts for these labels, and the labels themselves aren't Cal
+   Flora Nursery's ("Sun" not "Exposure", "Water needs" not "Water Requirement", "Flowering
+   season" not "Bloom Time", a "Size" with tall and wide on it rather than separate height and
+   width). Gated on two or more Calscape-only labels being present, because the label-alone shape
+   would misread Cal Flora Nursery's own "Sun" line (a value under "Exposures") as a label.
+   The name comes from the header pair directly above "Family:", which is how Calscape lays it
+   out; the generic label search mis-hits there (it reads the "Common names:" alternates list as
+   the common name), so these two override it rather than only filling blanks. Everything else
+   only fills what the other extractors left blank. */
+function extractCalscapeFields(plain,lines){
+  lines=lines||plain.split('\n');
+  const esc=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const LABELS=['plant type','size','sun','water needs','flowering season','soil drainage','special uses','growth rate','summer irrigation','dormancy','cold tolerance','family','genus','plant communities'];
+  const idx=label=>lines.findIndex(l=>l.replace(/:\s*$/,'').toLowerCase()===label.toLowerCase());
+  const below=(label,n)=>{ const i=idx(label); if(i<0) return null; const v=lines.slice(i+1,i+1+(n||1)).join(' ').trim();
+    return !v||LABELS.includes(v.replace(/:\s*$/,'').toLowerCase())?null:v; }; /* a value that is really the next label means this one was empty */
+  const same=label=>{ const m=plain.match(new RegExp('^'+esc(label)+'(?:[\\t ]*:[\\t ]*|[\\t ]+)(\\S[^\\n]*)$','im')); return m?m[1].trim():null; };
+  const val=label=>below(label)||same(label);
+  if(['Plant type','Water needs','Flowering season','Soil drainage','Special uses','Growth rate','Summer irrigation'].filter(l=>val(l)).length<2) return {};
+  const size=below('Size',2)||same('Size')||'';
+  const dim=re=>{ const m=size.match(re); return m?m[1].replace(/\s+/g,''):null; };
+  let names={}; const fi=lines.findIndex(l=>/^family:?$/i.test(l));
+  if(fi>=2){ const sci=lines[fi-1].trim(), com=lines[fi-2].trim();
+    if(/^[A-Z][a-z]+(?: [×x] [A-Z][a-z]+)? [a-z][a-z-]+(?: (?:subsp\.|ssp\.|var\.|f\.) ?[a-z-]+)?$/.test(sci)&&com&&com.length<80) names={botanicalName:sci,commonName:com}; }
+  return Object.assign(names,{
+    plantType:val('Plant type'), height:dim(/(\d[\d.]*(?:\s*-\s*\d[\d.]*)?)\s*ft\.?\s*tall/i), width:dim(/(\d[\d.]*(?:\s*-\s*\d[\d.]*)?)\s*ft\.?\s*wide/i),
+    exposure:val('Sun'), waterNeeds:val('Water needs'), bloomTime:val('Flowering season'), soilDrainage:val('Soil drainage'),
+    specialUses:val('Special uses'), growthRate:val('Growth rate'), summerIrrigation:val('Summer irrigation'),
+    dormancy:val('Dormancy'), coldTolerance:val('Cold tolerance'), family:val('Family'), genus:val('Genus'), communities:val('Plant communities') }); }
 /* Calflora's climate/soil table (Plant Characteristics or Plant Location Suitability
    page — same data, two different class-name schemes neither of which this looks at
    anymore) renders as one label + value(s) per line via innerText, cells tab-separated. */
@@ -798,9 +883,17 @@ function extractNameFallback(nonEmpty){
   for(let k=0;k<nonEmpty.length-1;k++){
     const m=nonEmpty[k].match(/^([A-Z][a-z]+(?:\s*[×x]\s*[A-Z]?[a-z]+)?\s+[a-z][a-z-]+(?:\s+(?:ssp\.|var\.|subsp\.)\s*[a-z-]+)?)\b/);
     if(!m) continue;
+    /* The pattern only checks that a line STARTS like a binomial, so a page's "Skip to content"
+       link read as the species "Skip to" and the line after it ("Donate") as its common name.
+       A real epithet is at least three letters and isn't a plain English word. */
+    const epithet=m[1].trim().split(/\s+/).pop().toLowerCase();
+    if(epithet.length<3||['the','and','for','you','our','all','new','get','see','use','add','buy','not','can','are','has','its','one','top','map','log','faq'].includes(epithet)) continue;
     const nextParts=nonEmpty[k+1].split('\t').map(p=>p.trim()).filter(Boolean);
     const next=nextParts[0];
-    if(!next||/^(Family|Genus|Click|California|Observations|Accepted|Name Status|HELP)/i.test(next)) continue;
+    /* "California" alone was in this skip list to avoid reading page lines like "California Rare Plant
+       Rank" as a common name, but it also rejected any real common name that starts that way
+       (California poppy, California buckeye, California bay...), so it's narrowed to those lines. */
+    if(!next||/^(Family|Genus|Click|California (?:Rare|Phenology|Native Plant|Invasive|Plant)|Observations|Accepted|Name Status|HELP)/i.test(next)) continue;
     return { botanicalName:m[1].trim(), commonName:next, lifeform:nextParts[1]||null };
   }
   return {}; }
@@ -872,6 +965,7 @@ function applyBatchJSON(list){
     });
   });
   pushSharedSpecies();
+  drawAll();
   if(status) status.textContent=results.length+' processed'+(newCount?' ('+newCount+' added as new species, not reviewed individually — check them in the library)':'')+': '+results.join('; ');
   paintSpeciesAdmin(); renderPanels(); UI.toast(results.length+' species processed from batch JSON.'); }
 function extractFromPaste(){
@@ -912,12 +1006,12 @@ function saveDraftSpecies(){
   const entry=JSON.parse(JSON.stringify(_harvestDraft)); const matchedId=entry.matchedId; delete entry.matchedId;
   if(matchedId){
     commit('Update species: '+entry.common,()=>{ const i=S.species.findIndex(sp=>sp.id===matchedId); if(i>=0) S.species[i]=entry; });
-    pushSharedSpecies(); _harvestDraft=null; paintSpeciesAdmin(); renderPanels(); UI.toast('Updated in the library.'); return;
+    pushSharedSpecies(); _harvestDraft=null; paintSpeciesAdmin(); drawAll(); renderPanels(); UI.toast('Updated in the library.'); return;
   }
   if(S.species.some(sp=>sp.id===entry.id)){ UI.toast('A species with this id already exists — change the id'); return; }
   commit('Add species: '+entry.common,()=>{ S.species.push(entry); });
   pushSharedSpecies();
-  _harvestDraft=null; paintSpeciesAdmin(); renderPanels(); UI.toast('Added to the library.'); }
+  _harvestDraft=null; paintSpeciesAdmin(); drawAll(); renderPanels(); UI.toast('Added to the library.'); }
 /* ---- Species spreadsheet editor: owner and editor (not viewer), launched from the
    Plants tab — full-page, one row per species, one column per attribute. Edits a
    staged deep copy (_speciesGridDraft) — nothing touches S.species or the server
@@ -939,10 +1033,9 @@ const SG_VOCAB={ sun:['any','shade','hot'], moisture:['dry','moderate','wet'], d
    only what the person sees in these dropdowns changes. */
 const SG_VOCAB_LABELS={ sun:{hot:'full'}, conf:{obs:'observed', lib:'literature', draft:'draft'} };
 const SG_COLUMNS=[
-  {path:'id',label:'Id',type:'readonly',title:"Internal identifier. Plant records reference a species by this id, so it isn't editable here — changing it would orphan every already-planted instance."},
-  {path:'common',label:'Common name',type:'text',title:'Common name shown throughout the app.'},
+  {path:'common',label:'Common name',type:'text',w:150,freeze:true,title:'Common name shown throughout the app.'},
   {path:'sci',label:'Scientific name',type:'text',w:180,title:'Scientific (binomial) name.'},
-  {path:'conf',label:'Confidence',type:'select',vocab:'conf',title:"How this entry's data should be trusted — observed (confirmed on this ranch), literature (a horticultural reference default), or draft (freshly harvested, not yet reviewed)."},
+  {path:'conf',label:'Confidence',type:'select',vocab:'conf',w:95,title:"How this entry's data should be trusted — observed (confirmed on this ranch), literature (a horticultural reference default), or draft (freshly harvested, not yet reviewed)."},
   {path:'color',label:'Map color',type:'color',title:'Color used for this species on the map and in the legend.'},
   {path:'ht',label:'Height ft',type:'number',title:'Mature height, feet.'},
   {path:'rad',label:'Radius ft',type:'number',title:'Mature canopy radius, feet (half of mature width).'},
@@ -958,7 +1051,7 @@ const SG_COLUMNS=[
   {path:'root.cls',label:'Root class',type:'select',vocab:'root.cls',title:'Root depth class: tap, fibrous (shallow), or mid.'},
   {path:'root.depth',label:'Root depth ft',type:'number',title:'Root depth, feet.'},
   {path:'root.lat',label:'Root lat ratio',type:'number',step:'0.1',title:'Lateral root spread as a ratio of canopy radius (1.0 = same width as the canopy).'},
-  {path:'regime',label:'Regime',type:'select',vocab:'regime',title:'Irrigation plan: wean (off by yr2), reduce (tapered by yr3), or perm (permanent water).'},
+  {path:'regime',label:'Regime',type:'select',vocab:'regime',w:90,title:'Irrigation plan: wean (off by yr2), reduce (tapered by yr3), or perm (permanent water).'},
   {path:'gph',label:'GPH',type:'number',step:'0.1',title:'Drip emitter rate, gallons per hour.'},
   {path:'emitters',label:'Emitters',type:'number',title:'Number of emitters per plant.'},
   {path:'basket',label:'Basket',type:'bool',title:'Needs a gopher basket at planting.'},
@@ -966,7 +1059,7 @@ const SG_COLUMNS=[
   {path:'spacingFt',label:'Spacing ft',type:'number',title:'Default spacing between plants of this species, feet.'},
   {path:'risk',label:'Risk yr3 %',type:'number',title:'Expected loss by year 3, percent.'},
   {path:'allelo',label:'Allelo',type:'number',title:'Allelopathy radius, feet (0 = none) — other plants within this distance are suppressed.'},
-  {path:'replace',label:'Replace with',type:'replace',title:'Species to substitute if this one fails, if any.'},
+  {path:'replace',label:'Replace with',type:'replace',w:150,title:'Species to substitute if this one fails, if any.'},
   {path:'fail',label:'Failure mode',type:'longtext',title:'How this species typically fails.'},
   {path:'trigger',label:'Trigger',type:'longtext',title:'What to watch for that signals failure.'},
   {path:'notes',label:'Notes',type:'longtext',title:'Free-form reference notes.'},
@@ -987,7 +1080,7 @@ function sgCellHtml(sp,idx,col){
   const val=sgGet(sp,col.path);
   const w=col.w?` style="min-width:${col.w}px"`:'';
   if(col.type==='readonly') return `<td class="sgId">${esc(val||'')}</td>`;
-  if(col.type==='text') return `<td><input type="text"${w} value="${esc(val||'')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
+  if(col.type==='text') return `<td${col.freeze?' class="sgFreeze"':''}><input type="text"${w} value="${esc(val||'')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
   if(col.type==='color') return `<td class="sgColor"><input type="color" value="${esc(val||'#7C8D6B')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
   if(col.type==='number') return `<td><input type="number"${col.step?` step="${col.step}"`:''} value="${val!=null?val:''}" onchange="updateGridCell(${idx},'${col.path}',this.value===''?null:+this.value)"></td>`;
   if(col.type==='bool') return `<td class="sgBool"><input type="checkbox" ${val?'checked':''} onchange="updateGridCell(${idx},'${col.path}',this.checked)"></td>`;
@@ -996,16 +1089,56 @@ function sgCellHtml(sp,idx,col){
     return `<td><select${w} onchange="updateGridCell(${idx},'${col.path}',this.value||null)"><option value="">—</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${esc(labels[o]||o)}</option>`).join('')}</select></td>`; }
   if(col.type==='bloom') return `<td><input type="text" value="${val?val.join(','):''}" onchange="updateGridCell(${idx},'bloom',this.value.split(',').map(x=>+x.trim()).filter(Boolean))"></td>`;
   if(col.type==='longtext') return `<td><textarea rows="2" onchange="updateGridCell(${idx},'${col.path}',this.value)">${esc(val||'')}</textarea></td>`;
-  if(col.type==='replace'){ const ids=_speciesGridDraft.map(s=>s.id).filter(id=>id!==sp.id).sort();
-    return `<td><select onchange="updateGridCell(${idx},'replace',this.value||null)"><option value="">—</option>${ids.map(id=>`<option value="${id}"${val===id?' selected':''}>${id}</option>`).join('')}</select></td>`; }
+  if(col.type==='replace'){ const others=_speciesGridDraft.filter(s=>s.id!==sp.id).map(s=>({id:s.id,label:s.common||s.id})).sort((a,b)=>a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
+    return `<td><select${w} onchange="updateGridCell(${idx},'replace',this.value||null)"><option value="">—</option>${others.map(o=>`<option value="${o.id}"${val===o.id?' selected':''}>${esc(o.label)}</option>`).join('')}</select></td>`; }
   return '<td></td>'; }
+/* Ascending-only, click-to-sort. Blank/null always sorts last regardless of the
+   column's own ordering, so incomplete data doesn't crowd the top. bloom (an array
+   of month numbers) sorts by its earliest month; booleans sort unchecked-first. */
+let _sgSortPath=null;
+function sgSortKey(sp,path){ let v=sgGet(sp,path);
+  if(Array.isArray(v)) v=v.length?Math.min(...v):null;
+  if(typeof v==='boolean') v=v?1:0;
+  return v; }
+function sortSpeciesGrid(path){ _sgSortPath=path;
+  _speciesGridDraft.sort((a,b)=>{ const va=sgSortKey(a,path), vb=sgSortKey(b,path);
+    const ae=va==null||va==='', be=vb==null||vb==='';
+    if(ae&&be) return 0; if(ae) return 1; if(be) return -1;
+    if(typeof va==='number'&&typeof vb==='number') return va-vb;
+    return String(va).toLowerCase().localeCompare(String(vb).toLowerCase()); });
+  paintSpeciesGrid(); }
+/* View-only filter over the staged draft: it hides rows, it never removes them, so Save and
+   Download still carry the whole library, and every cell keeps its index into the real array
+   (edits made in a filtered view land on the right species). A species matches when EVERY
+   space-separated word appears in at least one of its attributes, so "oak dry" finds oaks whose
+   moisture is dry while "dry" alone finds any species with dry anywhere. The text searched is
+   what the grid shows, not just what is stored (sun "hot" is shown as "full", obs as "observed",
+   bloom as month names, a replacement by its name, a goal by its label when above zero, a
+   checkbox by its column when ticked), so typing what you see works. */
+let _sgFilter='', _sgShown=0;
+const SG_MONTHS=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+function sgHaystack(sp){ const out=[];
+  sgColumns().forEach(c=>{ const v=sgGet(sp,c.path); if(v==null||v===''||v===false) return;
+    if(c.type==='bool') out.push(c.label);
+    else if(c.type==='goal'){ if(+v>0) out.push(c.label+' '+v); }
+    else if(c.type==='select'){ out.push(String(v)); const lab=(SG_VOCAB_LABELS[c.vocab]||{})[v]; if(lab) out.push(lab); }
+    else if(c.type==='bloom'){ (Array.isArray(v)?v:[]).forEach(m=>{ out.push(String(m)); if(SG_MONTHS[m-1]) out.push(SG_MONTHS[m-1]); }); }
+    else if(c.type==='replace'){ out.push(String(v)); const r=_speciesGridDraft.find(x=>x.id===v); if(r) out.push(r.common||''); }
+    else out.push(String(v)); });
+  return out.join('\n').toLowerCase(); }
+function setSgFilter(v){ _sgFilter=v||''; paintSpeciesGrid(); }
 function speciesGridHtml(){
   const cols=sgColumns();
-  let html='<thead><tr>'+cols.map(c=>`<th${c.title?` title="${esc(c.title)}"`:''}>${esc(c.label)}</th>`).join('')+'</tr></thead><tbody>';
-  html+=_speciesGridDraft.map((sp,idx)=>'<tr>'+cols.map(c=>sgCellHtml(sp,idx,c)).join('')+'</tr>').join('');
+  let html='<thead><tr>'+cols.map(c=>{ const cls=[c.path===_sgSortPath?'sorted':'',c.freeze?'sgFreeze':''].filter(Boolean).join(' ');
+    return `<th${c.title?` title="${esc(c.title)}"`:''}${cls?` class="${cls}"`:''} onclick="sortSpeciesGrid('${c.path}')">${esc(c.label)}</th>`; }).join('')+'</tr></thead><tbody>';
+  const terms=_sgFilter.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown=_speciesGridDraft.map((sp,idx)=>({sp,idx})).filter(({sp})=>{ if(!terms.length) return true; const hay=sgHaystack(sp); return terms.every(t=>hay.includes(t)); });
+  html+=shown.map(({sp,idx})=>'<tr>'+cols.map(c=>sgCellHtml(sp,idx,c)).join('')+'</tr>').join('');
+  if(!shown.length) html+=`<tr><td colspan="${cols.length}" style="padding:14px;color:var(--mute);white-space:normal">No species match “${esc(_sgFilter)}”.</td></tr>`;
+  _sgShown=shown.length;
   return html+'</tbody>'; }
 function paintSpeciesGrid(){ const t=document.getElementById('sgTable'); if(t) t.innerHTML=speciesGridHtml();
-  const c=document.getElementById('sgCount'); if(c) c.textContent=_speciesGridDraft.length+' species'; }
+  const c=document.getElementById('sgCount'); if(c) c.textContent=(_sgFilter.trim()?_sgShown+' of ':'')+_speciesGridDraft.length+' species'; }
 /* Downloads whatever's currently in the grid — including edits not yet saved —
    as a plain JSON array in exactly the shape each entry already has (id/common/sci/
    .../root:{...}/goals:{...}), the same shape SPECIES_DEFAULT's own array literal
@@ -1020,8 +1153,13 @@ function downloadSpeciesJSON(){
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 function openSpeciesGrid(){ if(cloudIdentity.role!=='owner'&&cloudIdentity.role!=='editor') return;
   _speciesGridDraft=JSON.parse(JSON.stringify(S.species));
+  _sgFilter=''; const _ss=document.getElementById('sgSearch'); if(_ss) _ss.value='';
   document.getElementById('speciesGrid').classList.add('show');
-  paintSpeciesGrid(); }
+  /* Opens pre-sorted by common name rather than raw array order, via the same
+     sortSpeciesGrid() a header click uses — so the highlight on open and the
+     highlight after clicking a different header are the same mechanism, not two
+     separate things that could drift out of sync with each other. */
+  sortSpeciesGrid('common'); }
 /* Cancel discards the staged draft (nothing in it was ever written to S.species) and
    additionally re-pulls the shared library from the server — a true reset to "what's
    actually there right now", not just a revert of this session's own edits, in case
@@ -1039,7 +1177,12 @@ async function saveSpeciesGrid(){ if(!_speciesGridDraft) return;
   document.getElementById('speciesGrid').classList.remove('show');
   _speciesGridDraft=null;
   await pushSharedSpecies();
-  renderPanels(); UI.toast('Species library saved.'); }
+  /* renderPanels() alone only re-renders the side panel/tab content, never the map
+     itself — plant markers are circleMarkers with fillColor baked in at draw time
+     (drawPlants(), called via drawAll()), so without this a color (or any other
+     visually-relevant) edit here wouldn't show up on the map until the next
+     unrelated pan/zoom/reload happened to trigger a redraw anyway. */
+  drawAll(); renderPanels(); UI.toast('Species library saved.'); }
 function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=cloudIdentity.role==='owner'?speciesAdminHtml():''; }); }
 function paintSpeciesAdmin(){ renderSpeciesAdmin(); }
 function speciesAdminHtml(){
@@ -1404,7 +1547,7 @@ function initMap(){
   hexCtx=hexCanvas.getContext('2d'); heatCtx=heatCanvasEl.getContext('2d');
   map.createPane('waterP'); map.getPane('waterP').style.zIndex=500;
   rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); tmpPtsLayer=L.layerGroup().addTo(map); foundLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
-  map.on('click',onMapClick); map.on('dblclick',(e)=>{ clearTimeout(_selClickTimer); if(['hedge','wline','pond','aoi','creek'].includes(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
+  map.on('click',onMapClick); map.on('dblclick',(e)=>{ clearTimeout(_selClickTimer); if(isDrawMode(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
   map.on('mousedown',onDown); map.on('mousemove',onMove); map.on('mouseup',onUp);
   map.on('moveend',()=>{ saveMyView(); if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); if(soilOn) loadSoilPolys(); if(heatOn&&!aoi()) runHeat(); drawAll(); });
   map.on('zoomend',()=>{ if(hexOn) drawHexes(); if(heatOn) paintHeatCanvas(); drawAll(); });
@@ -1518,29 +1661,49 @@ function openPlant(hid,rowIdx,ft,spId){
       if(v==='del') removePlantAt(hid,rowIdx,ft,spId);
       if(v==='swap') swapPlantAt(hid,rowIdx,ft,spId); }); }
 function removePlantAt(hid,rowIdx,ft,spId){ const sp=SP(spId);
+  /* "Why it filled this way" reads h.autoLog, a text snapshot populateHedge() writes
+     once — it was never updated by anything after that, so a manual change here
+     would silently fall out of sync with what the panel claims happened. Appending
+     to it (rather than leaving it alone) keeps it an honest running account of the
+     row instead of a frozen description of just the original auto-fill pass.
+     Deliberately not done for Paint/Erase mode's drag-based painting — logging every
+     stroke of a drag would flood this with noise rather than inform it. */
   commit('Remove '+(sp?sp.common:'plant'),()=>{ const h=R().hedgerows.find(x=>x.id===hid);
-    h.rows[rowIdx].plants=h.rows[rowIdx].plants.filter(p=>!(Math.abs(p.ft-ft)<0.01&&p.sp===spId)); });
+    h.rows[rowIdx].plants=h.rows[rowIdx].plants.filter(p=>!(Math.abs(p.ft-ft)<0.01&&p.sp===spId));
+    h.autoLog=(h.autoLog||[]).concat('Manual change: '+h.rows[rowIdx].name+' — removed '+(sp?sp.common:'a plant')+' at '+ft.toFixed(1)+' ft.'); });
   S.sel.plant=null; drawAll(); renderPanels(); }
 async function swapPlantAt(hid,rowIdx,ft,spId){ const h=R().hedgerows.find(x=>x.id===hid); const sp=SP(spId); if(!h) return;
   const info=stationInfo(h,rowIdx,ft); const row=h.rows[rowIdx];
-  const cands=S.species.filter(x=>x.id!==spId&&(x.story===sp.story||x.id===sp.replace))
+  /* Species unchecked in the plant list are excluded for this hedgerow, so they aren't offered here
+     either; saying how many were left out keeps a missing species from looking like a bug. */
+  const ex=new Set(planExcluded(h));
+  const eligible=S.species.filter(x=>x.id!==spId&&(x.story===sp.story||x.id===sp.replace));
+  const hidden=eligible.filter(x=>ex.has(x.id)).length;
+  const cands=eligible.filter(x=>!ex.has(x.id))
     .map(x=>{ const f=(info&&info.wet!=null)?speciesFit(x,info,row):null; return {sp:x,s:f?f.score:0.5}; })
     .sort((a,b)=>b.s-a.s).slice(0,8);
-  const body=`<p class="small">Same layer, scored for this spot. The rest of the row is untouched.</p>`
+  const body=`<p class="small">Same layer, scored for this spot. The rest of the row is untouched.${hidden?` <span class="mute">${hidden} species you excluded for this hedgerow ${hidden===1?'is':'are'} not shown.</span>`:''}</p>`
     +cands.map(c=>`<div class="sp" onclick="UI.close('${c.sp.id}')"><span class="swatch" style="background:${c.sp.color}"></span><span class="n">${esc(c.sp.common)}<i>${esc(bloomStr(c.sp))} · ${c.sp.moisture}</i></span><span class="fit ${c.s>=0.7?'ok':c.s<0.45?'alert':''}">${Math.round(c.s*100)}%</span></div>`).join('');
   const pick=await UI.open('Swap '+sp.common+' at '+ft.toFixed(1)+' ft',body,[{label:'Cancel',value:null}]);
   if(!pick) return;
   commit('Swap '+sp.common+' for '+SP(pick).common,()=>{ const hh=R().hedgerows.find(x=>x.id===hid);
-    const p=hh.rows[rowIdx].plants.find(q=>Math.abs(q.ft-ft)<0.01&&q.sp===spId); if(p) p.sp=pick; });
+    const p=hh.rows[rowIdx].plants.find(q=>Math.abs(q.ft-ft)<0.01&&q.sp===spId); if(p) p.sp=pick;
+    hh.autoLog=(hh.autoLog||[]).concat('Manual change: '+row.name+' — swapped '+sp.common+' for '+SP(pick).common+' at '+ft.toFixed(1)+' ft.'); });
   drawAll(); renderPanels(); }
-function setMode(m){ if(mode==='hedge'||mode==='wline'||mode==='pond'||mode==='aoi'||mode==='creek') tmpPts=[]; { const t=document.getElementById('hexTip'); if(t&&m!=='select') t.classList.remove('show'); } tmpLayer.clearLayers(); tmpPtsLayer.clearLayers(); mode=m; painting=false;
+/* Modes that collect pending points until you finish or cancel. A water node (tank, well, valve,
+   regulator) is one of them with exactly one point: a click positions it, a second click or a drag
+   moves it, Enter/Finish places it, Esc discards it. It used to commit on the first click, which
+   left Escape nothing to cancel and every misclick a node to delete (plus an elevation lookup). */
+const DRAW_MODES=['hedge','pond','aoi','wline','creek','wnode'];
+const isDrawMode=m=>DRAW_MODES.includes(m);
+function setMode(m){ if(isDrawMode(mode)) tmpPts=[]; { const t=document.getElementById('hexTip'); if(t&&m!=='select') t.classList.remove('show'); } tmpLayer.clearLayers(); tmpPtsLayer.clearLayers(); mode=m; painting=false;
   document.querySelectorAll('#modebar button').forEach(b=>b.classList.toggle('on',b.id==='m-'+m));
-  document.getElementById('m-finish').style.display=(m==='hedge'||m==='wline'||m==='pond'||m==='aoi'||m==='creek')?'':'none'; finishButton();
+  document.getElementById('m-finish').style.display=isDrawMode(m)?'':'none'; finishButton();
   map.dragging[(m==='paint'||m==='erase')?'disable':'enable']();
   map.getContainer().classList.toggle('hr-drawing',m!=='select');
   map.getContainer().style.cursor=(m==='select')?'':'crosshair';
   handleLayer.clearLayers();
-  const hints={select:'',hedge:'Tap along the hedgerow centreline. Double-tap or Finish to end.',paint:S.sel.species?('Painting '+SP(S.sel.species).common+' — drag along a row.'):'Pick a species in the Plants tab, then drag along a row.',erase:'Drag along a row to remove plants.',wnode:'Tap the map to place a '+WKINDS[wnodeKind].label.toLowerCase()+'.',aoi:'Tap a loose outline around the ground you want ranked — three corners is enough. Double-tap or Finish to close it.',creek:'Trace the creek, ditch or swale down its channel. Double-tap or Finish to end.',wline:'Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.',pond:'Tap around the pond edge at full pool. Finish to close the outline.',aoi:'Tap a loose outline around the ground you want ranked. Double-tap or Finish to close it.'};
+  const hints={select:'',hedge:'Tap along the hedgerow centreline. Double-tap or Finish to end.',paint:S.sel.species?('Painting '+SP(S.sel.species).common+' — drag along a row.'):'Pick a species in the Plants tab, then drag along a row.',erase:'Drag along a row to remove plants.',wnode:'Tap the map to position a '+WKINDS[wnodeKind].label.toLowerCase()+', then press Enter or Finish to place it. Esc cancels.',aoi:'Tap a loose outline around the ground you want ranked — three corners is enough. Double-tap or Finish to close it.',creek:'Trace the creek, ditch or swale down its channel. Double-tap or Finish to end.',wline:'Tap along the pipe route, starting and ending on nodes. Double-tap or Finish to end.',pond:'Tap around the pond edge at full pool. Finish to close the outline.',aoi:'Tap a loose outline around the ground you want ranked. Double-tap or Finish to close it.'};
   readout(hints[m]); modeBanner(); if(m==='paint'||m==='erase') showTab('paint'); if(m==='wnode'||m==='wline'||m==='pond'||m==='creek') showTab('water'); if(m==='aoi') showTab('goals'); if(m==='hedge') showTab('rows'); drawAll(); }
 /* Every mode-entry button (Draw hedgerow, Paint, Erase, Draw pipe, Study area, Draw
    pond outline, Trace a creek, the generic "Place water node") is a toggle: clicking
@@ -1550,7 +1713,7 @@ function toggleMode(m){ setMode(mode===m?'select':m); }
    choice on top of the single shared 'wnode' mode. Clicking the kind that's currently
    both selected AND active exits the mode; clicking a different kind just switches
    what you're about to place without leaving the mode. */
-function toggleWnodeKind(k){ if(mode==='wnode'&&wnodeKind===k) setMode('select'); else { wnodeKind=k; setMode('wnode'); } }
+function toggleWnodeKind(k){ if(mode==='wnode'&&wnodeKind===k) setMode('select'); else { const keep=mode==='wnode'?tmpPts.slice():[]; wnodeKind=k; setMode('wnode'); if(keep.length){ tmpPts=keep; drawTmp(); } } }
 let wnodeKind='tank';
 let _selClickTimer=null;
 function onMapClick(e){ const ll=[e.latlng.lat,e.latlng.lng];
@@ -1559,7 +1722,7 @@ function onMapClick(e){ const ll=[e.latlng.lat,e.latlng.lng];
   if(mode==='creek'){ tmpPts.push(ll); drawTmp(); readout('Creek: '+tmpPts.length+' point'+(tmpPts.length===1?'':'s')+(tmpPts.length>1?' · '+Math.round(pathLenFt(tmpPts))+' ft':'')+' · Finish to end'); return; }
   if(mode==='pond'){ tmpPts.push(ll); drawTmp(); readout('Pond outline: '+tmpPts.length+' corners · Finish to close'); return; }
   if(mode==='hedge'||mode==='wline'){ tmpPts.push(ll); drawTmp(); if(mode==='hedge') readout('Centreline '+Math.round(pathLenFt(tmpPts))+' ft · '+tmpPts.length+' pts · Finish when done'); else updateWlineReadout(); return; }
-  if(mode==='wnode'){ addWaterNode(ll); return; }
+  if(mode==='wnode'){ tmpPts=[ll]; drawTmp(); readout('Tap elsewhere or drag to move it · Enter or Finish places the '+WKINDS[wnodeKind].label.toLowerCase()+' · Esc cancels'); return; }
   /* A double-click is preceded by two ordinary 'click' events before Leaflet's own
      'dblclick' fires — without this delay, double-clicking to zoom was also selecting
      whichever acre hex sat under the cursor. Hold the single-click action briefly and
@@ -1578,6 +1741,7 @@ function drawTmpPoints(){ tmpPtsLayer.clearLayers(); tmpPts.forEach((p,i)=>{ con
     const mk=L.marker(p,{draggable:true,icon:L.divIcon({className:'vh',iconSize:first?[22,22]:[14,14]}),keyboard:false,zIndexOffset:950}).addTo(tmpPtsLayer);
     mk.on('drag',()=>{ const ll=mk.getLatLng(); tmpPts[i]=[ll.lat,ll.lng]; drawTmpLine(); modeBanner(); finishButton(); });
     mk.on('dragend',()=>{ modeBanner(); finishButton(); });
+    if(mode==='wnode') L.tooltip({permanent:true,direction:'top',className:'rowlab',offset:[0,-8]}).setLatLng(p).setContent((WKINDS[wnodeKind]||{label:'node'}).label.toLowerCase()).addTo(tmpPtsLayer);
     if(first){ mk.on('click',e=>{ L.DomEvent.stop(e); finishDraw(); }); L.tooltip({permanent:true,direction:'top',className:'rowlab',offset:[0,-8]}).setLatLng(p).setContent('tap to close').addTo(tmpPtsLayer); } }); }
 function finishDraw(){ const m=mode; const pts=tmpPts.slice(); tmpPts=[]; tmpLayer.clearLayers(); tmpPtsLayer.clearLayers();
   const short=(n,what)=>{ setMode('select'); readout('Need at least '+n+' '+what+' — nothing was added.'); };
@@ -1589,6 +1753,7 @@ function finishDraw(){ const m=mode; const pts=tmpPts.slice(); tmpPts=[]; tmpLay
   if(m==='pond'){ if(pts.length<3) return short('three','corners'); setMode('select'); commit('Draw pond',()=>addPondPoly(pts)); return; }
   if(m==='hedge'){ if(pts.length<2) return short('two','points'); setMode('select'); commit('Draw hedgerow',()=>addHedgerow(pts)); return; }
   if(m==='wline'){ if(pts.length<2) return short('two','points'); setMode('select'); commit('Draw pipe',()=>addWaterLine(pts)); return; }
+  if(m==='wnode'){ if(!pts.length){ readout('Tap the map to position it first.'); drawTmp(); return; } addWaterNode(pts[0]); drawTmp(); const nn=R().water.nodes.find(x=>x.id===S.sel.wnode); readout('Placed '+(nn?nn.name:'node')+' · tap the map to place another · Esc when done'); return; }
   setMode('select'); }
 
 function nearestRow(ll,tolFt){ let best=null; R().hedgerows.forEach(h=>{ if(S.sel.hedge&&h.id!==S.sel.hedge) return; const lines=rowLines(h); lines.forEach((pts,i)=>{ const pr=projectToLine(ll,pts); if(pr.distFt<tolFt&&(!best||pr.distFt<best.distFt)) best={h,i,ft:pr.ft,distFt:pr.distFt,ll:pr.ll}; }); }); return best; }
@@ -1616,15 +1781,16 @@ const MODE_BANNER={
   creek:()=>['Tracing a creek', tmpPts.length+' point'+(tmpPts.length===1?'':'s')+(tmpPts.length>1?' · '+Math.round(pathLenFt(tmpPts))+' ft':'')],
   aoi:()=>['Outlining a study area', tmpPts.length+' corner'+(tmpPts.length===1?'':'s')+(tmpPts.length>2?' · '+polyAreaAcres(tmpPts).toFixed(1)+' ac':'')],
   wline:()=>['Drawing a pipe', tmpPts.length+' point'+(tmpPts.length===1?'':'s')+(tmpPts.length>1?' · '+Math.round(pathLenFt(tmpPts))+' ft':'')],
-  wnode:()=>['Placing a '+(WKINDS[wnodeKind]||{label:'node'}).label.toLowerCase(),'tap the map'],
+  wnode:()=>['Placing a '+(WKINDS[wnodeKind]||{label:'node'}).label.toLowerCase(),tmpPts.length?'position set':'tap the map to position it'],
   paint:()=>['Painting '+((SP(S.sel.species)||{}).common||'— pick a species'),'drag along a row'],
   erase:()=>['Erasing plants','drag along a row']
 };
 function modeBanner(){ const el=document.getElementById('modeBanner'); if(!el) return;
   const f=MODE_BANNER[mode]; if(!f){ el.classList.remove('show'); return; }
-  const [what,detail]=f(); const drawing=['hedge','pond','aoi','wline','creek'].includes(mode);
+  const [what,detail]=f(); const drawing=isDrawMode(mode);
   const need=NEED[mode]; const ready=need&&tmpPts.length>=need[0];
   const how=!drawing?'<span style="opacity:.75"><kbd>Esc</kbd> done</span>'
+    : mode==='wnode'?(tmpPts.length?'<span class="cta">Happy with the spot? <b>Finish</b> or <kbd>Enter</kbd> · drag or tap to move · <kbd>Esc</kbd> cancel</span>':'<span style="opacity:.75">tap the map · <kbd>Esc</kbd> done</span>')
     : ready?`<span class="cta">Done drawing? <b>Finish</b>, double-tap${(mode==='pond'||mode==='aoi')?', tap the first corner':''} or <kbd>Enter</kbd></span>`
            :`<span style="opacity:.75">keep tapping — <kbd>⌫</kbd> undo a point · <kbd>Esc</kbd> cancel</span>`;
   el.innerHTML=`<b>${esc(what)}</b><span style="opacity:.75">${esc(detail)}</span>`+how;
@@ -1634,16 +1800,23 @@ document.addEventListener('keydown',e=>{
   if(document.getElementById('dlg')&&document.getElementById('dlg').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); UI.close(null); } return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!inField){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'&&!inField){ e.preventDefault(); manualSaveClick(); return; }
+  if(e.key==='Escape'&&_hedgeMenuOpen){ closeHedgeMenu(); return; }
   if(inField) return;
-  if(e.key==='Escape'){ if(['hedge','pond','aoi','wline','creek'].includes(mode)&&tmpPts.length){ tmpPts=[]; tmpLayer.clearLayers(); tmpPtsLayer.clearLayers(); modeBanner(); readout('Cancelled.'); }
+  if((e.key==='['||e.key===']')&&mode==='select'&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
+    const covered=['speciesGrid','start'].some(id=>{ const el=document.getElementById(id); return el&&el.classList.contains('show'); });
+    if(!covered){ e.preventDefault(); cycleHedge(e.key===']'?1:-1); } return; }
+  if(e.key==='Escape'){ if(isDrawMode(mode)&&tmpPts.length){ tmpPts=[]; tmpLayer.clearLayers(); tmpPtsLayer.clearLayers(); modeBanner(); finishButton(); readout('Cancelled.'); }
     else if(mode!=='select'){ setMode('select'); } return; }
-  if(e.key==='Enter'&&['hedge','pond','aoi','wline','creek'].includes(mode)){ e.preventDefault(); finishDraw(); return; }
-  if((e.key==='Backspace'||e.key==='Delete')&&['hedge','pond','aoi','wline','creek'].includes(mode)&&tmpPts.length){ e.preventDefault(); tmpPts.pop(); drawTmp(); modeBanner(); return; }
+  if(e.key==='Enter'&&isDrawMode(mode)){ e.preventDefault(); finishDraw(); return; }
+  if((e.key==='Backspace'||e.key==='Delete')&&isDrawMode(mode)&&tmpPts.length){ e.preventDefault(); tmpPts.pop(); drawTmp(); modeBanner(); return; }
 });
 
 const NEED={hedge:[2,'points','the hedgerow'],creek:[2,'points','the creek'],wline:[2,'points','the pipe'],
             pond:[3,'corners','the pond'],aoi:[3,'corners','the study area']};
 function finishButton(){ const b=document.getElementById('m-finish'); if(!b) return;
+  if(mode==='wnode'){ const lab=(WKINDS[wnodeKind]||{label:'node'}).label.toLowerCase(), ready=tmpPts.length>=1;
+    b.style.display=''; b.disabled=!ready; b.classList.toggle('ready',ready);
+    b.textContent=ready?'Place the '+lab:'Tap the map to position the '+lab; b.title=ready?'Or press Enter, or double-tap the map. Esc cancels.':'Then press Enter or this button to place it.'; return; }
   const need=NEED[mode]; if(!need){ b.style.display='none'; return; }
   const [min,unit,what]=need; const have=tmpPts.length; const ready=have>=min;
   b.style.display=''; b.disabled=!ready; b.classList.toggle('ready',ready);
@@ -1653,7 +1826,7 @@ function finishButton(){ const b=document.getElementById('m-finish'); if(!b) ret
 function nearFirstPt(ll){ if(tmpPts.length<3||!(mode==='pond'||mode==='aoi')) return false;
   const a=map.latLngToContainerPoint(tmpPts[0]), b=map.latLngToContainerPoint(ll);
   return Math.hypot(a.x-b.x,a.y-b.y)<=14; }
-function addHedgerow(pts){ const r=R(); const n=r.hedgerows.length+1; const h={id:uid(),name:'Hedgerow '+n,centerline:pts,drawn:pts.slice(),rowSpacingFt:8,side:'both',minGapFt:2,rows:[]}; for(let i=0;i<3;i++) h.rows.push(blankRow(i));
+function addHedgerow(pts){ const r=R(); const n=r.hedgerows.length+1; const h={id:uid(),name:'Hedgerow '+n,centerline:pts,drawn:pts.slice(),rowSpacingFt:8,side:'both',minGapFt:2,goals:{},excluded:[],rows:[]}; for(let i=0;i<3;i++) h.rows.push(blankRow(i));
   r.hedgerows.push(h); S.sel.hedge=h.id; S.sel.row=0; openHedge(h);
   readout(h.name+': '+Math.round(pathLenFt(pts))+' ft, 3 rows on 8 ft centres, exactly where you drew it.'); }
 function detectPondEdge(pts){ if(!ponds().length) return null; const L=pathLenFt(pts); if(L<20) return null;
@@ -1709,8 +1882,8 @@ async function openHedge(h){ S.sel.hedge=h.id; S.sel.row=0;
   readout(h.name+' — '+Math.round(pathLenFt(h.centerline))+' ft, '+h.rows.length+' rows'
     +(site.length?' · '+site.length+' acre'+(site.length===1?'':'s')+' read, moisture '+Math.min(...ms).toFixed(2)+'–'+Math.max(...ms).toFixed(2):''));
   if(!h.rows.some(r=>r.plants.length)){
-    const excluded=planExcluded().length;
-    const ready=excluded||Object.values(R().goals||{}).some(v=>+v>0);
+    const excluded=planExcluded(h).length;
+    const ready=hasCriteria(h);
     const go=await UI.confirm(ready
         ? 'Fill '+h.name+' now from your goals and the ground you just read'+(excluded?' (ruling out '+excluded+' species you excluded)':'')+'? You can change anything afterwards, and it is undoable.'
         : 'Fill '+h.name+' now? Nothing is weighted yet, so the tool will choose on site fit alone — setting goals first gives a better row.',
@@ -1972,7 +2145,16 @@ async function readStudyArea(){ const hx=hexesInAoi(); if(!hx.length){ renderGoa
     +(soils.length?' · '+soils.length+' soil map unit'+(soils.length===1?'':'s')+': '+soils.map(s=>s.split(',')[0]).join(', '):'')
     +(wets.length?' · moisture '+Math.min(...wets).toFixed(2)+'–'+Math.max(...wets).toFixed(2):''));
   drawHeat(); renderDock(); renderGoals(); showTab('goals'); }
-function speciesFit(sp,info,row){ if(!info||info.wet==null) return null; const target={dry:0.15,moderate:0.5,wet:0.85}[sp.moisture]; let score=1-Math.abs(target-info.wet)*1.6; const why=[]; const bad=[]; const dock=(t)=>{ why.push(t); bad.push(t); };
+function speciesFit(sp,info,row){ if(!info||info.wet==null) return null; const target={dry:0.15,moderate:0.5,wet:0.85}[sp.moisture];
+  /* A species with no moisture set can't be scored against the site's moisture. That used to
+     make target undefined and the whole score NaN, and a NaN in a list that gets sorted by
+     score doesn't just misplace itself: the comparator returns NaN, which sort treats as
+     "equal to everything", so the order of the whole list becomes unreliable and depends on
+     where those species happen to sit in the library. Scored as neutral instead (0.5, the
+     "moderate" target's own midpoint), and flagged with unknown:true so a display can show a
+     dash rather than imply a measured 50%. */
+  let score=target==null?0.5:1-Math.abs(target-info.wet)*1.6; const why=[]; const bad=[];
+  if(target==null) why.push('no moisture set for this species, so site moisture is not scored'); const dock=(t)=>{ why.push(t); bad.push(t); };
   const dc=(info.soil&&info.soil.drclass||'').toLowerCase();
   if(sp.drainage==='sharp'&&/poorly/.test(dc)){ score-=0.35; dock('needs sharp drainage; soil is '+dc); }
   if(sp.drainage==='sharp'&&info.soil&&info.soil.wtdep!=null&&info.soil.wtdep<100){ score-=0.2; dock('seasonal water table '+info.soil.wtdep+' cm'); }
@@ -1984,11 +2166,12 @@ function speciesFit(sp,info,row){ if(!info||info.wet==null) return null; const t
   if(sp.riparianFt&&info.waterFt!=null&&info.waterFt<=sp.riparianFt) why.push('water within '+Math.round(info.waterFt)+' ft');
   if(info.seep>0.3){ why.push('upland seep: '+info.seepWhy); if(sp.drainage==='sharp'){ score-=0.25*info.seep; why.push('wet feet from the pond'); } if(sp.moisture==='wet') why.push('the pond carries it here on '+(info.soil&&info.soil.muname?info.soil.muname:'upland soil')); }
   if(info.aspectDeg!=null&&info.slopePct>5){ const a=info.aspectDeg, south=a>112&&a<248, north=a>292||a<68; if(sp.sun==='hot'&&north){ score-=0.15; dock('north aspect'); } if(sp.sun==='shade'&&south){ score-=0.15; dock('south aspect'); } if(sp.sun==='hot'&&south) why.push('south aspect suits it'); }
-  if(row){ if(sp.regime==='wean'&&row.regime==='perm'){ score-=0.2; dock('wean species on a permanent line'); } if(sp.regime==='perm'&&row.regime==='wean'){ score-=0.3; dock('permanent-water species on a wean line'); } }
+  if(row){ if(sp.regime==='wean'&&row.regime==='perm'){ score-=0.2; dock('wean species on a permanent line'); } if(sp.regime==='perm'&&row.regime==='wean'&&!(info.wet>=0.48)){ score-=0.3; dock('permanent-water species on a wean line, and the ground here is too dry to carry it'); } }
   const reg=regionOf(info); if(reg&&!reg.ambiguous&&!spMlra(sp).includes(reg.code)){ score-=0.12; dock('outside the range HedgeRight has for it (MLRA '+reg.code+') — check Calflora before dismissing it'); }
   if(!why.length) why.push(sp.moisture+' site match '+(1-Math.abs(target-info.wet)).toFixed(2));
-  if(Math.abs(target-info.wet)>0.28) bad.unshift(sp.moisture+' plant on '+(info.wet<target?'drier':'wetter')+' ground (site moisture '+info.wet.toFixed(2)+')');
-  return {score:Math.max(0,Math.min(1,score)),why,bad}; }
+  if(target!=null&&Math.abs(target-info.wet)>0.28) bad.unshift(sp.moisture+' plant on '+(info.wet<target?'drier':'wetter')+' ground (site moisture '+info.wet.toFixed(2)+')');
+  const clamped=Math.max(0,Math.min(1,score)); /* never hand a NaN to a sort, whatever produced it */
+  return {score:isFinite(clamped)?clamped:0.5,why,bad,unknown:target==null}; }
 function siteForSelection(){ const h=curHedge(); if(!h) return null; const i=S.sel.row==null?0:S.sel.row; const pts=rowLines(h)[i]; if(!pts) return null; const k=hexKeyFor(pointAtFt(pts,pathLenFt(pts)/2)); const hex=hexInfo(k[0],k[1]); const info=(hex||R().water.nodes.some(n=>n.kind==='pond'))?stationInfo(h,i,pathLenFt(pts)/2):null; return {info,key:k,row:h.rows[i]}; }
 function psiFromFt(ft){return ft*PSI_PER_FT;} function ftFromPsi(p){return p/PSI_PER_FT;}
 function hwLossFt(Qgpm,Lft,dIn,C){ if(Qgpm<=0||Lft<=0||dIn<=0) return 0; const Q=Qgpm*6.30902e-5,d=dIn*0.0254,L=Lft*0.3048; return (10.67*L*Math.pow(Q,1.852)/(Math.pow(C,1.852)*Math.pow(d,4.8704)))/0.3048; }
@@ -2258,7 +2441,13 @@ function canopyAt(sp,y){ const f=grow(sp,y); return {rad:sp.rad*Math.max(f,0.08)
 function rootAt(sp,y){ const f=grow(sp,y); return {rad:sp.rad*(sp.root.lat||1)*Math.max(f,0.1),depth:sp.root.depth*Math.max(Math.sqrt(f),0.15)}; }
 const STORY_RANK={over:3,vine:2.5,mid:2,ground:1,nurse:0};
 const bloomStr=sp=>{ const b=sp.bloom||[]; if(!b.length) return 'no bloom'; const n=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return b.map(m=>n[m-1]).join(', '); };
-function goalWeights(){ return R().goals||{}; }
+/* Goal weights and the species-exclusion list are per-hedgerow criteria, not ranch-wide:
+   each hedgerow has its own purpose, so each carries its own h.goals / h.excluded.
+   Both accessors act on the hedgerow passed in, defaulting to the selected one, and
+   return an empty (never-persisted) value when there is none — every caller already
+   treats "no weights" / "nothing excluded" as the neutral case. */
+function goalWeights(h){ h=h||curHedge(); return (h&&h.goals)||{}; }
+function hasCriteria(h){ return !!h&&(Object.values(h.goals||{}).some(v=>+v>0)||(h.excluded||[]).length>0); }
 function goalScore(sp){ const w=goalWeights(); let num=0,den=0; Object.keys(GOALS).forEach(g=>{ const wt=+w[g]||0; if(!wt) return; num+=wt*((sp.goals&&sp.goals[g])||0); den+=wt*3; }); return den?num/den:null; }
 function siteSummaryFit(sp){ const h=curHedge(); if(!h) return null;
   const rows=S.sel.row!=null?[S.sel.row]:h.rows.map((_,i)=>i);
@@ -2273,7 +2462,19 @@ function siteSummaryFit(sp){ const h=curHedge(); if(!h) return null;
   return {score:Math.max(mean,best.score*0.85),why:best.why,best:best.score,mean};
 }
 function shortlist(){ return S.species.map(sp=>{ const g=goalScore(sp), f=siteSummaryFit(sp); let total=null; if(g!=null&&f) total=0.6*g+0.4*f.score; else if(g!=null) total=g; else if(f) total=f.score; return {sp,g,f,total}; }).sort((a,b)=>(b.total||0)-(a.total||0)); }
-function planExcluded(){ R().plan=R().plan||{}; R().plan.excluded=R().plan.excluded||[]; return R().plan.excluded; }
+/* What a list percentage is made of. It is 60% how well the species matches this hedgerow's goal
+   sliders plus 40% site fit, and either part alone when the other isn't available. The goal part
+   is a weighted average of the species' own 0-3 goal scores, so a species whose goal fields were
+   never filled in scores low whenever the sliders are set, however well it suits the ground. */
+function fitTip(x){ if(x.total==null) return 'No goals set and no ground read for this hedgerow yet, so there is nothing to score.';
+  const pc=v=>Math.round(v*100)+'%', lines=[];
+  if(x.g!=null&&x.f) lines.push(pc(x.total)+' = 60% of goals ('+pc(x.g)+') + 40% of site fit ('+pc(x.f.score)+')');
+  else if(x.g!=null) lines.push(pc(x.total)+' = goals only ('+pc(x.g)+'); no ground has been read yet');
+  else lines.push(pc(x.total)+' = site fit only; no goal sliders are set');
+  if(x.g!=null){ const gs=Object.keys(GOALS).filter(k=>+goalWeights()[k]>0).map(k=>(SG_GOAL_LABELS[k]||k)+' '+((x.sp.goals&&x.sp.goals[k])||0)+'/3'); /* the grid's hand-picked labels: the first word of "Little or no summer water" and "Low maintenance" is just "Little" and "Low" */ if(gs.length) lines.push('Its scores for the goals you weighted: '+gs.join(', ')); }
+  if(x.f&&x.f.why&&x.f.why.length) lines.push('Site: '+x.f.why.join('; '));
+  return lines.join('\n'); }
+function planExcluded(h){ h=h||curHedge(); if(!h) return []; h.excluded=h.excluded||[]; return h.excluded; }
 function bloomCoverage(ids){ const cov=new Array(12).fill(0); ids.forEach(id=>{ const sp=SP(id); if(sp) (sp.bloom||[]).forEach(m=>cov[m-1]++); }); return cov; }
 function storyCoverage(ids){ const st={over:0,mid:0,ground:0,nurse:0,vine:0}; ids.forEach(id=>{ const sp=SP(id); if(sp) st[sp.story]++; }); return st; }
 function plantsXY(h){ const out=[]; const xs=rowOffsetsFt(h); h.rows.forEach((r,i)=>{ const x=xs[i]; r.plants.forEach((p,pi)=>{ const s=SP(p.sp); if(s) out.push({h,r,i,p,pi,sp:s,x,ft:p.ft}); }); }); return out; }
@@ -2302,10 +2503,25 @@ function assess(h,y){ const P=plantsXY(h); const notes=P.map(()=>[]); const rowS
 function assessAll(h){ const out={}; HORIZONS.forEach(y=>out[y]=assess(h,y)); return out; }
 function rowRegimeIssues(h){ const out=[]; h.rows.forEach((r,i)=>{ r.plants.forEach(p=>{ const sp=SP(p.sp); if(!sp) return; if(sp.regime==='wean'&&r.regime==='perm') out.push({row:i,ft:p.ft,t:sp.common+' at '+p.ft+' ft is a wean species on a permanent line — it will get summer water it cannot take'}); if(sp.regime==='perm'&&r.regime==='wean') out.push({row:i,ft:p.ft,t:sp.common+' at '+p.ft+' ft needs permanent water; this line shuts off end of yr 2'}); if(sp.spreads&&h.rows[i].plants.some(q=>{ const t=SP(q.sp); return t&&t.id!=='treepoppy'&&t.story==='ground'&&Math.abs(q.ft-p.ft)<sp.rad*2&&q!==p; })&&sp.id==='mugwort') out.push({row:i,ft:p.ft,t:'Mugwort at '+p.ft+' ft will run over the forbs beside it'}); }); }); return out; }
 function crossSection(h,y){ const n=h.rows.length; const xs=rowOffsetsFt(h); const sp=n>1?Math.min(...xs.slice(1).map((x,i)=>x-xs[i])):8;
-  const spanFt=(Math.max(...xs)-Math.min(...xs))+2*sp+8; const x0=Math.min(...xs)-sp-4; const W=720, H=330, ground=190, pxA=W/spanFt, pxAbove=150/20, pxBelow=120/16;
+  const spanFt=(Math.max(...xs)-Math.min(...xs))+2*sp+8; const x0=Math.min(...xs)-sp-4; const W=720, pxA=W/spanFt;
+  /* The frame is sized for the hedgerow at full maturity, not for whichever year is showing: the
+     tallest mature canopy and deepest mature root among everything planted in it, the same for
+     every year button, so growth fills a fixed frame instead of running off the top (it used to
+     be a fixed 20 ft above and 16 ft below, so a 50 ft alder or an oak simply disappeared past the
+     edge by year 15). The original scale is the baseline: while everything fits in 20 ft up / 16 ft
+     down the picture is exactly what it was, then the frame grows at that same scale, and only
+     past a height cap does the scale compress (so a very tall tree can't make the image enormous). */
+  let maxHt=0, maxDepth=0; const seen=new Set();
+  h.rows.forEach(r=>r.plants.forEach(p=>{ if(seen.has(p.sp)) return; seen.add(p.sp); const t=SP(p.sp); if(!t) return;
+    maxHt=Math.max(maxHt,+t.ht||0); maxDepth=Math.max(maxDepth,(t.root&&+t.root.depth)||0); }));
+  const ftA=Math.max(20,maxHt*1.05), ftB=Math.max(16,maxDepth*1.05);
+  const pxAbove=Math.min(150/20,320/ftA), pxBelow=Math.min(120/16,180/ftB);
+  const ground=40+ftA*pxAbove, H=Math.round(ground+ftB*pxBelow+20);
   let s=`<svg class="xsec" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#fff"/>`;
-  [5,10,15,20].forEach(f=>{ const yy=ground-f*pxAbove; s+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="#eef0e8"/><text x="4" y="${yy-2}" font-size="9" fill="#9aa">${f} ft</text>`; });
-  [2,4,8,12].forEach(f=>{ const yy=ground+f*pxBelow; s+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="#eef0e8" stroke-dasharray="3 3"/><text x="4" y="${yy-2}" font-size="9" fill="#9aa">${f} ft</text>`; });
+  const stepA=ftA<=25?5:ftA<=60?10:20, linesA=[]; for(let f=stepA;f<=ftA+1e-9;f+=stepA) linesA.push(f);
+  const stepB=ftB<=30?5:10, linesB=ftB<=16?[2,4,8,12]:(()=>{ const a=[]; for(let f=stepB;f<=ftB+1e-9;f+=stepB) a.push(f); return a; })();
+  linesA.forEach(f=>{ const yy=ground-f*pxAbove; s+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="#eef0e8"/><text x="4" y="${yy-2}" font-size="9" fill="#9aa">${f} ft</text>`; });
+  linesB.forEach(f=>{ const yy=ground+f*pxBelow; s+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="#eef0e8" stroke-dasharray="3 3"/><text x="4" y="${yy-2}" font-size="9" fill="#9aa">${f} ft</text>`; });
   s+=`<line x1="0" y1="${ground}" x2="${W}" y2="${ground}" stroke="#6F7D72" stroke-width="1.5"/>`;
   h.rows.forEach((r,i)=>{ const cx=(xs[i]-x0)*pxA; s+=`<text x="${cx}" y="${H-6}" font-size="11" text-anchor="middle" fill="#1E2A22">${esc(r.name)} · ${REGIMES[r.regime].split(' ')[0]}</text>`;
     const counts={}; r.plants.forEach(p=>counts[p.sp]=(counts[p.sp]||0)+1); const ids=Object.keys(counts).sort((a,b)=>STORY_RANK[SP(b).story]-STORY_RANK[SP(a).story]||SP(b).ht-SP(a).ht);
@@ -2354,59 +2570,204 @@ function rowMoistures(h){ const n=h.rows.length; const lines=rowLines(h); const 
   if(wetSide==='auto'){ if(wp&&n>1){ const d0=llFt(pointAtFt(lines[0],pathLenFt(lines[0])/2),wp), d1=llFt(pointAtFt(lines[n-1],pathLenFt(lines[n-1])/2),wp); wetSide=Math.abs(d0-d1)<2?'none':(d0<d1?'first':'last'); } else wetSide='none'; }
   const spread=Math.min(0.6,0.18*(n-1));
   return h.rows.map((r,i)=>{ let m=stat[i]; if(!anyPond){ if(wetSide==='first'&&n>1) m=mean+spread/2-spread*i/(n-1); if(wetSide==='last'&&n>1) m=mean-spread/2+spread*i/(n-1); } else { if(wetSide==='first'&&n>1) m=Math.max(m,stat[i]+(0.1-0.2*i/(n-1))); if(wetSide==='last'&&n>1) m=Math.max(m,stat[i]+(-0.1+0.2*i/(n-1))); } return Math.max(0.05,Math.min(0.95,m)); }); }
+/* A row's regime is either derived (from its moisture, each time Auto-fill runs) or chosen by the
+   person (row.regimeSet). Auto-fill used to recompute and store it for every row regardless, so a
+   regime picked in the dropdown was silently replaced the next time Auto-fill ran, and the
+   replacement was what got saved. Rows the person has set keep their choice; "Auto" in the
+   dropdown clears the flag and hands the row back to the derivation. */
 function regimeForMoisture(m,i,n,isDriest){ if(n===1) return 'perm'; if(m<0.33) return 'wean'; if(isDriest&&(+goalWeights().lowWater||0)>=2&&m<0.6) return 'wean'; return 'perm'; }
 function shadeUnder(dom){ return !!dom&&(dom.cast==='dense'||(dom.cast==='light'&&dom.rad>=6)); }
 function fitForRow(sp,h,i,moist,regime){ const L=rowLenFt(h,i); const info=Object.assign({soil:null,waterFt:null,aspectDeg:null,slopePct:0},stationInfo(h,i,L/2)); info.wet=moist; return speciesFit(sp,info,{regime}); }
 function fitAtStation(sp,h,i,ft,regime){ if(!hedgeHexes(h).length&&!ponds().length) return null; return speciesFit(sp,stationInfo(h,i,ft),{regime}); }
 function candidatePool(){ const excluded=new Set(planExcluded()); return shortlist().filter(x=>!excluded.has(x.sp.id)).slice(0,16).map(x=>x.sp); }
-function regimeOk(sp,regime){ if(regime==='wean') return sp.regime==='wean'||sp.story==='nurse'; if(regime==='reduce') return sp.regime!=='perm'; return sp.regime!=='wean'; }
-function buildComp(h,i,moist,regime,pool,coveredMonths,usedDom){ usedDom=usedDom||new Set(); const scoreOf=sp=>{ const g=goalScore(sp), f=fitForRow(sp,h,i,moist,regime); const gapBonus=(sp.bloom||[]).some(m=>!coveredMonths.has(m))?0.12:0; return {sp,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+gapBonus-(usedDom.has(sp.id)?0.12:0),f}; };
-  const inPool=new Set(pool.map(x=>x.id)); const scores=S.species.filter(sp=>regimeOk(sp,regime)).map(scoreOf).map(x=>{ if(!inPool.has(x.sp.id)) x.s-=0.25; return x; }).sort((a,b)=>b.s-a.s);
-  const comp=[]; const used=new Set(); const take=(pred,role,n)=>{ let c=0; for(const x of scores){ if(c>=n) break; if(used.has(x.sp.id)||!pred(x.sp)) continue; comp.push({sp:x.sp.id,role}); used.add(x.sp.id); c++; } };
-  const w=goalWeights(); const wantOver=((+w.screen||0)+(+w.wild||0))>=3||moist>0.55;
-  take(sp=>sp.story==='over'&&(wantOver||!scores.some(x=>x.sp.story==='mid'&&!used.has(x.sp.id))),'dom',1);
-  if(!comp.length) take(sp=>sp.story==='mid'||sp.story==='over','dom',1);
-  const dom=comp[0]?SP(comp[0].sp):null; const L=rowLenFt(h,i);
+/* Does a species' regime tag fit a line's regime? The tag is how the species wants to be watered over
+   time (wean: nothing once established; reduce: taper by year 3; perm: water all year); a line
+   delivers one of those. Two things this used to get wrong:
+   - A species with NO tag was accepted on Reduce and Permanent lines but refused on Wean lines, so
+     a Wean row lost every untagged species (16 of 63 here, 8 of them ground species) for no
+     biological reason: nothing is known to conflict. No tag now means no conflict on every line.
+   - A permanent-water species was refused on Wean and Reduce lines even where the GROUND carries it,
+     which is what a wet-loving species such as willow or alder needs: the line is irrelevant if the
+     soil is wet. regimeEligible() adds that, but only for species whose own moisture is "wet" and
+     only where the row actually has wet stations (the same gate selection and layout already use).
+   Left strict on purpose: a wean-tagged species on a Permanent line. Those are the drought-adapted
+   plants (oaks, ceanothus, flannelbush) that summer water harms, and no site moisture changes that. */
+function regimeOk(sp,regime){ if(!sp.regime) return true; if(regime==='wean') return sp.regime==='wean'||sp.story==='nurse'; if(regime==='reduce') return sp.regime!=='perm'; return sp.regime!=='wean'; }
+function regimeEligible(sp,regime,moistureOk){ return regimeOk(sp,regime)||(regime!=='perm'&&sp.regime==='perm'&&sp.moisture==='wet'&&moistureOk(sp)); }
+/* Which species the row's moisture allows, by the same rule layoutRow's suits() applies at each
+   spot: a 'dry' species needs the ground at 0.6 or drier, a 'wet' one at 0.48 or wetter. Selection
+   used to apply that to the row's AVERAGE moisture, so a row averaging 0.61 lost every dry species
+   even though over half its length was drier than 0.6 and layout would happily have planted them
+   there. Now a species qualifies if at least a quarter of the row's stations suit it (layout then
+   puts it only where it does). With no per-station data it falls back to the average, as before. */
+function moistureGate(h,i,moist){ const prof=rowMoistureProfile(h,i,5).filter(p=>p.wet!=null);
+  if(!prof.length) return sp=>{ if(sp.moisture==='wet') return moist>=0.48; if(sp.moisture==='dry') return moist<=0.6; return true; };
+  return sp=>{ if(sp.moisture!=='wet'&&sp.moisture!=='dry') return true;
+    return prof.filter(p=>sp.moisture==='wet'?p.wet>=0.48:p.wet<=0.6).length/prof.length>=0.25; }; }
+/* The composition implied by plants already in a row: every overstory species is a dominant, and the
+   rest keep their layer. This is what lets Auto-fill treat what the person painted as part of the
+   row instead of something to replace. Species the library doesn't know are skipped here (their
+   plants are still kept untouched). */
+function seedFromPlants(h,i){ return [...new Set(h.rows[i].plants.map(p=>p.sp))].map(SP).filter(Boolean)
+  .map(sp=>({sp:sp.id,role:sp.story==='over'?'dom':sp.story==='nurse'?'nurse':sp.story==='vine'?'vine':sp.story==='mid'?'mid':'ground'})); }
+function buildComp(h,i,moist,regime,pool,coveredMonths,usedDom,seed){ usedDom=usedDom||new Set(); const scoreOf=sp=>{ const g=goalScore(sp), f=fitForRow(sp,h,i,moist,regime); const gapBonus=(sp.bloom||[]).some(m=>!coveredMonths.has(m))?0.12:0; return {sp,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+gapBonus-(usedDom.has(sp.id)?0.12:0),f}; };
+  /* Excluded species are a hard filter, not a score penalty — they're removed from
+     candidacy entirely, here at the source, rather than merely docked points the
+     way "didn't make the top-16 shortlist" is. Those are different kinds of
+     "not preferred": falling outside the shortlist is a soft ranking signal that a
+     role-appropriate but better-fitting species should win if one exists; an
+     explicit exclusion means never place this, even if nothing else can fill the
+     role — which can leave a role (vine, say, if the only vine:true species is
+     excluded) genuinely unfilled rather than silently falling back to the thing the
+     person excluded specifically because they didn't want to manage it. */
+  /* buildComp's own scoring (fitForRow/speciesFit, via scoreOf above) is a soft,
+     continuous site-fit signal — a bad moisture match lowers a candidate's score,
+     it doesn't disqualify it. But layoutRow()'s suits() check, which actually seats
+     plants on the map, is a hard binary gate: a 'dry' species needs site moisture
+     <=0.6, a 'wet' species needs >=0.48, no exceptions. Those two were able to
+     disagree — a role could get a dominant/mid/ground/nurse/vine species selected
+     here that suits() would then reject at every single position along the row,
+     so the role silently ends up with nothing physically placed even though comp
+     (and the "why it filled this way" log) both say it chose one. Mirroring the
+     same gate here, as an actual filter rather than a score penalty, keeps
+     selection honest about what can really be placed — a role with no
+     moisture-compatible candidate in the library now comes back genuinely empty
+     instead of picking something unplaceable and failing silently downstream. */
+  const moistureOk=moistureGate(h,i,moist);
+  const excluded=new Set(planExcluded());
+  const inPool=new Set(pool.map(x=>x.id)); const scores=S.species.filter(sp=>regimeEligible(sp,regime,moistureOk)&&!excluded.has(sp.id)&&moistureOk(sp)).map(scoreOf).map(x=>{ if(!inPool.has(x.sp.id)) x.s-=0.25; return x; }).sort((a,b)=>b.s-a.s);
+  const comp=(seed||[]).map(c=>({sp:c.sp,role:c.role})); const used=new Set(comp.map(c=>c.sp)); const take=(pred,role,n)=>{ let c=0; for(const x of scores){ if(c>=n) break; if(used.has(x.sp.id)||!pred(x.sp)) continue; comp.push({sp:x.sp.id,role}); used.add(x.sp.id); c++; } };
+  const w=goalWeights(); const wantOver=((+w.screen||0)+(+w.wild||0))>=3||moist>0.55; const L=rowLenFt(h,i);
+  /* Per-row species counts for the top two layers (the ground layer has its own, below). Unset
+     they behave exactly as before: one dominant, and one mid-story species only on rows over 90
+     ft. When set they are capped by length (one species per 60 ft of row, at least one), since
+     each species needs several plants of its own for the row to read as that species rather
+     than as a scatter. */
+  const row=h.rows[i]||{}; const lenCap=Math.max(1,Math.floor(L/60));
+  const domTarget=row.domCount!=null?Math.min(Math.max(1,row.domCount),lenCap):1;
+  const midTarget=row.midCount!=null?(row.midCount>0?Math.min(row.midCount,lenCap):0):(L>90?1:0);
+  /* Left on automatic, a dry row with no screening/wildlife goals is allowed to take a shrub as its
+     dominant (and then calls the trees "mid"). Asking for an overstory count is asking for
+     overstory trees, so an explicit count turns the preference on for that row; blank still
+     means the original automatic choice. */
+  const wantOverRow=wantOver||row.domCount!=null;
+  /* With a seed (plants already in the row) the dominant may already be there; only choose one if not.
+     Every count below then asks for the shortfall, not the total, so the painted species count toward
+     what was requested. Without a seed each of these reduces to the original test. */
+  const hasRole=r=>comp.some(c=>c.role===r);
+  if(!hasRole('dom')){ take(sp=>sp.story==='over'&&(wantOverRow||!scores.some(x=>x.sp.story==='mid'&&!used.has(x.sp.id))),'dom',1);
+    if(!hasRole('dom')) take(sp=>sp.story==='mid'||sp.story==='over','dom',1); }
+  const domEntry=comp.find(c=>c.role==='dom'); const dom=domEntry?SP(domEntry.sp):null;
   const sm=stationMoistures(h,i,10); const wetMax=Math.max(...sm.map(x=>x.wet)), wetMin=Math.min(...sm.map(x=>x.wet));
   if(dom&&wetMax-wetMin>0.25){ const wetEnd=scores.filter(x=>(x.sp.story===dom.story)&&!used.has(x.sp.id)).map(x=>({x,f:speciesFit(x.sp,Object.assign({},stationInfo(h,i,sm.reduce((a,b)=>b.wet>a.wet?b:a).ft)),{regime})})).filter(y=>y.f&&y.f.score>0.6).sort((a,b)=>b.f.score-a.f.score)[0]; if(wetEnd){ comp.push({sp:wetEnd.x.sp.id,role:'dom',end:'wet'}); used.add(wetEnd.x.sp.id); } }
-  if(dom&&L>90) take(sp=>(sp.story==='mid'||sp.story==='over')&&sp.story!==dom.story&&(dom.cast==='open'||sp.tol!=='sun'||dom.rad<5),'mid',1);
-  const castDense=shadeUnder(dom);
-  take(sp=>sp.story==='ground'&&(!castDense||sp.tol!=='sun')&&(!dom||sp.root.cls!==dom.root.cls),'ground',2);
-  take(sp=>sp.story==='ground'&&(!castDense||sp.tol!=='sun'),'ground',3-comp.filter(c=>c.role==='ground').length);
-  if(regime==='wean') take(sp=>sp.story==='nurse','nurse',1);
-  if(dom&&dom.story==='over'&&dom.ht>=12){ take(sp=>sp.vine===true,'vine',1); }
+  /* Extra dominants come from the same layer as the first, and count the wet-end one above toward
+     the target rather than adding to it. Everything below that used to ask about "the dominant"
+     now asks about all of them (domList): shade is dense if any casts dense shade, a root class
+     is taken if any dominant has it, a vine needs any tall overstory dominant. With one
+     dominant each of these reduces to the original test. */
+  const domNow=comp.filter(c=>c.role==='dom').length;
+  if(dom&&domTarget>domNow) take(sp=>sp.story===dom.story,'dom',domTarget-domNow);
+  const domList=comp.filter(c=>c.role==='dom').map(c=>SP(c.sp)).filter(Boolean);
+  if(dom&&midTarget>0) take(sp=>(sp.story==='mid'||sp.story==='over')&&sp.story!==dom.story&&domList.every(d=>d.cast==='open'||sp.tol!=='sun'||d.rad<5),'mid',midTarget-comp.filter(c=>c.role==='mid').length);
+  const castDense=domList.some(d=>shadeUnder(d));
+  /* Ground-layer count defaults to 3 (the original hardcoded value, so existing
+     designs behave exactly as before) but is overridable per row — this is the one
+     role where "how many distinct species" is a density preference, not something
+     the algorithm itself is reasoning about the way it reasons about whether a
+     dominant, mid, nurse, or vine slot applies at all. First pass prefers species
+     that also partition root class from the dominant, up to min(2,target); the
+     second pass tops up the remainder with that preference relaxed, same two-pass
+     structure as before, just scaled to the target instead of hardcoded to 3. */
+  const groundTarget=(h.rows[i]&&h.rows[i].groundCount!=null)?h.rows[i].groundCount:3;
+  take(sp=>sp.story==='ground'&&(!castDense||sp.tol!=='sun')&&!domList.some(d=>d.root.cls===sp.root.cls),'ground',Math.max(0,Math.min(2,groundTarget)-comp.filter(c=>c.role==='ground').length));
+  take(sp=>sp.story==='ground'&&(!castDense||sp.tol!=='sun'),'ground',groundTarget-comp.filter(c=>c.role==='ground').length);
+  if(regime==='wean'&&!hasRole('nurse')) take(sp=>sp.story==='nurse','nurse',1);
+  if(!hasRole('vine')&&domList.some(d=>d.story==='over'&&d.ht>=12)){ take(sp=>sp.vine===true,'vine',1); }
   return comp; }
-function layoutRow(h,i){ const r=h.rows[i]; const L=rowLenFt(h,i); const comp=r.comp||[]; const plants=[]; const k=densityK(h); const minGap=h.minGapFt||2;
-  const spacingOf0=id=>{ const c=comp.find(x=>x.sp===id); const sp=SP(id); return (c&&c.spacing)||(sp?sp.spacingFt:10); };
+/* fixed: plants already in the row that must stay exactly as they are (same objects, same position),
+   with everything new placed around them. Species they belong to are not placed again (a painted
+   handful of yarrow stays a handful; paint more if you want more), and new woody plants keep canopy
+   clearance from same-layer neighbours, since the usual designed spacing doesn't apply when the
+   existing plants aren't on its grid. With no fixed plants nothing below behaves differently. */
+function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const comp=r.comp||[]; const plants=[]; const k=densityK(h); const minGap=h.minGapFt||2;
+  const keptSet=new Set(); if(fixed&&fixed.length) fixed.forEach(p=>{ plants.push(p); keptSet.add(p); });
+  const seeded=new Set([...keptSet].map(p=>p.sp));
+  /* Falls back to 10 whenever spacingFt is missing, not just when the species is
+     missing entirely — the previous (sp?sp.spacingFt:10) only checked whether sp
+     existed, so a real species with spacingFt left null returned null itself. That
+     null then reached a `for(...;...;ft+=S)` loop elsewhere in this function with
+     S=null, which JS coerces to ft+=0 — an infinite loop that hangs the tab, not a
+     crash or a silent no-op. Species added via the admin harvest/paste/JSON tools
+     frequently have no sourced spacingFt at all, so this isn't a rare edge case. */
+  const spacingOf0=id=>{ const c=comp.find(x=>x.sp===id); const sp=SP(id); return (c&&c.spacing)||(sp&&sp.spacingFt)||10; };
   const prof=rowMoistureProfile(h,i,5); const wetAt=ft=>{ let b=prof[0]; for(const p of prof){ if(Math.abs(p.ft-ft)<Math.abs(b.ft-ft)) b=p; } return b.wet; }; const anyInfo=prof.some(p=>p.wet!=null); const suits=(ft,sp)=>{ if(!anyInfo) return true; const w=wetAt(ft); if(w==null) return true; if(sp.moisture==='wet') return w>=0.48; if(sp.moisture==='dry') return w<=0.6; return true; };
-  const free=(ft,sp)=>ft>=0&&ft<=L&&suits(ft,sp)&&plants.every(p=>{ const d=Math.abs(p.ft-ft); const q=SP(p.sp); if(d<minGap) return false; if(q&&q.id===sp.id&&d<spacingOf0(sp.id)*0.9) return false; if(q&&q.allelo&&d<q.allelo) return false; if(sp.allelo&&d<sp.allelo) return false; return true; });
+  const free=(ft,sp)=>ft>=0&&ft<=L&&suits(ft,sp)&&plants.every(p=>{ const d=Math.abs(p.ft-ft); const q=SP(p.sp); if(d<minGap) return false; if(q&&q.id===sp.id&&d<spacingOf0(sp.id)*0.9) return false; if(q&&q.allelo&&d<q.allelo) return false; if(sp.allelo&&d<sp.allelo) return false;
+    if(keptSet.size&&q&&q.story===sp.story&&(sp.story==='over'||sp.story==='mid')&&d<k*(sp.rad+q.rad)/2) return false; return true; });
   const put=(ft,sp)=>{ ft=Math.round(ft*2)/2; for(const dx of [0,1,-1,2,-2,3,-3]){ if(free(ft+dx,sp)){ plants.push({sp:sp.id,ft:ft+dx}); return true; } } return false; };
   const spacingOf=spacingOf0;
-  const doms=comp.filter(c=>c.role==='dom').map(c=>SP(c.sp)).filter(Boolean); const domPos=[];
+  const doms=comp.filter(c=>c.role==='dom'&&!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(Boolean); const domPos=[];
   const anyPond=ponds().length>0||creeks().length>0;
   const gate=(sp,ft)=>{ if(!anyPond) return true; const f=fitAtStation(sp,h,i,ft,r.regime); return !f||f.score>=0.35; };
   if(doms.length){ const explicit=doms.map(sp=>(comp.find(c=>c.sp===sp.id)||{}).spacing).filter(v=>v>0);
     const sd=explicit.length?Math.max(...explicit)
-                           :Math.max(...doms.map(sp=>Math.max(spacingOf(sp.id),k*sp.rad))); const margin=Math.min(sd/2,6); let j=0; for(let ft=margin;ft<=L-margin+0.01;ft+=sd){ let sp=doms[j%doms.length]; if(doms.length>1&&anyPond){ sp=doms.map(d=>({d,f:fitAtStation(d,h,i,ft,r.regime)})).sort((a,b)=>((b.f?b.f.score:0.5)-(a.f?a.f.score:0.5)))[0].d; } if(sp.allelo){ j++; continue; } if(put(ft,sp)) domPos.push(ft); j++; } }
-  const vines=comp.filter(c=>c.role==='vine').map(c=>SP(c.sp)).filter(Boolean); if(vines.length&&domPos.length){ domPos.forEach((ft,q)=>{ if(q%2) return; const sp=vines[q%vines.length]; if(gate(sp,ft+3)) put(ft+3,sp); }); }
-  const mids=comp.filter(c=>c.role==='mid').map(c=>SP(c.sp)).filter(Boolean);
+                           :Math.max(...doms.map(sp=>Math.max(spacingOf(sp.id),k*sp.rad))); const margin=Math.min(sd/2,6); let j=0; for(let ft=margin;ft<=L-margin+0.01;ft+=sd){ let sp=doms[j%doms.length]; if(doms.length>1&&anyPond){ sp=doms.map(d=>({d,f:fitAtStation(d,h,i,ft,r.regime)})).sort((a,b)=>((b.f?b.f.score:0.5)-(a.f?a.f.score:0.5)))[0].d; } /* With several dominants in rotation, one scheduled for a spot it doesn't suit (a dry oak where the row
+         is wet) would leave that slot empty; take the next in the rotation that does suit it instead. */
+        if(doms.length>1&&!suits(ft,sp)){ for(let k2=1;k2<doms.length;k2++){ const alt=doms[(j+k2)%doms.length]; if(!alt.allelo&&suits(ft,alt)){ sp=alt; j+=k2; break; } } }
+        if(sp.allelo){ j++; continue; }
+        if(put(ft,sp)) domPos.push(ft);
+        else if(keptSet.size){ for(let d2=4;d2<sd;d2+=2){ if(put(ft+d2,sp)){ domPos.push(ft+d2); break; } } } /* the grid isn't aligned with what's already there: take the next free spot */
+        j++; } }
+  if(keptSet.size){ const domSeed=new Set(comp.filter(c=>c.role==='dom'&&seeded.has(c.sp)).map(c=>c.sp)); plants.forEach(p=>{ if(keptSet.has(p)&&domSeed.has(p.sp)) domPos.push(p.ft); }); domPos.sort((a,b)=>a-b); } /* mids and vines anchor on the dominants already there too */
+  const vines=comp.filter(c=>c.role==='vine'&&!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(Boolean); if(vines.length&&domPos.length){ domPos.forEach((ft,q)=>{ if(q%2) return; const sp=vines[q%vines.length]; if(gate(sp,ft+3)) put(ft+3,sp); }); }
+  const mids=comp.filter(c=>c.role==='mid'&&!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(Boolean);
   if(mids.length){ if(domPos.length>1){ let j=0; for(let q=1;q<domPos.length;q++){ const sp=mids[j%mids.length]; const mid=(domPos[q-1]+domPos[q])/2; if(gate(sp,mid)&&plants.filter(p=>p.sp===sp.id).every(p=>Math.abs(p.ft-mid)>=spacingOf(sp.id)*0.9)) put(mid,sp); j++; } } else { mids.forEach((sp,j)=>{ const S=spacingOf(sp.id); for(let ft=S/2+j*3;ft<=L;ft+=S) put(ft,sp); }); } }
-  const grounds=comp.filter(c=>c.role==='ground'||c.role==='nurse').map(c=>SP(c.sp)).filter(Boolean);
+  const grounds=comp.filter(c=>(c.role==='ground'||c.role==='nurse')&&!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(Boolean);
   grounds.forEach((sp,j)=>{ const S=spacingOf(sp.id); const off=(j+0.5)*S/Math.max(1,grounds.length); for(let ft=off;ft<=L;ft+=S) if(gate(sp,ft)) put(ft,sp); });
-  const allel=comp.map(c=>SP(c.sp)).filter(sp=>sp&&sp.allelo); allel.forEach(sp=>{ const slots=[1,L-1]; for(let ft=30;ft<L-20;ft+=Math.max(30,sp.spacingFt*2)) slots.push(ft); slots.forEach(ft=>{
+  const allel=comp.filter(c=>!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(sp=>sp&&sp.allelo); allel.forEach(sp=>{ const slots=[1,L-1]; for(let ft=30;ft<L-20;ft+=Math.max(30,sp.spacingFt*2)) slots.push(ft); slots.forEach(ft=>{
+      if(plants.some(p=>keptSet.has(p)&&Math.abs(p.ft-ft)<sp.allelo+1)) return; /* clearing neighbours must never remove something that was placed by hand */
       const keep=plants.filter(p=>Math.abs(p.ft-ft)>=sp.allelo+1); if(plants.length-keep.length<=2){ plants.length=0; plants.push(...keep); put(ft,sp); } }); });
   plants.sort((a,b)=>a.ft-b.ft); r.plants=plants; return plants.length; }
 function autoRowGaps(h){ const n=h.rows.length; h.gapsFt=[]; for(let i=0;i<n-1;i++){ const ra=domRadius(h,i), rb=domRadius(h,i+1); const g=Math.max(5,Math.min(18,Math.round(0.7*(ra+rb)*2)/2)); h.gapsFt.push(g); } }
-function domRadius(h,i){ const r=h.rows[i]; const ids=(r.comp||[]).filter(c=>c.role==='dom'||c.role==='mid').map(c=>SP(c.sp)).filter(Boolean); if(!ids.length){ const cnt={}; r.plants.forEach(p=>cnt[p.sp]=(cnt[p.sp]||0)+1); const best=Object.keys(cnt).map(SP).filter(Boolean).sort((a,b)=>b.rad-a.rad)[0]; return best?best.rad:3; } return Math.max(...ids.map(sp=>sp.rad)); }
+function domRadius(h,i){ const r=h.rows[i]; const ids=(r.comp||[]).filter(c=>c.role==='dom'||c.role==='mid').map(c=>SP(c.sp)).filter(Boolean); if(!ids.length){ const cnt={}; r.plants.forEach(p=>cnt[p.sp]=(cnt[p.sp]||0)+1); const best=Object.keys(cnt).map(SP).filter(Boolean).sort((a,b)=>b.rad-a.rad)[0]; return (best&&best.rad)||3; } return Math.max(...ids.map(sp=>sp.rad)); }
+/* A count you ask for is a request, not a guarantee: the regime, your exclusions and the row's moisture
+   can leave fewer species than that, and auto-fill used to just place what it could without saying
+   so, which read as a bug (3 overstory asked, 1 delivered, no explanation). This finds the first
+   filter that left too few and names it. Only rows where you set a count are checked. */
+function shortfalls(h,i,moist){ const r=h.rows[i], out=[], L=rowLenFt(h,i), cap=Math.max(1,Math.floor(L/60));
+  const regimeName=REGIMES[r.regime].split(' ')[0].toLowerCase(), ok=moistureGate(h,i,moist), ex=new Set(planExcluded(h));
+  const firstDom=SP((r.comp.find(c=>c.role==='dom')||{}).sp);
+  [['domCount','dom','overstory',firstDom?firstDom.story:'over',cap],['midCount','mid','mid-story','mid',cap],['groundCount','ground','ground','ground',99]].forEach(([key,role,label,story,capN])=>{
+    const asked=r[key]; if(asked==null||asked<=0) return; const want=Math.min(asked,capN), got=r.comp.filter(c=>c.role===role).length; if(got>=want) return;
+    const all=S.species.filter(sp=>sp.story===story), a=all.filter(sp=>regimeEligible(sp,r.regime,ok)), b=a.filter(sp=>!ex.has(sp.id)), c=b.filter(ok);
+    const why=a.length<want?`the ${regimeName} regime only accepts ${a.length} of ${all.length} ${label} species`
+      :b.length<want?`only ${b.length} are left after your exclusions`
+      :c.length<want?`only ${c.length} of the ${b.length} that accept a ${regimeName} line suit this row's moisture (dry species need ground at 0.6 or drier, wet species 0.48 or wetter)`
+      :'the rest were ruled out by shade, root or spacing checks';
+    out.push(`${r.name}: asked for ${asked} ${label} species${want<asked?` (capped at ${want} by row length)`:''}, got ${got} — ${why}.`); });
+  return out; }
 function populateHedge(h){ h.accepted=[]; const n=h.rows.length; const moist=rowMoistures(h); const pool=candidatePool(); if(!pool.length){ readout('Nothing to choose from — set goals or tick a plan set first.'); return null; }
+  /* Plants already in a row are kept, exactly as they are, and everything new is placed around them
+     (see layoutRow's note). A row with no plants takes the original path unchanged. Two steps are
+     skipped as soon as any plant is kept because both rearrange rows: the conflict-repair pass
+     (re-lays out rows, swaps species, widens spacing) and autoRowGaps (moves rows apart). The log
+     says so, and says plainly when nothing could be added. */
+  const keptN=h.rows.map(r=>r.plants.length), anyKept=keptN.some(c=>c>0);
   const log=[]; const covered=new Set(); const order=[...h.rows.keys()].sort((a,b)=>moist[a]-moist[b]);
-  const usedDom=new Set(); order.forEach((i,oi)=>{ const r=h.rows[i]; r.regime=regimeForMoisture(moist[i],i,n,oi===0); r.comp=buildComp(h,i,moist[i],r.regime,pool,covered,usedDom); r.comp.filter(c=>c.role==='dom').forEach(c=>usedDom.add(c.sp)); r.comp.forEach(c=>(SP(c.sp).bloom||[]).forEach(m=>covered.add(m))); });
-  autoRowGaps(h); h.rows.forEach((r,i)=>{ const c=layoutRow(h,i); const sp0=rowMoistureProfile(h,i,10); const seepFt=sp0.filter(p=>stationInfo(h,i,p.ft).seep>0.3).length*10; log.push(r.name+' ('+REGIMES[r.regime].split(' ')[0].toLowerCase()+', moisture '+moist[i].toFixed(2)+(seepFt?', '+seepFt+' ft in pond seep':'')+'): '+r.comp.map(x=>SP(x.sp).common+(x.role==='dom'?' (dominant)':x.role==='nurse'?' (nurse)':x.role==='vine'?' (vine on the dominant)':'')).join(', ')+' — '+c+' plants'); });
-  const fixes=repairHedge(h); const pi=pondInfluence(h); if(pi&&pi.any){ const w=pi.rows.filter(x=>x.ft>0); const kinds=[...new Set(w.map(x=>x.kind).filter(Boolean))];
+  const usedDom=new Set(); order.forEach((i,oi)=>{ const r=h.rows[i]; if(!r.regimeSet) r.regime=regimeForMoisture(moist[i],i,n,oi===0); r.comp=buildComp(h,i,moist[i],r.regime,pool,covered,usedDom,keptN[i]?seedFromPlants(h,i):null); r.comp.filter(c=>c.role==='dom').forEach(c=>usedDom.add(c.sp)); r.comp.forEach(c=>(SP(c.sp).bloom||[]).forEach(m=>covered.add(m))); });
+  if(!anyKept) autoRowGaps(h); h.rows.forEach((r,i)=>{ const keptSp=new Set(keptN[i]?r.plants.map(p=>p.sp):[]); const c=layoutRow(h,i,keptN[i]?r.plants.slice():null); const sp0=rowMoistureProfile(h,i,10); const seepFt=sp0.filter(p=>stationInfo(h,i,p.ft).seep>0.3).length*10; log.push(r.name+' ('+REGIMES[r.regime].split(' ')[0].toLowerCase()+(r.regimeSet?' (your setting)':'')+', moisture '+moist[i].toFixed(2)+(seepFt?', '+seepFt+' ft in pond seep':'')+'): '+r.comp.map(x=>SP(x.sp).common+(x.role==='dom'?' (dominant)':x.role==='nurse'?' (nurse)':x.role==='vine'?' (vine on the dominant)':'')).join(', ')+' — '+(keptN[i]?'kept '+keptN[i]+' of yours, added '+(c-keptN[i]):c+' plants'));
+    if(keptN[i]&&c===keptN[i]) log.push(r.name+': nothing added — '+(r.comp.some(x=>!keptSp.has(x.sp))
+      ?'there is no room left around your plants for the species it chose (every free spot is within the spacing of something already there).'
+      :'the species counts you set are already met by what is in the row, and Auto-fill never adds more of a species you have placed. Raise a count in the Rows tab, or paint more.'));
+    if(keptN[i]){ const unplaced=r.comp.filter(x=>!keptSp.has(x.sp)&&!r.plants.some(p=>p.sp===x.sp)).map(x=>SP(x.sp).common);
+      if(unplaced.length) log.push(r.name+': chosen but no spot was free for '+unplaced.join(', ')+' (too close to plants already here, or the ground there doesn\'t suit it).'); }
+    shortfalls(h,i,moist[i]).forEach(t=>log.push(t)); });
+  const fixes=anyKept?['Conflict repair and row re-spacing were skipped, because both rearrange rows and some of these plants are yours.']:repairHedge(h); const pi=pondInfluence(h); if(pi&&pi.any){ const w=pi.rows.filter(x=>x.ft>0); const kinds=[...new Set(w.map(x=>x.kind).filter(Boolean))];
     const label=kinds.length>1?'Water influence':kinds[0]==='creek'?'Creek influence':'Pond influence';
-    log.unshift(label+' detected: '+((w[0].src&&w[0].src.name)||(kinds[0]==='creek'?'a creek':'a pond'))+' reaches '+w.map(x=>x.r.name+' ('+Math.round(x.ft)+' ft)').join(', ')+' — see the Plan tab for what changed.'); } h.autoLog=log.concat(fixes); return h.autoLog; }
+    log.unshift(label+' detected: '+((w[0].src&&w[0].src.name)||(kinds[0]==='creek'?'a creek':'a pond'))+' reaches '+w.map(x=>x.r.name+' ('+Math.round(x.ft)+' ft)').join(', ')+' — see the Plan tab for what changed.'); } if(anyKept){ const kt=keptN.reduce((a,b)=>a+b,0), at=h.rows.reduce((a,r)=>a+r.plants.length,0)-kt; log.unshift('Filled around '+kt+' plants already in '+h.name+': every one kept exactly as placed, '+at+' added.'); }
+  h.autoLog=log.concat(fixes); return h.autoLog; }
 function substitutes(h,i,spId){ const r=h.rows[i]; const sp=SP(spId); if(!sp) return []; const moist=rowMoistures(h)[i]; const inRow=new Set((r.comp||[]).map(c=>c.sp));
-  const cands=S.species.filter(x=>x.id!==spId&&!inRow.has(x.id)&&regimeOk(x,r.regime)&&(x.story===sp.story||(sp.story==='nurse'&&x.story==='ground'))).map(x=>{ const g=goalScore(x), f=fitForRow(x,h,i,moist,r.regime); return {sp:x,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+(sp.replace===x.id?0.15:0)}; }).sort((a,b)=>b.s-a.s);
+  const ex=new Set(planExcluded(h)), gate=moistureGate(h,i,moist); /* repairHedge picks swaps from here, so without this auto-fill itself could put an excluded species back in */
+  const cands=S.species.filter(x=>x.id!==spId&&!ex.has(x.id)&&!inRow.has(x.id)&&regimeEligible(x,r.regime,gate)&&(x.story===sp.story||(sp.story==='nurse'&&x.story==='ground'))).map(x=>{ const g=goalScore(x), f=fitForRow(x,h,i,moist,r.regime); return {sp:x,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+(sp.replace===x.id?0.15:0)}; }).sort((a,b)=>b.s-a.s);
   return cands.slice(0,6); }
 let lastSwap=null;
 function swapSpecies(h,i,fromId,toId){ const r=h.rows[i]; const from=SP(fromId), to=SP(toId);
@@ -2452,8 +2813,8 @@ function pondInfluence(h){ if(!ponds().length&&!creeks().length) return null; co
   if(!any) return {any:false,rows};
   const pool=candidatePool(); const withP=rowMoistures(h); IGNORE_PONDS=true; const noP=rowMoistures(h); IGNORE_PONDS=false;
   const order=[...h.rows.keys()].sort((a,b)=>withP[a]-withP[b]); const orderNo=[...h.rows.keys()].sort((a,b)=>noP[a]-noP[b]);
-  const compWith={},compNo={},regWith={},regNo={}; { const cov=new Set(), used=new Set(); order.forEach((i,oi)=>{ regWith[i]=regimeForMoisture(withP[i],i,n,oi===0); compWith[i]=buildComp(h,i,withP[i],regWith[i],pool,cov,used); compWith[i].forEach(c=>{ if(c.role==='dom') used.add(c.sp); (SP(c.sp).bloom||[]).forEach(m=>cov.add(m)); }); }); }
-  IGNORE_PONDS=true; { const cov=new Set(), used=new Set(); orderNo.forEach((i,oi)=>{ regNo[i]=regimeForMoisture(noP[i],i,n,oi===0); compNo[i]=buildComp(h,i,noP[i],regNo[i],pool,cov,used); compNo[i].forEach(c=>{ if(c.role==='dom') used.add(c.sp); (SP(c.sp).bloom||[]).forEach(m=>cov.add(m)); }); }); } IGNORE_PONDS=false;
+  const compWith={},compNo={},regWith={},regNo={}; { const cov=new Set(), used=new Set(); order.forEach((i,oi)=>{ regWith[i]=h.rows[i].regimeSet?h.rows[i].regime:regimeForMoisture(withP[i],i,n,oi===0); compWith[i]=buildComp(h,i,withP[i],regWith[i],pool,cov,used); compWith[i].forEach(c=>{ if(c.role==='dom') used.add(c.sp); (SP(c.sp).bloom||[]).forEach(m=>cov.add(m)); }); }); }
+  IGNORE_PONDS=true; { const cov=new Set(), used=new Set(); orderNo.forEach((i,oi)=>{ regNo[i]=h.rows[i].regimeSet?h.rows[i].regime:regimeForMoisture(noP[i],i,n,oi===0); compNo[i]=buildComp(h,i,noP[i],regNo[i],pool,cov,used); compNo[i].forEach(c=>{ if(c.role==='dom') used.add(c.sp); (SP(c.sp).bloom||[]).forEach(m=>cov.add(m)); }); }); } IGNORE_PONDS=false;
   rows.forEach(x=>{ const i=x.i; x.moistWith=withP[i]; x.moistNo=noP[i]; x.regWith=regWith[i]; x.regNo=regNo[i]; const a=new Set(compNo[i].map(c=>c.sp)), b=new Set(compWith[i].map(c=>c.sp)); x.added=[...b].filter(id=>!a.has(id)).map(SP); x.dropped=[...a].filter(id=>!b.has(id)).map(SP);
     x.domWith=(compWith[i].filter(c=>c.role==='dom').map(c=>SP(c.sp).common)).join(' + '); x.domNo=(compNo[i].filter(c=>c.role==='dom').map(c=>SP(c.sp).common)).join(' + ');
     x.gated=(h.rows[i].comp||[]).map(c=>SP(c.sp)).filter(Boolean).map(sp=>{ const prof=rowMoistureProfile(h,i,10); const ok=prof.filter(p=>{ const f=fitAtStation(sp,h,i,p.ft,h.rows[i].regime); return !f||f.score>=0.35; }).length; return {sp,frac:ok/Math.max(1,prof.length)}; }).filter(g=>g.frac<0.85); });
@@ -2489,7 +2850,7 @@ const STAGE_ORDER=['ranch','water','goals','rows','paint','build','shop','report
 function stageDone(t){ const r=R(); switch(t){
   case 'ranch': return !!(r.hedgerows.length||r.name!=='New ranch');
   case 'water': return r.water.nodes.length>0||(r.creeks||[]).length>0;
-  case 'goals': return Object.values(r.goals||{}).some(v=>+v>0)||planExcluded().length>0;
+  case 'goals': return r.hedgerows.some(hasCriteria);
   case 'rows': return r.hedgerows.length>0;
   case 'paint': return r.hedgerows.some(h=>h.rows.some(rr=>rr.plants.length));
   case 'build': return r.hedgerows.some(h=>h.rows.some(rr=>rr.plants.length));
@@ -2501,7 +2862,7 @@ function renderStageHint(t){ const map={
   water:'Map tanks, wells, ponds and pipes — this feeds every irrigation calculation.',
   goals:'Weight what you want from the hedgerow; tap the map to read the ground.',
   rows:'Draw hedgerow centrelines and set row count and spacing.',
-  paint:'Pick a species and paint it along a row, or auto-fill the whole hedgerow.',
+  paint:'Pick a species and paint it along a row. Auto-fill then fills in around what you painted, or fills the whole hedgerow if it is empty.',
   build:'Walk the finished row: elevation view, bloom calendar, planting order.',
   shop:'Cost the plan and track sourcing status per line.',
   report:'Export the full plan as a printable document.'};
@@ -2510,7 +2871,7 @@ const STAGE_NEXT={ranch:'water',water:'goals',goals:'rows',rows:'paint',paint:'b
 function renderStageBar(t){ const el=document.getElementById('stageBar'); if(!el) return;
   const nx=STAGE_NEXT[t]; const r=R();
   const why={ranch:'',water:r.water.nodes.length?'':'Not required, but irrigation and seep modelling need it.',
-    goals:planExcluded().length||Object.values(r.goals||{}).some(v=>+v>0)?'':'Skippable — fills on site fit alone if you move on.',
+    goals:hasCriteria(curHedge())?'':'Skippable — fills on site fit alone if you move on.',
     rows:r.hedgerows.length?'':'Draw at least one hedgerow to continue.',
     paint:r.hedgerows.some(h=>h.rows.some(rr=>rr.plants.length))?'':'Paint by hand, or auto-fill from the Rows tab.',
     build:'',shop:'',report:''}[t];
@@ -2571,7 +2932,7 @@ function openSettingsDialog(){
     });
   renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); }
 function renderRanch(){ const r=R();
-  document.getElementById('ranchSub').textContent=r.name+' · '+r.hedgerows.length+' hedgerow'+(r.hedgerows.length===1?'':'s');
+  renderRanchSub();
   let html=`<h2>Study area</h2>`;
   if(aoi()){ html+=`<p class="small">${aoiAcres().toFixed(1)} acres outlined, ${(hexesInAoi()||[]).length} acre hexes.</p><div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`; }
   else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="toggleMode('aoi')">Draw study area</button></p>`;
@@ -2613,12 +2974,16 @@ function renderRows(){ const h=curHedge(); const r=R(); let html='';
   html+=h.rows.map((r0,i)=>{ const sel=S.sel.row===i; const st=rowStats(h,i); const m=moist[i];
     return `<div class="card${sel?' sel':''}" onclick="S.sel.row=${i};drawAll();renderPanels()">
       <div class="row"><input type="text" class="grow" value="${esc(r0.name)}" onclick="event.stopPropagation()" onchange="commit('Rename row',()=>{curHedge().rows[${i}].name=this.value});drawAll();renderPanels()">
-        <label style="margin:0">Regime</label><select style="width:104px" title="${esc(REGIMES[r0.regime])}" onclick="event.stopPropagation()" onchange="commit('Set regime',()=>curHedge().rows[${i}].regime=this.value);renderPanels();saveSoon()">${Object.keys(REGIMES).map(k=>`<option value="${k}"${r0.regime===k?' selected':''}>${REGIMES[k]}</option>`).join('')}</select></div>
+        <label style="margin:0">Regime</label><select style="width:128px" title="${esc(REGIMES[r0.regime])}${r0.regimeSet?' — set by you; Auto-fill keeps it':' — Auto-fill picks this from the row\'s moisture; choose one to keep it'}" onclick="event.stopPropagation()" onchange="commit('Set regime',()=>{const rr=curHedge().rows[${i}]; if(this.value===''){ rr.regimeSet=false; } else { rr.regime=this.value; rr.regimeSet=true; }});renderPanels();saveSoon()"><option value=""${r0.regimeSet?'':' selected'}>Auto (${REGIMES[r0.regime].split(' ')[0]})</option>${Object.keys(REGIMES).map(k=>`<option value="${k}"${r0.regimeSet&&r0.regime===k?' selected':''}>${REGIMES[k]}</option>`).join('')}</select></div>
       <p class="small mute">${Math.round(rowLenFt(h,i))} ft · ${st.n} plants · ${st.gpm.toFixed(2)} gpm${site.length?' · moisture '+m.toFixed(2):''}</p>
       ${i<h.rows.length-1?`<label style="margin:4px 0 0">Gap to next row, ft</label><input type="number" min="3" max="30" value="${(h.gapsFt&&h.gapsFt[i])||h.rowSpacingFt||8}" onclick="event.stopPropagation()" onchange="commit('Set row gap',()=>{curHedge().gapsFt=curHedge().gapsFt||[];curHedge().gapsFt[${i}]=+this.value;clampPlants(curHedge())});afterChange(()=>{drawAll();renderPanels();})">`:''}
+      <label style="margin:4px 0 0" title="How many distinct overstory (tree) species Auto-fill picks for this row. Blank is automatic: one dominant, a tree when the row is wet or you want screening/wildlife, otherwise a shrub. A number asks for that many trees. Capped by length, one per 60 ft of row.">Overstory species, Auto-fill</label><input type="number" min="1" max="4" placeholder="auto" value="${r0.domCount!=null?r0.domCount:''}" onclick="event.stopPropagation()" onchange="commit('Set overstory species count',()=>{curHedge().rows[${i}].domCount=this.value===''?null:+this.value});renderPanels()">
+      <label style="margin:4px 0 0" title="How many distinct mid-story species Auto-fill picks for this row. Unset, it picks one on rows over 90 ft and none on shorter ones. Capped by length, one per 60 ft of row.">Mid-story species, Auto-fill</label><input type="number" min="0" max="4" value="${r0.midCount!=null?r0.midCount:(rowLenFt(h,i)>90?1:0)}" onclick="event.stopPropagation()" onchange="commit('Set mid-story species count',()=>{curHedge().rows[${i}].midCount=this.value===''?null:+this.value});renderPanels()">
+      <label style="margin:4px 0 0" title="How many distinct ground-layer species Auto-fill picks for this row. Nurse and vine species aren't set here; they follow the row's regime and canopy.">Ground species, Auto-fill</label><input type="number" min="0" max="8" value="${r0.groundCount!=null?r0.groundCount:3}" onclick="event.stopPropagation()" onchange="commit('Set ground species count',()=>{curHedge().rows[${i}].groundCount=this.value===''?null:+this.value});renderPanels()">
     </div>`; }).join('');
-  html+=`<div class="row" style="margin-top:8px"><button class="small primary" onclick="doPopulate()">${h.rows.some(r=>r.plants.length)?'Re-run auto-fill':'Auto-fill from goals'}</button>
-    <button class="small" onclick="commit('Clear all plants',()=>h.rows.forEach(r=>r.plants=[]));drawAll();renderPanels();saveSoon()">Clear plants</button></div>`;
+  html+=`<div class="row" style="margin-top:8px"><button class="small primary" onclick="doPopulate()" title="${h.rows.some(r=>r.plants.length)?'Adds species around the plants already here. Nothing you have placed is moved, replaced or removed, and a species already here is not added again. To start over, Clear plants first.':'Fills the hedgerow from your goals and the ground.'}">${h.rows.some(r=>r.plants.length)?'Fill in around plants':'Auto-fill from goals'}</button>
+    <button class="small" onclick="commit('Clear all plants',()=>curHedge().rows.forEach(r=>r.plants=[]));drawAll();renderPanels();saveSoon()">Clear plants</button></div>`
+    +(h.rows.some(r=>r.plants.length)?`<p class="small mute" style="margin:4px 0 0">Auto-fill works around the plants already here: it keeps every one where it is and won't add more of a species you've placed. If there's nothing left to add, “Why it filled this way” says why. To redo a row from scratch, Clear plants first.</p>`:'');
   if(h.autoLog&&h.autoLog.length) html+=`<details open><summary>Why it filled this way</summary>`+h.autoLog.map(l=>`<div class="small" style="padding:2px 0">${esc(l)}</div>`).join('')+`</details>`;
   html+=waterInfluenceHtml(h);
   setHtml('tab-rows',html); }
@@ -2627,7 +2992,14 @@ function delHedge(id){ UI.confirm('Delete this hedgerow and everything planted i
   drawAll(); renderPanels(); }); }
 async function doPopulate(){ busy(true,'Filling the hedgerow…'); const h=curHedge(); if(!h) return;
   if(!hedgeHexes(h).length) await sampleHedgeHexes(h);
-  commit('Fill '+h.name,()=>populateHedge(h)); drawAll(); renderPanels(); showTab('rows'); busy(false,'Filled'); readout(h.name+' filled — see “Why it filled this way” below, or open Build to walk the row.'); }
+  const before=h.rows.reduce((a,r)=>a+r.plants.length,0); let res;
+  commit('Fill '+h.name,()=>{ res=populateHedge(h); });
+  if(res===null){ busy(false,'Nothing to fill'); return; } /* populateHedge already said why (no goals or plan set) */
+  drawAll(); renderPanels(); showTab('rows'); busy(false,'Filled');
+  const after=h.rows.reduce((a,r)=>a+r.plants.length,0);
+  readout(!before?h.name+' filled — see “Why it filled this way” below, or open Build to walk the row.'
+    :after>before?h.name+': kept your '+before+' plants and added '+(after-before)+' around them — see “Why it filled this way” below.'
+    :h.name+': nothing added around your '+before+' plants — “Why it filled this way” below says why.'); }
 function renderWater(){ const r=R(); const sol=solveNet();
   let html=`<div class="row"><label style="margin:0">Feed</label><select onchange="commit('Set water feed',()=>{R().feed=this.value});drawAll();renderPanels()"><option value="gravity"${r.feed==='gravity'?' selected':''}>Gravity</option><option value="pumped"${r.feed==='pumped'?' selected':''}>Pumped</option></select>
     ${r.feed==='pumped'?`<label style="margin:0">psi</label><input type="number" style="width:60px" value="${r.feedPsi||0}" onchange="commit('Set feed psi',()=>{R().feedPsi=+this.value});afterChange(()=>{drawAll();renderPanels();})">`:''}</div>
@@ -2710,22 +3082,35 @@ function diagnosisHtml(spId){ const b=bestAcreFor(spId); const sp=SP(spId); if(!
 function suggestSwap(spId){ const sf=siteSummaryFit(SP(spId)); if(!sf||sf.score>=0.5) return ''; const better=shortlist().find(x=>x.f&&x.f.score>sf.score+0.2); if(!better) return ''; return `<div class="issue warn">Poor fit here (${Math.round(sf.score*100)}%). ${esc(better.sp.common)} scores ${Math.round(better.f.score*100)}% on this ground.</div>`; }
 function heatBreakdown(q,r){ const info=hexInfo(q,r); if(!info) return ''; const sl=shortlist().slice(0,8);
   return sl.map(x=>{ const f=speciesFit(x.sp,info,null); return f?`<div class="row small"><span class="grow">${esc(x.sp.common)}</span><span>${Math.round(f.score*100)}%</span></div>`:''; }).join(''); }
-function renderGoals(){ const r=R(); r.goals=r.goals||{}; let html=`<h2>What do you want from it?</h2>`
-    +Object.keys(GOALS).map(g=>`<div class="goal"><span>${esc(GOALS[g])}</span><input type="range" min="0" max="3" value="${r.goals[g]||0}" onpointerdown="_goalBefore=JSON.stringify(S)" oninput="R().goals['${g}']=+this.value;this.nextElementSibling.textContent=['none','a little','a lot','defining'][+this.value]" onchange="renderGoals();if(_goalBefore&&JSON.stringify(S)!==_goalBefore){HIST.stack.push({label:'Adjust goal weight',state:_goalBefore});if(HIST.stack.length>HIST.max)HIST.stack.shift();HIST.redo.length=0;updateHistButtons();UI.toast('Adjust goal weight',{label:'Undo',fn:undo});}_goalBefore=null;saveSoon()"><span class="mute small">${['none','a little','a lot','defining'][r.goals[g]||0]}</span></div>`).join('');
+/* Goals and exclusions belong to one hedgerow, so this tab is about whichever one is
+   selected — the heading says which, since the same panel now shows different values
+   as you switch between hedgerows. With none selected there is nothing to attach a
+   weight to, so the sliders give way to a prompt; the study-area and shortlist
+   sections below still work. */
+function copyCriteriaFrom(srcId){ const h=curHedge(); const src=R().hedgerows.find(x=>x.id===srcId); if(!h||!src||src.id===h.id) return;
+  commit('Copy goals & exclusions from '+src.name,()=>{ h.goals=JSON.parse(JSON.stringify(src.goals||{})); h.excluded=(src.excluded||[]).slice(); });
+  renderPanels(); }
+function renderGoals(){ const h=curHedge(); const r=R(); let html;
+  if(!h) html=`<h2>What do you want from it?</h2><p class="small mute">Goals and species exclusions are set per hedgerow. Select a hedgerow on the map, or draw one, to set what you want from it.</p>`;
+  else { h.goals=h.goals||{};
+    const others=r.hedgerows.filter(x=>x.id!==h.id);
+    html=`<h2>What do you want from ${esc(h.name)}?</h2>`
+      +(others.length?`<div class="row" style="margin:2px 0 10px"><label style="margin:0">Copy goals &amp; exclusions from</label><select onchange="if(this.value) copyCriteriaFrom(this.value)"><option value="">—</option>${others.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>`:'')
+      +Object.keys(GOALS).map(g=>`<div class="goal"><span>${esc(GOALS[g])}</span><input type="range" min="0" max="3" value="${h.goals[g]||0}" onpointerdown="_goalBefore=JSON.stringify(S)" oninput="curHedge().goals['${g}']=+this.value;this.nextElementSibling.textContent=['none','a little','a lot','defining'][+this.value]" onchange="renderGoals();if(_goalBefore&&JSON.stringify(S)!==_goalBefore){HIST.stack.push({label:'Adjust goal weight',state:_goalBefore});if(HIST.stack.length>HIST.max)HIST.stack.shift();HIST.redo.length=0;updateHistButtons();UI.toast('Adjust goal weight',{label:'Undo',fn:undo});}_goalBefore=null;saveSoon()"><span class="mute small">${['none','a little','a lot','defining'][h.goals[g]||0]}</span></div>`).join(''); }
   html+=`<h2>Study area</h2>`;
   if(!aoi()) html+=`<p class="small mute">Outline the ground you're considering and every acre gets read and ranked by fit. <button class="small" onclick="toggleMode('aoi')">Draw study area</button></p>`;
   else html+=`<p class="small">${aoiAcres().toFixed(1)} acres, ${(hexesInAoi()||[]).length} hexes.</p><label><input type="checkbox" ${heatOn?'checked':''} onchange="document.getElementById('lyHeat').checked=this.checked;heatToggle()"> Show suitability heat map</label>
     <div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`;
-  html+=`<h2>Shortlist</h2>`;
+  html+=`<h2>Shortlist</h2>`+(h?`<p class="small mute">Checked species are eligible for ${esc(h.name)}'s auto-fill.</p>`:'');
   const sl=shortlist().slice(0,24);
   html+=sl.map(x=>{ const excluded=planExcluded().includes(x.sp.id);
     return `<div class="sp${excluded?' excluded':''}" onclick="openSpeciesInfo('${x.sp.id}')">
       <input type="checkbox" onclick="event.stopPropagation();toggleExcluded('${x.sp.id}')" ${excluded?'':'checked'} title="${excluded?'Excluded from auto-fill':'Eligible for auto-fill'}">
       <span class="swatch" style="background:${x.sp.color}"></span>
       <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))} · ${x.sp.moisture}</i></span>
-      <span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
+      <span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}" title="${esc(fitTip(x))}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
   setHtml('tab-goals',html); }
-function toggleExcluded(id){ const was=planExcluded().includes(id); const label=(was?'Include ':'Exclude ')+((SP(id)||{}).common||'species')+(was?' in auto-fill again':' from auto-fill');
+function toggleExcluded(id){ if(!curHedge()){ UI.toast('Select a hedgerow first — exclusions are set per hedgerow'); renderPanels(); return; } const was=planExcluded().includes(id); const label=(was?'Include ':'Exclude ')+((SP(id)||{}).common||'species')+(was?' in auto-fill again':' from auto-fill');
   commit(label,()=>{ const set=planExcluded(); const i=set.indexOf(id); if(i>=0) set.splice(i,1); else set.push(id); }); renderPanels(); }
 async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=siteSummaryFit(sp); const g=goalScore(sp);
   const body=`<p class="small"><i>${esc(sp.sci)}</i> ${prov('lib')}<br>${esc(sp.notes||'')}</p>
@@ -2749,7 +3134,7 @@ function renderPaint(){ const h=curHedge(); let html='';
     ?`<div class="row" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><button class="small" onclick="openSpeciesGrid()">Edit species library (spreadsheet view)</button></div>`:'';
   if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`+editBtn); return; }
   const r=h.rows[S.sel.row||0];
-  html+=`<div class="row"><button class="small" onclick="doPopulate()">Auto-fill</button><button class="small${mode==='paint'?' on':''}" onclick="toggleMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="toggleMode('erase');renderPaint()">Erase mode</button></div>`;
+  html+=`<div class="row"><button class="small" onclick="doPopulate()" title="${h.rows.some(r=>r.plants.length)?'Adds species around the plants already here; nothing you have placed is moved or removed.':'Fills the hedgerow from your goals and the ground.'}">${h.rows.some(r=>r.plants.length)?'Fill in around plants':'Auto-fill'}</button><button class="small${mode==='paint'?' on':''}" onclick="toggleMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="toggleMode('erase');renderPaint()">Erase mode</button></div>`;
   if(mode==='paint') html+=`<p class="small">Painting into <b>${esc(r?r.name:'')}</b> — pick a species, then drag along the row on the map.</p>`;
   else if(mode==='erase') html+=`<p class="small">Erasing from <b>${esc(r?r.name:'')}</b> — drag along the row on the map to clear whatever's planted there.</p>`;
   const site=r?stationInfo(h,S.sel.row||0,rowLenFt(h,S.sel.row||0)/2):null;
@@ -2758,19 +3143,63 @@ function renderPaint(){ const h=curHedge(); let html='';
     return `<div class="sp${on?' on':''}${excluded?' excluded':''}" onclick="S.sel.species='${x.sp.id}';renderPaint()">
       <input type="checkbox" onclick="event.stopPropagation();toggleExcluded('${x.sp.id}')" ${excluded?'':'checked'} title="${excluded?'Excluded from auto-fill':'Eligible for auto-fill'}">
       <span class="swatch" style="background:${x.sp.color}"></span>
-      <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))}</i></span><span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
+      <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))}</i></span><span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}" title="${esc(fitTip(x))}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
   html+=editBtn;
   setHtml('tab-paint',html); }
 let dockPinned=null;
+/* The dock has two views of the same acre. "fit" ranks every library species by how well it
+   suits the acre's soil, moisture and water (top 6 per layer, outlined if it's also planted in
+   the selected row). "planted" lists what is actually planted inside the acre, from any
+   hedgerow, with a count and how well each suits it. The choice is a per-person display
+   preference, kept in localStorage rather than in the shared design. */
+let dockView=(()=>{ try{ const v=localStorage.getItem('hedgeright.dockView'); return v==='planted'||v==='hedge'?v:'fit'; }catch(e){ return 'fit'; } })();
+function setDockView(v){ dockView=v==='planted'||v==='hedge'?v:'fit'; try{ localStorage.setItem('hedgeright.dockView',dockView); }catch(e){} renderDock(); }
+function plantsInAcre(k){ const out={};
+  R().hedgerows.forEach(h=>{ const lines=rowLines(h); h.rows.forEach((r,i)=>{ if(!lines[i]) return;
+    r.plants.forEach(p=>{ const q=hexKeyFor(pointAtFt(lines[i],p.ft)); if(q[0]!==k[0]||q[1]!==k[1]) return;
+      const o=out[p.sp]=out[p.sp]||{n:0,rows:new Set()}; o.n++; o.rows.add(h.name+' · '+r.name); }); }); });
+  return out; }
 function dockActive(){ return document.getElementById('growDock').classList.contains('show'); }
 function dockShow(){ document.getElementById('growDock').classList.add('show'); document.getElementById('mapWrap').classList.add('docked'); }
 function dockHide(){ document.getElementById('growDock').classList.remove('show'); document.getElementById('mapWrap').classList.remove('docked'); dockPinned=null; }
 function dockToggle(){ dockActive()?dockHide():dockShow(); if(dockActive()) renderDock(); }
-function dockHover(k){ if(dockPinned||!dockActive()) return; renderDock(k); }
+function dockHover(k){ if(dockPinned||!dockActive()||dockView==='hedge') return; renderDock(k); }
 function dockPin(k){ dockPinned=k; dockShow(); renderDock(k); }
 function dockAcre(){ return dockPinned||hoverHex; }
 function dockInfo(){ const k=dockAcre(); return k?hexInfo(k[0],k[1]):null; }
-function renderDock(k){ const el=document.getElementById('growDock'); if(!el||!dockActive()) return; k=k||dockAcre(); const info=k?hexInfo(k[0],k[1]):null;
+/* Hedgerow-wide figures for the dock's third view. Best fit stays acre-only on purpose: "how well
+   does this suit the ground" has no single answer for a hedgerow that crosses several acres. The
+   fit shown here is the mean of speciesFit over stations along every row (the same sampling
+   siteSummaryFit uses, but across all rows, since that one follows the selected row). */
+function plantsInHedge(h){ const out={};
+  h.rows.forEach(r=>r.plants.forEach(p=>{ const o=out[p.sp]=out[p.sp]||{n:0,rows:{}}; o.n++; o.rows[r.name]=(o.rows[r.name]||0)+1; }));
+  return out; }
+function hedgeFit(sp,h){ const fits=[];
+  h.rows.forEach((row,i)=>{ const L=rowLenFt(h,i); if(!L) return;
+    for(let f=0;f<=L;f+=Math.max(20,L/8)){ const info=stationInfo(h,i,f); if(info&&info.wet!=null){ const fit=speciesFit(sp,info,row); if(fit) fits.push(fit); } } });
+  if(!fits.length) return null;
+  return {score:fits.reduce((a,b)=>a+b.score,0)/fits.length,unknown:fits.every(f=>f.unknown)}; }
+function dockPct(f){ return f&&!f.unknown&&isFinite(f.score)?Math.round(f.score*100)+'%':'—'; }
+function dockSegHtml(){ const b=(v,label,tip)=>`<button class="small${dockView===v?' on':''}" title="${esc(tip)}" onclick="setDockView('${v}')">${label}</button>`;
+  return `<span class="dockSeg">`+b('fit','Best fit',"Species that suit this acre's soil, moisture and water best")
+    +b('planted','Planted here','What is planted inside this one acre, from any hedgerow. A long row can cross several acres, so this can be only part of it.')
+    +b('hedge','Hedgerow','Everything planted in the selected hedgerow, across all its rows and acres')+`</span>`; }
+function renderDockHedge(el){ const h=curHedge(), seg=dockSegHtml();
+  const head=`<div class="dockHead"><b>${h?esc(h.name):'Hedgerow'}</b>${seg}`;
+  if(!h){ el.innerHTML=head+`<span class="grow"></span><button class="small" onclick="dockHide()">Close</button></div><div class="dockBody"><p class="small mute" style="align-self:center">Select a hedgerow to summarize it.</p></div>`; return; }
+  const planted=plantsInHedge(h), ids=Object.keys(planted), total=ids.reduce((a,id)=>a+planted[id].n,0);
+  const acres=hedgeHexes(h).length, nr=h.rows.length;
+  const facts=`<p class="small"><b>${esc(h.name)}</b><br>${Math.round(pathLenFt(h.centerline))} ft · ${nr} row${nr===1?'':'s'}<br>${total} plant${total===1?'':'s'} · ${ids.length} species<br>${acres} acre${acres===1?'':'s'} read</p>`
+    +`<p class="small mute">${h.rows.map(r=>esc(r.name)+': '+r.plants.length).join(' · ')}</p>`;
+  const LAYERS=['over','mid','ground','nurse','vine'];
+  const pcol=(label,keep)=>{ const items=ids.map(SP).filter(sp=>sp&&keep(sp)).sort((a,b)=>planted[b.id].n-planted[a.id].n||a.common.localeCompare(b.common));
+    return !items.length?'':`<div class="dockCol"><h4>${label}</h4>`+items.map(sp=>{ const o=planted[sp.id], f=hedgeFit(sp,h);
+      const tip=sp.common+' — '+Object.entries(o.rows).map(([n,c])=>n+' ×'+c).join(', ')+(f&&!f.unknown?'; average fit along the hedgerow '+dockPct(f):'');
+      return `<div class="dockSp" title="${esc(tip)}" onclick="openSpeciesInfo('${sp.id}')"><span class="swatch" style="background:${sp.color}"></span><span class="n">${esc(sp.common)}</span><span class="fit">×${o.n} · ${dockPct(f)}</span></div>`; }).join('')+`</div>`; };
+  const body=total?pcol('Overstory',sp=>sp.story==='over')+pcol('Mid-story',sp=>sp.story==='mid')+pcol('Ground',sp=>sp.story==='ground')+pcol('Nurse',sp=>sp.story==='nurse')+pcol('Vine',sp=>sp.story==='vine')+pcol('Other',sp=>!LAYERS.includes(sp.story))
+    :`<p class="small" style="align-self:center"><span class="mute">Nothing is planted in ${esc(h.name)} yet.</span></p>`;
+  el.innerHTML=head+` <span class="mute small">${total} plant${total===1?'':'s'} · ${ids.length} species across the hedgerow</span><span class="grow"></span><button class="small" onclick="dockHide()">Close</button></div><div class="dockBody"><div class="dockFacts">${facts}</div>${body}</div>`; }
+function renderDock(k){ const el=document.getElementById('growDock'); if(!el||!dockActive()) return; if(dockView==='hedge'){ renderDockHedge(el); return; } k=k||dockAcre(); const info=k?hexInfo(k[0],k[1]):null;
   if(!k){ el.innerHTML=`<div class="dockHead"><b>Hover an acre</b><span class="mute">to see what grows well there</span><span class="grow"></span><button class="small" onclick="dockHide()">Close</button></div>`; return; }
   const facts=!info?`<p class="small mute">Not read yet. <button class="small" onclick="sampleHex(${k[0]},${k[1]}).then(()=>renderDock())">Read this acre</button></p>`
     :`<p class="small">${info.soil?esc(info.soil.muname.split(',')[0]):'—'}${info.soil&&info.soil.tex?', '+esc(texName(info.soil.tex)):''}<br>
@@ -2779,13 +3208,39 @@ function renderDock(k){ const el=document.getElementById('growDock'); if(!el||!d
       <button class="small" onclick="sampleHex(${k[0]},${k[1]},true).then(()=>renderDock())">Re-read</button>`;
   const scored=S.species.map(sp=>({sp,f:info?speciesFit(sp,info,null):null})).filter(x=>x.f).sort((a,b)=>b.f.score-a.f.score);
   const byStory={over:[],mid:[],ground:[],nurse:[],vine:[]};
-  scored.forEach(x=>byStory[x.sp.story].push(x));
+  scored.forEach(x=>{ if(byStory[x.sp.story]) byStory[x.sp.story].push(x); }); /* a species with no/unknown layer has no column here */
+  const pct=f=>f&&!f.unknown&&isFinite(f.score)?Math.round(f.score*100)+'%':'—'; /* no moisture set: unknown, not a measured 50% */
   const h=curHedge(); const inRow=h&&S.sel.row!=null?new Set(h.rows[S.sel.row].plants.map(p=>p.sp)):new Set();
-  const col=(label,items)=>!items.length?'':`<div class="dockCol"><h4>${label}</h4>`+items.slice(0,6).map(x=>`<div class="dockSp${inRow.has(x.sp.id)?' in':''}" onclick="openSpeciesInfo('${x.sp.id}')"><span class="swatch" style="background:${x.sp.color}"></span><span class="n">${esc(x.sp.common)}</span><span class="fit">${Math.round(x.f.score*100)}%</span></div>`).join('')+`</div>`;
-  el.innerHTML=`<div class="dockHead"><b>Acre ${k[0]},${k[1]}</b>${dockPinned?' <span class="mute">(pinned)</span>':''}<span class="grow"></span>
+  /* Top 6 per layer, but not an arbitrary 6: species tied with the 6th (same displayed percent)
+     are all shown, because otherwise which of several equals makes the list was decided by
+     where each sits in the library, and a tied species silently vanished. */
+  const cutoff=items=>{ if(items.length<=6) return items; const edge=Math.round(items[5].f.score*100); return items.filter((x,i)=>i<6||Math.round(x.f.score*100)===edge); };
+  const col=(label,items)=>!items.length?'':`<div class="dockCol"><h4>${label}</h4>`+cutoff(items).map(x=>`<div class="dockSp${inRow.has(x.sp.id)?' in':''}" title="${esc(x.sp.common+(x.f&&x.f.why&&x.f.why.length?' — site fit '+pct(x.f)+': '+x.f.why.join('; '):''))}" onclick="openSpeciesInfo('${x.sp.id}')"><span class="swatch" style="background:${x.sp.color}"></span><span class="n">${esc(x.sp.common)}</span><span class="fit">${pct(x.f)}</span></div>`).join('')+`</div>`;
+  let body, summary='';
+  if(dockView==='planted'){
+    const planted=plantsInAcre(k), ids=Object.keys(planted);
+    const fitMap=new Map(scored.map(x=>[x.sp.id,x.f]));
+    const LAYERS=['over','mid','ground','nurse','vine'];
+    const pcol=(label,keep)=>{ const items=ids.map(SP).filter(sp=>sp&&keep(sp)).sort((a,b)=>planted[b.id].n-planted[a.id].n||a.common.localeCompare(b.common));
+      return !items.length?'':`<div class="dockCol"><h4>${label}</h4>`+items.map(sp=>`<div class="dockSp" title="${esc(sp.common+' — '+[...planted[sp.id].rows].join(', '))}" onclick="openSpeciesInfo('${sp.id}')"><span class="swatch" style="background:${sp.color}"></span><span class="n">${esc(sp.common)}</span><span class="fit">×${planted[sp.id].n}${info?' · '+pct(fitMap.get(sp.id)):''}</span></div>`).join('')+`</div>`; };
+    const total=ids.reduce((a,id)=>a+planted[id].n,0);
+    /* A long row can cross several acres, and this view only covers the pinned one, so say how much
+       of the selected row is inside it — otherwise a species planted further along the same row
+       looks as if it went missing (28 plants here against a row header reading 76). */
+    let rowNote='';
+    const selH=curHedge(), selRow=selH&&S.sel.row!=null?selH.rows[S.sel.row]:null;
+    if(selRow&&selRow.plants.length){ const ln=rowLines(selH)[S.sel.row];
+      const here=ln?selRow.plants.filter(p=>{ const q=hexKeyFor(pointAtFt(ln,p.ft)); return q[0]===k[0]&&q[1]===k[1]; }).length:0;
+      if(here<selRow.plants.length) rowNote=` · ${esc(selRow.name)}: ${here} of ${selRow.plants.length} plants are in this acre`; }
+    summary=total?` <span class="mute small">${total} plant${total===1?'':'s'} · ${ids.length} species in this acre${rowNote}</span>`:'';
+    body=total?pcol('Overstory',sp=>sp.story==='over')+pcol('Mid-story',sp=>sp.story==='mid')+pcol('Ground',sp=>sp.story==='ground')+pcol('Nurse',sp=>sp.story==='nurse')+pcol('Vine',sp=>sp.story==='vine')+pcol('Other',sp=>!LAYERS.includes(sp.story))
+      :`<p class="small mute" style="align-self:center">Nothing is planted in this acre yet.</p>`;
+  } else body=col('Overstory',byStory.over)+col('Mid-story',byStory.mid)+col('Ground',byStory.ground)+col('Nurse',byStory.nurse)+col('Vine',byStory.vine);
+  const seg=dockSegHtml();
+  el.innerHTML=`<div class="dockHead"><b>Acre ${k[0]},${k[1]}</b>${dockPinned?' <span class="mute">(pinned)</span>':''}${seg}${summary}<span class="grow"></span>
       ${dockPinned?`<button class="small" onclick="dockPinned=null;renderDock()">Unpin</button>`:''}<button class="small" onclick="dockHide()">Close</button></div>
     <div class="dockBody"><div class="dockFacts">${facts}</div>
-      ${col('Overstory',byStory.over)}${col('Mid-story',byStory.mid)}${col('Ground',byStory.ground)}${col('Nurse',byStory.nurse)}${col('Vine',byStory.vine)}
+      ${body}
     </div>`; }
 function renderTape(){ const svg=document.getElementById('tapeSvg'); if(!svg) return; const on=document.getElementById('lyTape'); const showTape=!on||on.checked;
   document.getElementById('tape').classList.toggle('hidden',!showTape); document.getElementById('mapWrap').classList.toggle('notape',!showTape); if(!showTape) return;
@@ -2918,9 +3373,49 @@ function normalizeState(){ if(!S.species) S.species=JSON.parse(JSON.stringify(SP
   S.species.forEach(sp=>{ const def=SPECIES_DEFAULT.find(d=>d.id===sp.id); if(def) Object.keys(def).forEach(k=>{ if(sp[k]===undefined) sp[k]=def[k]; }); });
   S.ranches.forEach(r=>{ r.hexCache=r.hexCache||{}; r.water=r.water||{nodes:[],lines:[]}; r.creeks=r.creeks||[]; r.goals=r.goals||{}; r.plan=r.plan||{set:[]};
     r.origin=r.origin||r.center.slice();
-    r.hedgerows.forEach(h=>{ h.rows.forEach(rr=>{ rr.plants=rr.plants||[]; }); }); });
+    /* One-time migration: goals and exclusions used to live on the ranch and apply to every
+       hedgerow. A hedgerow saved before that moved (h.goals undefined) starts with a copy of
+       what the ranch had, so nothing already set is lost; the ranch-level fields are left in
+       place but are no longer read. Hedgerows created afterwards get their own at creation
+       and are never touched here. */
+    r.hedgerows.forEach(h=>{ h.rows.forEach(rr=>{ rr.plants=rr.plants||[]; });
+      if(h.goals===undefined) h.goals=JSON.parse(JSON.stringify(r.goals||{}));
+      if(h.excluded===undefined) h.excluded=((r.plan&&r.plan.excluded)||[]).slice(); }); });
   if(!S.sel) S.sel={hedge:null,row:null,species:null,wnode:null,wline:null}; }
-function renderPanels(){ const t=currentTab(); renderTabIfNeeded(t); renderStageHint(t); updateHistButtons(); saveBadge(); netBadge();
+/* ---- Hedgerow navigator ----
+   The subtitle under the app name names the ranch and the hedgerow you're working on,
+   and opens a menu to jump to any hedgerow (selecting it and fitting the map to it) or
+   back out to the whole ranch. Navigation only: it deliberately does not call
+   openHedge(), which is for a freshly drawn hedgerow — it reads site data and offers to
+   auto-fill, neither of which belongs on a menu click. It stays on whatever tab you're
+   on, since the per-hedgerow tabs (Explore, Rows, Plants) now simply show the new one.
+   Rendered from renderPanels() as well as renderRanch(): the subtitle used to be
+   written only by renderRanch(), so it went stale on every other tab. */
+let _hedgeMenuOpen=false;
+function renderRanchSub(){ const el=document.getElementById('ranchSub'); if(!el||!S||!S.ranches) return;
+  const r=R(), n=r.hedgerows.length, cur=curHedge();
+  if(!n){ _hedgeMenuOpen=false; el.textContent=r.name+' · no hedgerows yet'; return; }
+  const label=esc(r.name)+' · '+(cur?esc(cur.name):n+' hedgerow'+(n===1?'':'s'));
+  el.innerHTML=`<span id="hedgeNavWrap"><button id="hedgeNavBtn" onclick="toggleHedgeMenu(event)" title="Go to a hedgerow — [ and ] step through them" aria-haspopup="true" aria-expanded="${_hedgeMenuOpen}">${label} ▾</button>${_hedgeMenuOpen?hedgeMenuHtml():''}</span>`; }
+function hedgeMenuHtml(){ const cur=S.sel.hedge;
+  return `<div class="menu" role="menu">`+R().hedgerows.map(h=>{ const plants=h.rows.reduce((a,rr)=>a+rr.plants.length,0), on=h.id===cur;
+    return `<button role="menuitem" class="${on?'on':''}" onclick="gotoHedge('${h.id}')"><span>${on?'✓ ':''}${esc(h.name)}</span><span class="mute small">${Math.round(pathLenFt(h.centerline))} ft · ${plants} plant${plants===1?'':'s'}</span></button>`; }).join('')
+    +`<div class="sep"></div><button role="menuitem" onclick="gotoWholeRanch()"><span>Whole ranch</span><kbd>zoom out</kbd></button></div>`; }
+function toggleHedgeMenu(e){ if(e) e.stopPropagation(); _hedgeMenuOpen=!_hedgeMenuOpen; renderRanchSub(); }
+function closeHedgeMenu(){ if(!_hedgeMenuOpen) return; _hedgeMenuOpen=false; renderRanchSub(); }
+function gotoHedge(id){ const h=R().hedgerows.find(x=>x.id===id); if(!h) return;
+  _hedgeMenuOpen=false; S.sel.hedge=id; S.sel.row=0; S.sel.plant=null;
+  zoomHedge(id); drawAll(); renderPanels(); }
+function gotoWholeRanch(){ _hedgeMenuOpen=false; renderRanchSub(); fitAllView(); }
+function cycleHedge(dir){ const hs=R().hedgerows; if(!hs.length) return; const i=hs.findIndex(x=>x.id===S.sel.hedge);
+  gotoHedge(hs[i<0?(dir>0?0:hs.length-1):(i+dir+hs.length)%hs.length].id); }
+document.addEventListener('click',e=>{ if(_hedgeMenuOpen){ const w=document.getElementById('hedgeNavWrap'); if(!w||!w.contains(e.target)) closeHedgeMenu(); } });
+/* The acre dock outlines the species planted in the selected row (.dockSp.in), so it has
+   to follow the same changes the panels do — auto-fill, paint, erase, swap, remove,
+   undo, or switching row/hedgerow. It was only ever redrawn on hover/pin/toggle, so it
+   kept showing the row as it was before. renderDock() returns immediately when the dock
+   isn't open, so this costs nothing in the common case. */
+function renderPanels(){ renderRanchSub(); const t=currentTab(); renderTabIfNeeded(t); renderStageHint(t); updateHistButtons(); saveBadge(); netBadge(); try{ renderDock(); }catch(e){ console.error('renderDock failed:',e); }
 }
 let curSave=null;
 function saveIndexKey(){ return 'hedgeright.saves.index'; }
