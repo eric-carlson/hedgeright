@@ -264,6 +264,18 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
    the bar with no overlap. */
 #speciesGrid{position:fixed;inset:0;z-index:2500;background:var(--paper);display:none;flex-direction:column}
 #speciesGrid.show{display:flex}
+/* Shown over the whole spreadsheet while "Update all" runs: the run replaces rows in the editing copy, so nothing
+   else can be touched until it stops. */
+#sgProgress,#igProgress{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(30,42,34,.5)}
+#sgProgress.show,#igProgress.show{display:flex}
+#sgpCard,#igpCard{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 22px;width:min(420px,90vw);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+#sgpCard h3,#igpCard h3{margin:0 0 10px}
+#sgpBar,#igpBar{width:100%;height:16px;display:block}
+#sgpCount,#igpCount{margin:8px 0 2px;font-weight:600}
+#sgpNow,#igpNow{margin:0;min-height:1.3em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sgpTally,#igpTally{margin:2px 0 12px}
+#sgpActions,#igpActions{display:flex;justify-content:flex-end} /* Stop sits at the card's bottom right */
+#sgpStop,#igpStop{min-width:90px}
 #sgBar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper2);border-bottom:1px solid var(--line)}
 #sgBar h2{margin:0;font-size:16px}
 #sgSearch{width:min(280px,34vw);font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit}
@@ -294,6 +306,56 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 #sgTable th.sorted{background:var(--sel);color:#fff}
 #sgTable td.sgBool{text-align:center;vertical-align:middle}
 #sgTable input[type=checkbox]{width:auto;margin:0;display:inline-block;vertical-align:middle}
+#importGrid{position:fixed;inset:0;z-index:2600;background:var(--paper);display:none;flex-direction:column}
+#importGrid.show{display:flex}
+#igBar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper2);border-bottom:1px solid var(--line)}
+#igBar h2{margin:0;font-size:16px}
+#igSearch{width:min(280px,34vw);font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit}
+#igSearch:focus{outline:2px solid var(--ink);outline-offset:1px}
+#igScroll{flex:1 1 auto;overflow:auto}
+#igTable{border-collapse:collapse;white-space:nowrap;font-size:12px}
+#igTable th{position:sticky;top:0;background:var(--paper2);border:1px solid var(--line);padding:4px 6px;text-align:left;z-index:5}
+#igTable td.sgFreeze{position:sticky;left:0;z-index:3;background:var(--paper)}
+#igTable th.sgFreeze{position:sticky;left:0;z-index:7}
+#igTable td{border:1px solid var(--line);padding:1px 3px;vertical-align:top}
+#igTable td.sgId{font-family:monospace;color:var(--mute);white-space:nowrap;padding:3px 6px}
+#igTable input,#igTable select,#igTable textarea{width:100%;min-width:50px;font-size:12px;border:1px solid transparent;background:transparent;padding:2px;font-family:inherit}
+#igTable input:focus,#igTable select:focus,#igTable textarea:focus{border-color:var(--ink);background:#fff}
+#igTable textarea{resize:vertical;min-height:26px;min-width:140px}
+#igTable td.sgColor{text-align:center;vertical-align:middle}
+#igTable input[type=color]{width:28px;height:20px;min-width:0;padding:0;display:inline-block;vertical-align:middle;border:1px solid var(--line)}
+#igTable td.sgId, #igBar h2, #igCount{cursor:default}
+#igTable th{cursor:pointer}
+#igTable th.sorted{background:var(--sel);color:#fff}
+#igTable td.sgBool{text-align:center;vertical-align:middle}
+#igTable input[type=checkbox]{width:auto;margin:0;display:inline-block;vertical-align:middle}
+
+/* Import window: same table styling as the species spreadsheet (copied above under #igTable), plus a URL bar,
+   a sticky Add column, and the common name pushed right of it. */
+#igBar{flex-wrap:wrap}
+#igUrl{flex:1 1 340px;min-width:200px;font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit}
+#igUrl:focus{outline:2px solid var(--ink);outline-offset:1px}
+#igBar2{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:6px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+#igStatus{flex:1 1 280px}
+#igProblems{flex:0 0 auto;padding:0 14px 4px;color:var(--bad,#a33)}
+#igProblems:empty{display:none}
+#igTable td.igAcc,#igTable th.igAcc{position:sticky;left:0;width:46px;min-width:46px;text-align:center;vertical-align:middle;background:var(--paper)}
+#igTable td.igAcc{z-index:3}
+#igTable th.igAcc{z-index:7;background:var(--paper2);cursor:default}
+#igTable td.sgFreeze,#igTable th.sgFreeze{left:46px}
+#igTable td.igChg input,#igTable td.igChg select,#igTable td.igChg textarea,#sgTable td.igChg input,#sgTable td.igChg select,#sgTable td.igChg textarea{font-style:italic;font-weight:700}
+#igTable td.igChg.sgColor,#igTable td.igChg.sgBool,#sgTable td.igChg.sgColor,#sgTable td.igChg.sgBool{box-shadow:inset 0 0 0 2px var(--sel)}
+#catScroll{flex:1 1 auto;overflow:auto}
+#catTable{border-collapse:collapse;font-size:12px}
+#catTable th{position:sticky;top:0;background:var(--paper2);border:1px solid var(--line);padding:4px 6px;text-align:left;z-index:5;cursor:pointer;white-space:nowrap}
+#catTable th.sorted{background:var(--sel);color:#fff}
+#catTable td{border:1px solid var(--line);padding:2px 6px;vertical-align:top;cursor:default}
+#catTable td.cTick{text-align:center;width:40px;vertical-align:middle}
+#catTable td.cTerms{max-width:230px}
+#catTable tr.cDim td{color:var(--mute)}
+#catTable input[type=checkbox]{margin:0;vertical-align:middle}
+#igTable td.igStatus{white-space:normal;min-width:140px;max-width:210px;padding:3px 6px;color:var(--mute);cursor:default}
+
 .stitle{display:flex;gap:12px;align-items:center;margin-bottom:14px}
 .scards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .scard{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;cursor:pointer}
@@ -401,12 +463,62 @@ body.wide{--panelW:560px}
       title="Shows only species where every word you type matches some field: name, notes, moisture, a goal, a bloom month, what it replaces… (space means AND). Esc clears."
       oninput="setSgFilter(this.value)" onkeydown="if(event.key==='Escape'){ this.value=''; setSgFilter(''); event.stopPropagation(); }">
     <span class="small mute" id="sgCount"></span>
+    <span class="small mute" id="sgStatus"></span>
     <span class="grow"></span>
+    <button class="small" id="sgUpdAll" style="display:none" onclick="sgUpdateAll()" title="Asks the nursery about every species here, one a second: refreshes prices, stock and sizes available, and fills what is blank. Species it does not list are skipped. Nothing is kept until you press Save.">Update all from nursery</button>
+    <button class="small" id="sgImport" style="display:none" onclick="openImportGrid()" title="Opens an empty sheet where you can load plants from a Cal Flora Nursery Plant Finder address, look them over and edit them, and add only the ones you tick.">Import from Cal Flora Nursery…</button>
     <button class="small" onclick="downloadSpeciesJSON()" title="Downloads the whole library, edits included, whether or not you've saved yet. The search box only hides rows; it never limits what is downloaded or saved.">Download</button>
     <button class="small danger" onclick="cancelSpeciesGrid()">Cancel</button>
     <button class="small primary" onclick="saveSpeciesGrid()">Save</button>
   </div>
   <div id="sgScroll"><table id="sgTable"></table></div>
+  <div id="sgProgress" role="dialog" aria-modal="true" aria-labelledby="sgpTitle">
+    <div id="sgpCard">
+      <h3 id="sgpTitle">Updating from the nursery</h3>
+      <progress id="sgpBar" value="0" max="1"></progress>
+      <p id="sgpCount" aria-live="polite"></p>
+      <p id="sgpNow" class="small"></p>
+      <p id="sgpTally" class="small mute"></p>
+      <div id="sgpActions"><button class="small danger" id="sgpStop" onclick="sgUpdateAll()">Stop</button></div>
+    </div>
+  </div>
+</div>
+<div id="importGrid">
+  <div id="igBar">
+    <h2>Import from Cal Flora Nursery</h2>
+    <input id="igUrl" type="text" autocomplete="off" spellcheck="false" placeholder="Paste a Plant Finder address (filters applied on their site), then press Load"
+      onkeydown="if(event.key==='Enter'){ event.preventDefault(); igLoad(); }">
+    <button class="small primary" id="igLoad" onclick="igLoad()" title="Lists the plants that address matches and loads each one into the sheet below, one request a second.">Load</button>
+    <button class="small danger" id="igStop" style="display:none" onclick="igCancel()">Stop</button>
+    <button class="small" id="igBrowse" onclick="igBrowse(false)" title="Loads the nursery's whole plant list in one request: names and categories, not sizes or prices. You can then search it, tick the plants you want, and fetch just those.">Browse catalog</button>
+    <button class="small primary" id="igFetch" style="display:none" onclick="igFetchDetails()" title="Fetches each ticked plant's page for its size and price, one a second, and adds it to the import sheet for review.">Fetch details</button>
+    <button class="small primary" id="igAccept" onclick="igAccept()" title="Adds the ticked rows to your library, empties this sheet, and waits for another address. Unticked rows are discarded.">Accept</button>
+    <button class="small" onclick="igDone()" title="Closes this window. Anything you haven't accepted is discarded.">Done</button>
+  </div>
+  <div id="igBar2">
+    <span id="igViews" style="display:none"><button class="small" id="igVSheet" onclick="igShow('sheet')">Import sheet</button> <button class="small" id="igVCat" onclick="igShow('catalog')">Catalog</button> <button class="small" id="igReload" style="display:none" onclick="igBrowse(true)" title="Fetches the catalog from the nursery again.">Reload</button></span>
+    <span class="small mute" id="igStatus"></span>
+    <input id="igSearch" type="search" placeholder="Search any field…" autocomplete="off" spellcheck="false" style="width:min(240px,30vw);font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit"
+      title="Shows only rows where every word you type matches some field, including the Status column. It only hides rows: Accept still adds every ticked row."
+      oninput="setIgFilter(this.value)" onkeydown="if(event.key==='Escape'){ this.value=''; setIgFilter(''); event.stopPropagation(); }">
+    <span class="small mute" id="igCount"></span>
+    <button class="small" id="igTickNew" onclick="igTick('new')" title="Ticks every row that is new to you, named selections included. Rows that update a species you already have stay as they are.">Tick new</button>
+    <button class="small" onclick="igTick('all')">Tick all</button>
+    <button class="small" onclick="igTick('none')">Tick none</button>
+  </div>
+  <div id="igProblems" class="small"></div>
+  <div id="igScroll"><table id="igTable"></table></div>
+  <div id="catScroll" style="display:none"><table id="catTable"></table></div>
+  <div id="igProgress" role="dialog" aria-modal="true" aria-labelledby="igpTitle">
+    <div id="igpCard">
+      <h3 id="igpTitle">Importing from the nursery</h3>
+      <progress id="igpBar" value="0" max="1"></progress>
+      <p id="igpCount" aria-live="polite"></p>
+      <p id="igpNow" class="small"></p>
+      <p id="igpTally" class="small mute"></p>
+      <div id="igpActions"><button class="small danger" id="igpStop" onclick="igCancel()">Stop</button></div>
+    </div>
+  </div>
 </div>
 <div id="app">
   <div id="panel">
@@ -659,9 +771,144 @@ function mapSoilDrainage(s){ s=(s||'').toLowerCase(); const hit=[/fast|rapid|sha
   return !hit.length?null:hit.length>1?'any':hit[0]; }
 /* The layer auto-fill places a species in. Left null this was the one field a draft could never
    recover from by itself: a species with no story matches no role and is never auto-filled. */
-function mapStory(s){ s=(s||'').toLowerCase(); if(!s) return null; if(/\btree\b/.test(s)) return 'over'; if(/vine/.test(s)) return 'vine';
+/* Common names from the nursery arrive lower-case ("cream bush, ocean spray"). Title-cased: every word
+   capitalised, including either side of a hyphen or slash, except small joining words after the first
+   ("Wild Rose of the Valley"). Only the first letter of each part is touched, so an apostrophe never
+   capitalises ("Hound's Tongue") and letters already capitalised stay ("CA Poppy"). */
+function titleCaseName(s){ const minor=new Set(['of','the','and','or','in','on','a','an','to','for','by','with','at']);
+  const cap=p=>p.replace(/^([^A-Za-z]*)([a-z])/,(m,a,b)=>a+b.toUpperCase());
+  return String(s||'').trim().split(/\s+/).filter(Boolean).map((w,i)=>(i>0&&minor.has(w.toLowerCase()))?w.toLowerCase():w.split(/([-\/])/).map(x=>/^[-\/]$/.test(x)?x:cap(x)).join('')).join(' '); }
+function hexToLab(hex){ let h=String(hex||'').replace('#',''); if(/^[0-9a-f]{3}$/i.test(h)) h=h.split('').map(c=>c+c).join(''); /* shorthand like #aa0 */
+  const m=/^([0-9a-f]{6})$/i.exec(h); if(!m) return null; const n=parseInt(m[1],16);
+  const lin=c=>c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4); const r=lin((n>>16&255)/255), g=lin((n>>8&255)/255), b=lin((n&255)/255);
+  const t=v=>v>0.008856?Math.cbrt(v):7.787*v+16/116; const x=t((r*0.4124+g*0.3576+b*0.1805)/0.95047), y=t(r*0.2126+g*0.7152+b*0.0722), z=t((r*0.0193+g*0.1192+b*0.9505)/1.08883);
+  return [116*y-16,500*(x-y),200*(y-z)]; }
+function hslToHex(h,sat,lig){ sat/=100; lig/=100; const k=n=>(n+h/30)%12, a=sat*Math.min(lig,1-lig), f=n=>lig-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return '#'+[f(0),f(8),f(4)].map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('').toUpperCase(); }
+/* A random colour for a new species that is also far from every colour already in use (the library, the
+   spreadsheet's working copy, rows staged in the import window). Draws 60 random candidates across all
+   hues and takes the one whose nearest existing colour is farthest away in CIE Lab, so successive new
+   species spread around the colour wheel instead of landing on near-identical shades. */
+function pickSpeciesColor(){
+  const used=S.species.concat(_importDraft,_speciesGridDraft||[]).map(x=>hexToLab(x.color)).filter(Boolean);
+  let best='#7C8D6B', bestD=-1;
+  for(let i=0;i<60;i++){ const hex=hslToHex(Math.random()*360,38+Math.random()*52,32+Math.random()*34), lab=hexToLab(hex);
+    const dmin=used.length?Math.min(...used.map(u=>Math.hypot(u[0]-lab[0],u[1]-lab[1],u[2]-lab[2]))):999;
+    if(dmin>bestD){ bestD=dmin; best=hex; } }
+  return best; }
+function mapStory(s){ s=(s||'').toLowerCase(); if(!s) return null; if(/\btrees?\b/.test(s)) return 'over'; if(/vine/.test(s)) return 'vine';
   if(/subshrub/.test(s)) return 'ground'; if(/shrub/.test(s)) return 'mid';
   if(/herb|forb|grass|sedge|rush|fern|bulb|perennial|annual|groundcover|succulent/.test(s)) return 'ground'; return null; }
+/* ---- Fields beyond the botanical ones: where a plant is native, and what the nursery sells it for ----
+   northBay: true / false / null. Null means no information, which is NOT the same as false: the library's
+   original species have never been tagged, and "not native to the North Bay" must not be inferred for them.
+   price, container, stock, priceAsOf: a snapshot of the nursery's monthly inventory for one container.
+   They always travel together (PRICE_FIELDS), because a price means nothing without its container and date. */
+const PRICE_FIELDS=['price','container','stock','priceAsOf','containers'];
+/* The Worker returns the page's Native categories as text. "" means the page was read and lists none, which for
+   this nursery means it is not tagged as a California native, so not a North Bay native either (false). null
+   or undefined means there was nothing to read (a pasted page, an old Worker), so we do not know. */
+function cfnNorthBay(native){ if(native==null) return null; return /north bay/i.test(String(native)); }
+function normContainer(c){ const t0=String(c||'').toLowerCase().replace(/[\u2033\u201D]/g,'"').replace(/\s+/g,' ').trim(); if(!t0) return null;
+  /* The nursery writes some names with a short code in brackets, "Tall Tree Pot (TTP)" or "5 Inch Sleeve (5")": the name before the bracket is read. */
+  const t=t0.replace(/\s*\([^)]*\)\s*$/,'').trim()||t0.replace(/[()]/g,'').trim();
+  let m=/^(\d+)\s?g(?:al(?:lons?)?)?$/.exec(t); if(m) return m[1]+'g';
+  m=/^(\d+)\s?(?:in|inch|inches|")(?:\s+(?:young|sleeve))?$/.exec(t); if(m) return m[1]==='2'?'rp':m[1]+'in'; /* "Rose Pot or 2 Inch (RP)" */
+  if(/^(?:rp|rose pots?)\b/.test(t)) return 'rp';
+  /* STP = short tree pot, TTP = tall tree pot: the nursery's deep, narrow pots for trees, whose roots go down first. */
+  if(/^(?:stp|short tree pots?)\b/.test(t)) return 'stp'; if(/^(?:ttp|tall tree pots?)\b/.test(t)) return 'ttp';
+  return t; }
+const CONTAINER_LABEL={'rp':'RP','5in':'5 in','4in':'4 in','stp':'STP','1g':'1 gal','ttp':'TTP','2g':'2 gal','5g':'5 gal'};
+const CONTAINER_NAME={'rp':'rose pot, 2 in','5in':'sleeve','stp':'short tree pot','ttp':'tall tree pot'};
+const MONTH_ABBR=['Jan','Feb','Mar','Apr','May','June','July','Aug','Sept','Oct','Nov','Dec'];
+function fmtAsOf(a){ const m=/^(\d{4})-(\d{2})/.exec(a||''); return m?(MONTH_ABBR[+m[2]-1]||m[2])+' '+m[1]:(a||''); }
+/* The Worker returns the nursery's inventory table as { containers: ['4in','1g'], rows: [{ note, cells: [{qty, price} | null] }] }:
+   one cell per container in column order, null where there is none. A plant can be sold in several
+   containers at once (a 4-inch start and a 1-gallon, with different prices and counts), so each container is
+   totalled on its own: cheapest price across the rows, total stock. The one recorded on the species is the 1-gallon
+   if there is one, else the 5-gallon, else the 4-inch, else the first; `all` keeps every container for anything
+   that wants to choose. */
+const CONTAINER_PREFERENCE=['1g','2g','5g','ttp','stp','4in','5in','rp'];
+function cfnInventory(h){ const none={price:null,container:null,stock:null,asOf:null,all:[]}; const inv=h&&h.inventory; if(!inv) return none;
+  if(Array.isArray(inv)) return cfnInventoryLines(h); /* an older Worker sent the table's text cells instead */
+  const per=new Map();
+  (inv.containers||[]).forEach((c,i)=>{ const key=normContainer(c); if(!key) return;
+    (inv.rows||[]).forEach(r=>{ const cell=(r.cells||[])[i]; if(!cell||!(cell.price>0)) return;
+      const e=per.get(key)||{container:key,price:Infinity,stock:0}; e.price=Math.min(e.price,cell.price); e.stock+=cell.qty||0; per.set(key,e); }); });
+  const all=[...per.values()]; if(!all.length) return none;
+  const best=CONTAINER_PREFERENCE.map(k=>per.get(k)).find(Boolean)||all[0];
+  return {price:best.price,container:best.container,stock:best.stock,asOf:h.inventoryAsOf?String(h.inventoryAsOf).slice(0,7):null,all}; }
+/* The older shape: a flat list of the table's text cells. Cells are paired with the headers by position, which
+   is only safe when every row fills every column, so with several headers and an uneven count the container is
+   left unknown rather than guessed. */
+function cfnInventoryLines(h){ const none={price:null,container:null,stock:null,asOf:null,all:[]}; const L=h.inventory; if(!L.length) return none;
+  const isCont=l=>/^(\d+\s?g(?:al(?:lons?)?)?|\d+\s?(?:in|inch|inches)|\d+\s?["\u2033\u201D][^\d]*|\d+\s?qt|liners?|plugs?|stp|ttp|rp|[\w"\u2033 ]*young)$/i.test(String(l).trim());
+  const heads=[]; for(const l of L){ if(isCont(l)) heads.push(normContainer(l)); else break; }
+  const cells=[...L.slice(heads.length).join(' | ').matchAll(/(\d+)\s*available\s*\|?\s*\$\s*([\d.]+)\s*each/gi)].map(m=>({stock:+m[1],price:parseFloat(m[2])})).filter(c=>c.price>0);
+  if(!cells.length) return none;
+  cells.forEach((c,i)=>{ c.container=heads.length===1?heads[0]:(heads.length&&cells.length%heads.length===0?heads[i%heads.length]:null); });
+  const groups=new Map(); cells.forEach(c=>{ const k=c.container||''; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+  const pick=groups.has('1g')?'1g':[...groups.keys()][0], g=groups.get(pick);
+  return {price:Math.min(...g.map(c=>c.price)),container:pick||null,stock:g.reduce((a,c)=>a+c.stock,0),asOf:h.inventoryAsOf?String(h.inventoryAsOf).slice(0,7):null,all:[]}; }
+/* A harvested price replaces the stored one only when it is newer than a dated stored one. A price with no
+   date was typed by a person, so a harvest never overwrites it; an empty price takes all four fields. */
+function mergePrice(merged,fresh){ if(fresh.price==null) return;
+  const take=merged.price==null||(merged.priceAsOf&&fresh.priceAsOf&&fresh.priceAsOf>merged.priceAsOf);
+  if(take) PRICE_FIELDS.forEach(k=>{ merged[k]=fresh[k]==null?null:fresh[k]; });
+  /* A price saved before the full container list existed gets the list from a harvest of the same month,
+     changing nothing else. */
+  else if(!merged.containers&&fresh.containers&&merged.priceAsOf&&merged.priceAsOf===fresh.priceAsOf) merged.containers=fresh.containers; }
+/* Every container a species is sold in: the list from the nursery, with the single recorded price (which a
+   person may have edited in the spreadsheet) winning for its own container. Sorted small to large. */
+const CONTAINER_ORDER=['rp','5in','4in','stp','1g','ttp','2g','5g']; /* by actual volume: the nursery's TTP (0.8 gal) is bigger than its "1 gallon" (0.6) */
+const orderIdx=k=>{ const i=CONTAINER_ORDER.indexOf(k); return i<0?99:i; };
+function containerLabel(k){ if(CONTAINER_LABEL[k]) return CONTAINER_LABEL[k]; const g=/^(\d+)g$/.exec(k||''); return g?g[1]+' gal':k; /* a size not in the table, such as one the nursery lists: 15g -> 15 gal */ }
+/* In menus the codes are spelled out: STP (short tree pot). */
+function containerLabelLong(k){ return containerLabel(k)+(CONTAINER_NAME[k]?' ('+CONTAINER_NAME[k]+')':''); }
+function spContainers(sp){ const out=(Array.isArray(sp.containers)?sp.containers:[]).filter(c=>c&&c.container&&c.price>0).map(c=>({container:normContainer(c.container),price:+c.price,stock:c.stock==null||c.stock===''?null:+c.stock}));
+  const np=nurseryPrice(sp); if(np){ const i=out.findIndex(c=>c.container===np.container), e={container:np.container,price:np.unit,stock:np.stock}; if(i>=0) out[i]=e; else out.push(e); }
+  return out.sort((a,b)=>orderIdx(a.container)-orderIdx(b.container)); }
+function containerSummary(list){ return (list||[]).map(c=>containerLabel(normContainer(c.container))+' $'+fmtMoney(c.price)+(c.stock!=null&&c.stock!==''?' ×'+c.stock:'')).join(' · '); }
+/* A pick from the Container · price menu sets the species' recorded default (container, price, stock together)
+   from the entry chosen; "none" clears them (the list of sizes stays); "Other price…" asks for a container and
+   price of your own, adds it to the list and makes it the default. A price you enter has no date, so a later
+   harvest never overwrites it. */
+function applySizeChoice(sp,val,repaint){ if(!sp) return;
+  if(val==='__other'){ chooseOtherSize(sp).then(done=>{ if(repaint) repaint(); }); return; }
+  if(!val){ sp.container=null; sp.price=null; sp.stock=null; return; }
+  const e=spContainers(sp).find(c=>c.container===val); if(e){ sp.container=e.container; sp.price=e.price; sp.stock=e.stock; } }
+async function chooseOtherSize(sp){
+  const sizes=CONTAINER_ORDER.map(k=>`<option value="${k}">${esc(containerLabelLong(k))}</option>`).join('');
+  const v=await UI.open('Set a container and price for '+(sp.common||'this species'),
+    `<label>Container</label><select id="dlgSz">${sizes}</select><label>Price each, $</label><input type="number" step="0.01" min="0" id="dlgPx"><label>How many in stock (optional)</label><input type="number" min="0" id="dlgSk">
+     <p class="small mute">A price you enter here is yours: a later harvest from the nursery will not overwrite it.</p>`,[{label:'Cancel',value:null},{label:'Use this',primary:true,value:'__ok__'}],'#dlgPx');
+  if(v!=='__ok__') return false;
+  const key=document.getElementById('dlgSz').value, price=parseFloat(document.getElementById('dlgPx').value), stk=document.getElementById('dlgSk').value;
+  if(!(price>0)){ UI.alert('Enter a price greater than zero.'); return false; }
+  const list=(Array.isArray(sp.containers)?sp.containers:[]).filter(c=>normContainer(c.container)!==key); list.push({container:key,price,stock:stk===''?null:+stk});
+  sp.containers=list.sort((a,b)=>orderIdx(normContainer(a.container))-orderIdx(normContainer(b.container))); sp.container=key; sp.price=price; sp.stock=stk===''?null:+stk; sp.priceAsOf=null; return true; }
+/* Nursery price for a species, usable only when its container is known: a price for an unknown container
+   could be off by a factor of three. */
+function nurseryPrice(sp){ const c=normContainer(sp.container); if(!(+sp.price>0)||!c) return null;
+  return {unit:+sp.price,container:c,label:CONTAINER_LABEL[c]||c,asOf:sp.priceAsOf||null,stock:sp.stock==null||sp.stock===''?null:+sp.stock}; }
+/* The nursery defines each water term by how often it must be irrigated once established: Dry = rainfall only,
+   Infrequent = every 4-6 weeks, Occasional = every 2-4 weeks, Moderate = every 7-14 days, Regular = every 3-7
+   days. A plant lists every schedule it accepts ("Moderate, Occasional, Infrequent, Dry"), so the DRIEST one
+   listed is what it can be weaned down to, which is what this app plans for: Dry or Infrequent -> dry, anything
+   wetter -> moderate. "wet" is not on the nursery's water scale at all (it is a site condition), so it comes
+   only from a Riparian site condition on a plant that does not list Dry or Infrequent. (Seasonal Swale is wet in
+   winter and dry in summer, so it does not count.) Null when no water term is found, which falls through to
+   mapMoisture as before. */
+function mapCfnWater(s,site){ const rank={dry:0,infrequent:1,occasional:2,moderate:3,regular:4};
+  const r=((s||'').toLowerCase().match(/\b(dry|infrequent|occasional|moderate|regular)\b/g)||[]).map(x=>rank[x]);
+  if(!r.length) return null; const driest=Math.min(...r);
+  return driest<=1?'dry':(/riparian/i.test(site||'')?'wet':'moderate'); }
+/* What a bulk harvest keeps in the notes: the nursery's category terms, nothing written by them. These
+   are facts (which categories a plant belongs to), they are what makes "under oaks" or "pollinators"
+   searchable in the species spreadsheet later, and unlike a description they aren't their prose. */
+function cfnFacts(h){ const pairs=[['Plant type',h.plantType],['Native',h.native],['Exposure',h.exposure],['Water',h.water],['Bloom',h.bloomTime],['Site conditions',h.siteConditions],['Habitat value',h.habitatValues],['Tolerances',h.tolerances],['Special uses',h.specialUses]];
+  const body=pairs.filter(x=>x[1]).map(x=>x[0]+': '+x[1]).join(' · ');
+  return body?'Cal Flora Nursery · '+body:''; }
 function mapDrainage(text){ text=(text||'').toLowerCase(); if(text.includes('clay')) return 'tolerant'; if(text.includes('well-drain')||text.includes('well drain')||text.includes('sandy')||text.includes('sharp')) return 'sharp'; return null; }
 function mapBloomMonths(s){ const seasons={winter:[12,1,2],spring:[3,4,5],summer:[6,7,8],fall:[9,10,11],autumn:[9,10,11]}; s=(s||'').toLowerCase(); let months=[]; Object.keys(seasons).forEach(k=>{ if(s.includes(k)) months=months.concat(seasons[k]); }); return months.length?Array.from(new Set(months)).sort((a,b)=>a-b):null; }
 function parseSizeMid(s){ if(!s) return null; const m=s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/); if(m) return Math.round(((+m[1]+ +m[2])/2)*10)/10; const m2=s.match(/(\d+(?:\.\d+)?)/); return m2?+m2[1]:null; }
@@ -676,8 +923,30 @@ function parseBloomRange(s){ if(!s) return null;
 function mapDrainageFromTextures(textures){ if(!textures) return null; const t=textures.toLowerCase();
   const sandy=/sand/.test(t), clay=/clay/.test(t);
   if(sandy&&clay) return 'any'; if(sandy) return 'sharp'; if(clay) return 'tolerant'; return null; }
-function findExistingSpecies(h,id){
-  if(h.botanicalName){ const m=S.species.find(sp=>sp.sci&&sp.sci.trim().toLowerCase()===h.botanicalName.trim().toLowerCase()); if(m) return m; }
+/* Scientific names compare equal ignoring case, spacing and curly-versus-straight quotes (the nursery
+   writes a cultivar as 'Davis Gold' with typographic quotes; a library entry may have plain ones). */
+function normSci(s){ return String(s||'').replace(/[\u2018\u2019\u201A\u201B]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim().toLowerCase(); }
+/* Botanical names often carry a parenthetical: the nursery writes the current genus with the older one in
+   brackets, "Frangula (Rhamnus) californica", while a library entry may be just "Frangula californica" (or
+   the reverse, or the old genus alone). Each name is expanded into the forms it can be searched as:
+   exactly as written; with every parenthetical dropped; and with each parenthetical put in place of the
+   word before it ("Rhamnus californica"). Two names match when any form of one equals any form of the
+   other. Nothing is invented for names without brackets, so "Rhamnus californica" and "Frangula
+   californica" are still different species unless one of them carries the bracket, and a cultivar
+   ("... 'Eve Case'") never matches its species, since the cultivar stays part of every form. */
+function sciKeys(name){ const base=normSci(name), keys=new Set([base]); if(!base.includes('(')) return keys;
+  const tidy=t=>t.replace(/\([^()]*\)/g,' ').replace(/\s+/g,' ').trim();
+  keys.add(tidy(base));
+  const ms=[...base.matchAll(/([^\s()]+)\s*\(([^()]*)\)/g)];
+  ms.forEach((m,i)=>{ let out='', last=0; ms.forEach((mm,j)=>{ out+=base.slice(last,mm.index)+(j===i?mm[2]:mm[1]); last=mm.index+mm[0].length; }); out+=base.slice(last); keys.add(tidy(out)); });
+  keys.delete(''); return keys; }
+function sciMatches(a,b){ const kb=sciKeys(b); for(const k of sciKeys(a)) if(kb.has(k)) return true; return false; }
+/* strict = scientific name only. A batch must not use the id or common-name fallbacks: ten yarrow
+   selections all share the common name "yarrow", so a common-name match would fold every one of them
+   into the single "Yarrow" entry already in the library. */
+function findExistingSpecies(h,id,strict){
+  if(h.botanicalName){ const m=S.species.find(sp=>sp.sci&&sciMatches(h.botanicalName,sp.sci)); if(m) return m; }
+  if(strict) return null;
   let m=S.species.find(sp=>sp.id===id); if(m) return m;
   if(h.commonName){ m=S.species.find(sp=>sp.common&&sp.common.trim().toLowerCase()===h.commonName.trim().toLowerCase()); if(m) return m; }
   return null; }
@@ -688,33 +957,36 @@ function findExistingSpecies(h,id){
    is still useful signal, not a real score being overwritten. */
 function fillGaps(existing,fresh,isGoals){
   Object.keys(fresh).forEach(k=>{
-    if(k==='id'||k==='conf'||k==='matchedId') return;
+    if(k==='id'||k==='conf'||k==='matchedId'||PRICE_FIELDS.includes(k)) return;
     const fv=fresh[k]; if(fv==null||fv==='') return;
     const ev=existing[k];
     if(fv&&typeof fv==='object'&&!Array.isArray(fv)&&ev&&typeof ev==='object'){ fillGaps(ev,fv,k==='goals'); return; }
     const empty=ev==null||ev===''||(isGoals&&ev===0);
     if(empty) existing[k]=fv; }); }
-function mapHarvestToDraft(h){
+function mapHarvestToDraft(h,opts){ opts=opts||{}; const inv=cfnInventory(h);
   const tags=((h.tolerances||'')+' '+(h.habitatValues||'')+' '+(h.specialUses||'')).toLowerCase();
   const widthMid=parseSizeMid(h.width);
   const refKeys={plantType:'Plant type',growthRate:'Growth rate',dormancy:'Dormancy',summerIrrigation:'Summer irrigation',coldTolerance:'Cold tolerance',precipitation:'Annual precip',wetSeason:'Wet season',elevation:'Elevation',hardiness:'Hardiness',soilPh:'Soil pH',soilTextures:'Soil textures',lifeform:'Life form',family:'Family',genus:'Genus',rarityRank:'CA Rare Plant Rank',communities:'Plant communities'};
   const ref=Object.keys(refKeys).map(k=>h[k]?(refKeys[k]+': '+h[k]):null).filter(Boolean).join(' · ');
-  const fresh={ id:slugifyId(h.commonName||h.botanicalName), common:h.commonName||'', sci:h.botanicalName||'',
-    color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
-    moisture:h.waterNeeds?mapWaterNeeds(h.waterNeeds):mapMoisture(h.water), drainage:mapSoilDrainage(h.soilDrainage)||mapDrainageFromTextures(h.soilTextures)||mapDrainage(h.siteConditions||h.rawText), sun:mapSun(h.exposure),
+  const fresh={ id:slugifyId(h.commonName||h.botanicalName), common:titleCaseName(h.commonName), sci:h.botanicalName||'',
+    color:pickSpeciesColor(), spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
+    moisture:h.waterNeeds?mapWaterNeeds(h.waterNeeds):(mapCfnWater(h.water,h.siteConditions)||mapMoisture(h.water)), drainage:mapSoilDrainage(h.soilDrainage)||mapDrainageFromTextures(h.soilTextures)||mapDrainage(h.siteConditions||h.rawText), sun:mapSun(h.exposure),
     riparianFt:null, bloom:parseBloomRange(h.bloomPeriod)||mapBloomMonths(h.bloomTime), risk:null, story:mapStory(h.plantType||h.lifeform),
     ht:parseSizeMid(h.height), rad:widthMid?Math.round(widthMid/2*10)/10:null,
     T:null, cast:null, tol:null, root:{cls:null,depth:null,lat:null}, spreads:null, allelo:0,
     goals:{poll:/pollinat|bee|butterfl/.test(tags)?2:0, wild:/wildlife|bird/.test(tags)?2:0, screen:/hedge|screen|windbreak/.test(tags)?2:0, barrier:0, bank:/erosion|bank stabil|slope stabil/.test(tags)?2:0,
       fire:/fire resist/.test(tags)?2:0, lowWater:/drought/.test(tags)?2:0, fodder:0, fast:0, lowMaint:0},
-    replace:null, fail:'', trigger:'', notes:((h.rawText||'').split('\n').find(l=>l.length>80)||'')+(ref?(' — '+ref):''),
-    conf:'draft', source:h.sourceUrl||null };
-  const existing=findExistingSpecies(h,fresh.id);
+    replace:null, fail:'', trigger:'', notes:opts.factsOnly?cfnFacts(h):(((h.rawText||'').split('\n').find(l=>l.length>80&&!/^Click on a characteristic/i.test(l))||'')+(ref?(' — '+ref):'')),
+    conf:'draft', source:h.sourceUrl||null,
+    northBay:cfnNorthBay(h.native), price:inv.price, container:inv.container, stock:inv.stock, priceAsOf:inv.asOf,
+    containers:inv.all&&inv.all.length?inv.all.map(c=>({container:c.container,price:c.price,stock:c.stock})):null };
+  const existing=opts.into||findExistingSpecies(h,fresh.id,opts.strict); /* into: merge into this very entry (a spreadsheet row not yet saved) instead of searching the library */
   if(!existing) return fresh;
   const merged=JSON.parse(JSON.stringify(existing));
+  const addNote=opts.factsOnly?cfnFacts(h):ref;
   if(!merged.notes) merged.notes=fresh.notes;
-  else if(ref&&!merged.notes.includes(ref)) merged.notes=merged.notes+' | '+ref;
-  fillGaps(merged,fresh);
+  else if(addNote&&!merged.notes.includes(addNote)) merged.notes=merged.notes+' | '+addNote;
+  fillGaps(merged,fresh); mergePrice(merged,fresh);
   merged.matchedId=existing.id;
   return merged; }
 /* Same field-pattern-matching the Worker's /harvest route does, but run client-side
@@ -923,7 +1195,9 @@ function draftFromJSON(obj){
   const d=Object.assign({ id:null, common:'', sci:'', color:'#7C8D6B', spacingFt:null, gph:null, emitters:null, basket:false, regime:null,
     moisture:null, drainage:null, sun:null, riparianFt:null, bloom:null, risk:null, story:null,
     ht:null, rad:null, T:null, cast:null, tol:null, spreads:false, allelo:0,
-    replace:null, fail:'', trigger:'', notes:'', conf:'draft', source:null }, obj);
+    replace:null, fail:'', trigger:'', notes:'', conf:'draft', source:null,
+    northBay:null, price:null, container:null, stock:null, priceAsOf:null, containers:null }, obj);
+  if(!obj.color) d.color=pickSpeciesColor();
   d.root=Object.assign({cls:null,depth:null,lat:null},obj.root||{});
   d.goals=Object.assign({poll:0,wild:0,screen:0,barrier:0,bank:0,fire:0,lowWater:0,fodder:0,fast:0,lowMaint:0},obj.goals||{});
   if(!d.id) d.id=slugifyId(d.common||d.sci);
@@ -932,7 +1206,7 @@ function draftFromJSON(obj){
   const merged=JSON.parse(JSON.stringify(existing));
   if(!merged.notes) merged.notes=d.notes;
   else if(d.notes&&!merged.notes.includes(d.notes)) merged.notes=merged.notes+' | '+d.notes;
-  fillGaps(merged,d);
+  fillGaps(merged,d); mergePrice(merged,d);
   /* fillGaps deliberately never touches conf, so an ordinary harvest/paste can't
      silently downgrade an already-vetted entry — but that leaves no way to go the
      other direction either. An explicit conf in the incoming JSON is a deliberate
@@ -997,6 +1271,364 @@ async function harvestSpecies(){
     if(status) status.textContent="Harvested — review below, fill in what's blank, then Add to library.";
     paintSpeciesAdmin(); }
   catch(e){ if(status) status.textContent='Harvest failed: '+((e&&e.message)||e); } }
+/* ---- Import window: bulk harvest from Cal Flora Nursery, staged for review ----
+   Opened from the species spreadsheet. Paste the address of a Plant Finder page (filters applied on their
+   site) or a category page, press Load: this walks its result pages, then harvests each plant into a row of
+   an import sheet that looks and edits like the library spreadsheet. Nothing reaches the library until
+   Accept, which adds the ticked rows (one undo step) and empties the sheet. Every request goes through the
+   Worker, one per CFN_DELAY_MS (longer if robots.txt asks for a Crawl-delay), and the Worker reads
+   robots.txt first. What's kept is structured facts only (see cfnFacts), never the nursery's description
+   text. Matching against the library is by exact scientific name, so a named selection becomes its own
+   draft; a row that does match is marked "updates" and, on Accept, replaces that entry with the merged
+   one (blanks filled, nothing already there overwritten). */
+let CFN_DELAY_MS=1000;
+const CFN_MAX_PAGES=60, CFN_MAX_HARVEST=150;
+const cfnSleep=ms=>new Promise(r=>setTimeout(r,ms));
+function cfnIsSelectionName(n){ return /[\u2018\u2019'"\u201C\u201D]|\s[\u2013-]\s|\b(?:form|seed source|hybrid)\b|\sx\s/i.test(n||''); }
+async function cfnFetchPage(url){
+  const r=await fetch(CLOUD_SYNC_BASE+'/catalog-page?url='+encodeURIComponent(url),{headers:{'Authorization':'Bearer '+accessCode()}});
+  if(!r.ok){ const t=await r.text().catch(()=>''); throw new Error(t||('HTTP '+r.status)); }
+  return r.json(); }
+/* Each staged row is a species-shaped draft plus _ig: {slug,url,name,selection,accept}. _ig and matchedId
+   are stripped before anything reaches the library. */
+const igp=makeProgress('ig',()=>{ if(_igRun&&_igRun.running) igCancel(); });
+let _igView='sheet', _catalog=null, _catSel=new Set(), _catFilter='', _catSortKey='common';
+let _importDraft=[], _igFilter='', _igSortPath=null, _igShown=0, _igRun={running:false,cancel:false,abandon:false};
+const igEl=id=>document.getElementById(id);
+function igSay(t){ const el=igEl('igStatus'); if(el) el.textContent=t||''; }
+function igProblems(list){ const el=igEl('igProblems'); if(!el) return;
+  el.innerHTML=list.length?'<b>'+list.length+' problem'+(list.length===1?'':'s')+':</b> '+list.slice(0,8).map(esc).join(' · ')+(list.length>8?' · …and '+(list.length-8)+' more':''):''; }
+function igStatusText(d){ const bits=[];
+  if(d.matchedId){ const e=S.species.find(x=>x.id===d.matchedId), n=(d._ig.changed||[]).length;
+    bits.push('updates '+(e?e.common:d.matchedId)+(n?': '+n+' field'+(n===1?'':'s')+' filled (bold italic)':': nothing new to add'));
+    /* The row shows the library's own name, so say what the nursery called it when that differs. */
+    if(e&&d._ig.name&&normSci(d._ig.name)!==normSci(e.sci)) bits.push('listed as '+d._ig.name); } else bits.push('new');
+  if(d._ig.selection) bits.push('named selection'); return bits.join(' · '); }
+function igMatches(d){ const terms=_igFilter.toLowerCase().split(/\s+/).filter(Boolean); if(!terms.length) return true;
+  const hay=(sgHaystack(d)+'\n'+igStatusText(d)+'\n'+(d._ig.name||'')).toLowerCase(); return terms.every(t=>hay.includes(t)); }
+function igRefresh(){ const vs=igEl('igVSheet'); if(vs) vs.textContent='Import sheet ('+_importDraft.length+')';
+  const l0=igEl('igLoad'), st0=igEl('igStop'), br=igEl('igBrowse'); if(l0) l0.disabled=_igRun.running; if(br) br.disabled=_igRun.running; if(st0) st0.style.display=_igRun.running?'':'none';
+  if(_igView==='catalog'&&_catalog){ catRefresh(); return; }
+  const n=_importDraft.length, t=_importDraft.filter(d=>d._ig.accept).length;
+  const c=igEl('igCount'); if(c) c.textContent=(_igFilter.trim()?_igShown+' of ':'')+n+' staged · '+t+' ticked';
+  const a=igEl('igAccept'); if(a){ a.textContent=t?'Accept '+t:'Accept'; a.disabled=_igRun.running||!t; }
+  const l=igEl('igLoad'), st=igEl('igStop'); if(l) l.disabled=_igRun.running; if(st) st.style.display=_igRun.running?'':'none'; }
+/* Marks a cell the import changed on an existing species, so it reads differently from the rest. */
+function igMark(html,on){ if(!on) return html; return html.replace(/^<td(?: class="([^"]*)")?/,(m,c)=>'<td class="igChg'+(c?' '+c:'')+'"'); }
+function igRowHtml(d,idx,cols){ cols=cols||sgColumns(); const ch=new Set(d._ig.changed||[]);
+  return '<tr><td class="igAcc" title="Tick to add this plant when you press Accept"><input type="checkbox" '+(d._ig.accept?'checked':'')+' onchange="igTickRow('+idx+',this.checked)"></td>'
+    +cols.map((c,i)=>igMark(sgCellHtml(d,idx,c,'updateImportCell'),ch.has(c.path))+(i===0?'<td class="igStatus">'+esc(igStatusText(d))+'</td>':'')).join('')+'</tr>'; }
+function importGridHtml(){ const cols=sgColumns();
+  const th=c=>{ const cls=[c.path===_igSortPath?'sorted':'',c.freeze?'sgFreeze':''].filter(Boolean).join(' ');
+    return '<th'+(c.title?' title="'+esc(c.title)+'"':'')+(cls?' class="'+cls+'"':'')+' onclick="sortImportGrid(\''+c.path+'\')">'+esc(c.label)+'</th>'; };
+  let html='<thead><tr><th class="igAcc" title="Tick the plants to add when you press Accept.">Add</th>'
+    +cols.map((c,i)=>th(c)+(i===0?'<th title="Whether the plant is new, or matches one you already have by scientific name. For a match, the cells the import filled in are shown in bold italic; everything else is what you already had.">Status</th>':'')).join('')+'</tr></thead><tbody>';
+  const shown=_importDraft.map((d,idx)=>({d,idx})).filter(({d})=>igMatches(d));
+  html+=shown.map(({d,idx})=>igRowHtml(d,idx,cols)).join('');
+  if(!_importDraft.length) html+='<tr><td colspan="'+(cols.length+2)+'" id="igEmpty" style="padding:14px;color:var(--mute);white-space:normal">Nothing here yet. Paste a Plant Finder address above and press Load. The plants it finds appear as rows you can read, edit and tick; nothing is added to your library until you press Accept.</td></tr>';
+  else if(!shown.length) html+='<tr><td colspan="'+(cols.length+2)+'" style="padding:14px;color:var(--mute);white-space:normal">No rows match \u201C'+esc(_igFilter)+'\u201D.</td></tr>';
+  _igShown=shown.length; return html+'</tbody>'; }
+function paintImportGrid(){ const t=igEl('igTable'); if(t) t.innerHTML=importGridHtml(); igRefresh(); }
+/* While rows are still arriving, add the new one to the table instead of repainting it, so a cell you are
+   in the middle of editing is not thrown away. */
+function igAppendRow(idx){ const t=igEl('igTable'); const tb=t&&t.tBodies[0]; if(!tb){ paintImportGrid(); return; }
+  const empty=igEl('igEmpty'); if(empty) empty.parentNode.remove();
+  const d=_importDraft[idx]; if(igMatches(d)){ tb.insertAdjacentHTML('beforeend',igRowHtml(d,idx)); _igShown++; } }
+function updateImportCell(idx,path,val){ if(path==='$size'){ applySizeChoice(_importDraft[idx],val,paintImportGrid); return; } const parts=path.split('.'); let o=_importDraft[idx]; for(let i=0;i<parts.length-1;i++) o=o[parts[i]]; o[parts[parts.length-1]]=val; }
+function igTickRow(idx,on){ _importDraft[idx]._ig.accept=!!on; igRefresh(); }
+/* 'new' ticks every row that is new to you, species and named selections alike, and leaves rows that update a species you have. */
+function igTick(mode){ if(_igView==='catalog'){ if(mode!=='new') catTickShown(mode==='all'); return; } _importDraft.forEach(d=>{ d._ig.accept=mode==='all'||(mode==='new'&&!d.matchedId); }); paintImportGrid(); }
+function sortImportGrid(path){ _igSortPath=path; _importDraft.sort(sgSorter(path)); paintImportGrid(); }
+function setIgFilter(v){ _igFilter=v||''; _catFilter=_igFilter; if(_igView==='catalog') paintCatalog(); else paintImportGrid(); }
+function igUniqueId(slug){ const base=slug.replace(/-/g,'').slice(0,40)||'cfn';
+  const taken=new Set(S.species.map(x=>x.id).concat(_importDraft.map(x=>x.id),(_speciesGridDraft||[]).map(x=>x.id))); let id=base, n=2; while(taken.has(id)) id=base+(n++); return id; }
+function openImportGrid(){ if(!canEditSpecies()) return; igp.close();
+  _importDraft=[]; _igFilter=''; _catFilter=''; _catSel=new Set(); _igSortPath=null; _igRun={running:false,cancel:false,abandon:false}; _igView='sheet';
+  igEl('igScroll').style.display=''; igEl('catScroll').style.display='none'; igEl('igFetch').style.display='none'; igEl('igAccept').style.display=''; igEl('igViews').style.display=_catalog?'':'none'; igEl('igReload').style.display='none';
+  igEl('igUrl').value=''; igEl('igSearch').value=''; igSay(''); igProblems([]);
+  igEl('importGrid').classList.add('show'); paintImportGrid(); setTimeout(()=>igEl('igUrl').focus(),30); }
+function igCancel(){ _igRun.cancel=true; igSay('Stopping after the current request…'); igp.stopping(); }
+async function igDone(){ const n=_importDraft.length;
+  if(n){ const ok=await UI.confirm('The sheet has '+n+' plant'+(n===1?'':'s')+' you haven\u2019t accepted. Closing discards them.',{title:'Close the import window?',ok:'Discard and close',cancel:'Keep working',danger:true}); if(!ok) return; }
+  _igRun.cancel=true; _igRun.abandon=true; igp.close(); _importDraft=[]; _catSel=new Set(); igEl('importGrid').classList.remove('show'); }
+/* Harvests each plant's page in turn (one a second, or the site's Crawl-delay) and appends a row to the import sheet
+   for each. Shared by "Load" (plants found by paging a Plant Finder address) and "Fetch details" (plants ticked
+   in the catalog). Stops after 3 failures in a row; `run.cancel` stops it between plants and `run.abandon` (the
+   window was closed) makes it drop whatever is in flight. */
+/* The three kinds of row a run produces, counted apart everywhere: NEW SPECIES (ticked for you when loaded from an
+   address), NAMED SELECTIONS (a quoted cultivar, a form, a seed source: new to you, but left unticked because there are
+   so many of them) and rows UPDATING a species you already have (also left unticked). Counting them all as "new" had the
+   dialog say 46 new and the sheet then show nothing ticked. opts.tickAll is for plants you picked one by one in the
+   catalog: you chose them, so they arrive ticked, whichever kind they are. */
+async function igHarvestList(run,todo,delay,problems,opts){ opts=opts||{}; let streak=0, got=0, nw=0, nsel=0, up=0;
+  const tally=()=>nw+' new species · '+nsel+' named selections · '+up+' updating existing'+(problems.length?' · '+problems.length+' problem'+(problems.length===1?'':'s'):'');
+  for(let i=0;i<todo.length&&!run.cancel;i++){ const p=todo[i]; igSay('Loading '+(i+1)+' of '+todo.length+': '+p.name+'…'); igp.set(i,todo.length,p.name,tally(),{countText:i+' of '+todo.length+' plants'});
+    try{
+      const r=await fetch(CLOUD_SYNC_BASE+'/harvest?url='+encodeURIComponent(p.url),{headers:{'Authorization':'Bearer '+accessCode()}});
+      if(run.abandon) return {got,aborted:true}; if(!r.ok) throw new Error((await r.text().catch(()=>''))||('HTTP '+r.status));
+      const h=await r.json(); if(run.abandon) return {got,aborted:true}; h.sourceUrl=p.url;
+      if(!h.botanicalName) throw new Error('no scientific name found on the page (its layout may have changed)');
+      const d=mapHarvestToDraft(h,{strict:true,factsOnly:true}); if(!d.matchedId) d.id=igUniqueId(p.slug);
+      /* The data comes straight from the nursery's own page and every row is looked over, and can be edited, before
+         Accept, so a row arrives as literature, not as an unreviewed draft. This covers a row that updates a species
+         you already had as a draft, too (the change shows in bold italic). Observed and literature entries are left
+         as they are, and the Confidence cell can still be changed before Accept. */
+      if(d.conf==='draft') d.conf='lib';
+      const sel=cfnIsSelectionName(p.name); d._ig={slug:p.slug,url:p.url,name:p.name,selection:sel,accept:opts.tickAll?true:(!sel&&!d.matchedId),changed:[]};
+      if(d.matchedId){ /* which columns the merge changed, compared with the entry as it is in the library now */
+        /* "Nothing" means null, blank, 0, false or an empty list: an entry that lacked a goal score gets the
+           import's default 0, which is not a change anyone needs to see. */
+        const ex=S.species.find(x=>x.id===d.matchedId); if(ex) d._ig.changed=changedPaths(ex,d); }
+      _importDraft.push(d); got++; if(d.matchedId) up++; else if(sel) nsel++; else nw++; igAppendRow(_importDraft.length-1); igRefresh(); streak=0;
+    }catch(e){ if(run.abandon) return {got,aborted:true}; problems.push(p.name+': '+((e&&e.message)||e)); igProblems(problems);
+      if(++streak>=3){ problems.push('Stopped after 3 failures in a row.'); igProblems(problems); break; } }
+    igp.set(i+1,todo.length,p.name,tally(),{countText:(i+1)+' of '+todo.length+' plants'});
+    if(i<todo.length-1&&!run.cancel) await cfnSleep(delay); }
+  return {got,aborted:false,counts:{nw,nsel,up}}; }
+/* Every plant matching a Plant Finder address, in ONE request: the nursery's Show All works together with its filters
+   (a query that paged through 2 results pages, 51 plants, comes back as a single page of 51). Returns null if the
+   page still has a pager, meaning Show All was ignored, so the caller falls back to paging. */
+async function igListShowAll(u){ const r=await fetch(CLOUD_SYNC_BASE+'/catalog-all?url='+encodeURIComponent(u.toString()),{headers:{'Authorization':'Bearer '+accessCode()}});
+  if(!r.ok) return null; const doc=parseCatalogDoc(await r.text()); if(doc.pager) return null;
+  return {plants:doc.plants.map(c=>({slug:c.slug,url:c.url,name:c.sci})),crawl:+(r.headers&&r.headers.get&&r.headers.get('X-Crawl-Delay'))||0}; }
+async function igLoad(){ if(_igRun.running) return;
+  const raw=(igEl('igUrl').value||'').trim(); let u;
+  try{ u=new URL(raw); }catch(e){ igSay('Paste the address of a Plant Finder or category page from calfloranursery.com.'); return; }
+  if(!/(^|\.)calfloranursery\.com$/.test(u.hostname)){ igSay('Only calfloranursery.com pages are supported.'); return; }
+  /* Always start from page 1, whatever page the pasted address was on. */
+  [...u.searchParams.keys()].filter(k=>/^query-.*-page$/.test(k)).forEach(k=>u.searchParams.delete(k)); u.pathname=u.pathname.replace(/page\/\d+\/$/,'');
+  const run={running:true,cancel:false,abandon:false}; _igRun=run; igProblems([]); igRefresh();
+  const problems=[]; let delay=CFN_DELAY_MS;
+  igp.open(0,{title:'Importing from the nursery',unit:'plants'}); igp.set(0,0,'','',{indeterminate:true,countText:'Listing the matches…'});
+  try{
+    let listed=null, note='';
+    if(u.pathname==='/find-the-right-plant/'){ igSay('Listing every match (one request)…'); igp.set(0,0,'','',{indeterminate:true,countText:'Listing every match (one request)…'}); const one=await igListShowAll(u); if(run.abandon) return; if(one){ listed=one.plants; delay=Math.max(delay,one.crawl*1000); } }
+    if(!listed){ /* a category page, or Show All did not apply: list it page by page */
+      igp.set(0,0,'','',{indeterminate:true,countText:'Listing the matches…'});
+      const first=await cfnFetchPage(u.toString()); if(run.abandon) return;
+      listed=first.plants.slice(); const paging=first.paging||{kind:'none',max:1};
+      const max=Math.min(paging.max||1,CFN_MAX_PAGES); delay=Math.max(CFN_DELAY_MS,(first.crawlDelay||0)*1000);
+      igSay('Listing page 1 of '+max+': '+listed.length+' plants…'); igp.set(1,max,'','',{countText:'Listing page 1 of '+max});
+      for(let n=2;n<=max&&!run.cancel;n++){ await cfnSleep(delay); if(run.cancel) break;
+        const pu=new URL(u.toString()); if(paging.kind==='query') pu.searchParams.set(paging.param,String(n)); else pu.pathname=pu.pathname.replace(/\/?$/,'/')+'page/'+n+'/';
+        const pg=await cfnFetchPage(pu.toString()); if(run.abandon) return; listed=listed.concat(pg.plants); igSay('Listing page '+n+' of '+max+': '+listed.length+' plants…'); igp.set(n,max,'','',{countText:'Listing page '+n+' of '+max}); }
+      if(run.cancel){ igSay('Stopped while listing; nothing was loaded.'); return; }
+      note=paging.max>CFN_MAX_PAGES?'Listed only the first '+CFN_MAX_PAGES+' of '+paging.max+' pages. ':''; }
+    const seen=new Set(), have=new Set(_importDraft.map(d=>d._ig.slug)); let todo=[];
+    listed.forEach(p=>{ if(seen.has(p.slug)) return; seen.add(p.slug); if(!have.has(p.slug)) todo.push(p); });
+    const already=seen.size-todo.length, capped=todo.length>CFN_MAX_HARVEST; if(capped) todo=todo.slice(0,CFN_MAX_HARVEST);
+    if(!todo.length){ igSay(seen.size?'All '+seen.size+' of those plants are already in the sheet.':'No plant links found on that page. Either nothing matches those filters, or the site\u2019s page layout has changed.'); return; }
+    const res=await igHarvestList(run,todo,delay,problems); if(res.aborted) return; const got=res.got;
+    const c=res.counts, ticked=_importDraft.filter(d=>d._ig.accept).length;
+    igSay((run.cancel?'Stopped. ':'')+'Loaded '+got+' plant'+(got===1?'':'s')+' ('+c.nw+' new species, '+c.nsel+' named selections, '+c.up+' updating existing'+(already?', '+already+' already in the sheet':'')+'). '+note+(capped?'Only the first '+CFN_MAX_HARVEST+' were loaded; press Load again for the rest. ':'')
+      +(got?(ticked?ticked+' ticked: the new species. Named selections and updates start unticked. ':'Nothing is ticked yet: named selections and updates start unticked. Use Tick new or Tick all, or tick the rows you want. ')+'Check or edit the rows, then press Accept.':''));
+  }catch(e){ if(!run.abandon) igSay('Could not load: '+((e&&e.message)||e)); }
+  finally{ run.running=false; igp.close(); if(!run.abandon) igRefresh(); } }
+/* ---- Browsing the nursery's whole catalog ----
+   The nursery's "Show All Plants" page lists every plant (about 1,000) on one page, so the catalog costs ONE
+   request. Each card carries the plant's names and, as CSS classes, every category it belongs to (verified
+   identical to the plant's own page); it carries no size, price or stock, which need the plant's page. So the
+   catalog is for finding plants, searchable by any category; ticking some and pressing Fetch details then reads
+   just those pages and adds them to the import sheet for review. The page itself is read here, in the
+   browser, not in the Worker (which only passes it through). */
+const CAT_TAX=[['bloom-time-','bloomTime'],['exposure-','exposure'],['flower-color-','flowerColor'],['flowers-foliage-','flowersFoliage'],['habitat-value-','habitatValues'],['native-','native'],['plant-type-','plantType'],['site-condition-','siteConditions'],['special-use-','specialUses'],['tolerance-','tolerances'],['water-requirement-','water']];
+const CAT_LABEL_FIX={'attracts-bees-pollinators':'Attracts Bees/Pollinators','butterfly-moth-larval-host':'Butterfly/Moth Larval Host','butterfly-moth-nectar-plant':'Butterfly/Moth Nectar Plant'};
+const CAT_COLS=[['common','Common name',c=>titleCaseName(c.common)],['sci','Scientific name',c=>c.sci],['plantType','Type'],['nb','North Bay',c=>(c.terms.native||[]).includes('north-bay-native')?'Yes':''],['exposure','Sun'],['water','Water'],['bloomTime','Bloom'],['siteConditions','Site'],['habitatValues','Habitat'],['tolerances','Tolerances'],['specialUses','Uses'],['flowerColor','Color']];
+const CAT_MAX_AGE_MS=14*86400000, CAT_CACHE_KEY='hedgeright.catalog';
+function catLabel(slug){ return CAT_LABEL_FIX[slug]||titleCaseName(slug.replace(/-/g,' ')); }
+/* Shown in a stable order: water by how often it must be irrigated (driest first), everything else A to Z. The
+   cards list a plant's terms in no particular order. */
+const CAT_WATER_ORDER=['dry','infrequent','occasional','moderate','regular'];
+function catTerms(c,key){ const t=(c.terms[key]||[]).slice();
+  t.sort(key==='water'?(a,b)=>CAT_WATER_ORDER.indexOf(a)-CAT_WATER_ORDER.indexOf(b):(a,b)=>catLabel(a).localeCompare(catLabel(b))); return t.map(catLabel).join(', '); }
+function parseCatalogHtml(html){ return parseCatalogDoc(html).plants; }
+function parseCatalogDoc(html){ const doc=new DOMParser().parseFromString(html,'text/html'), out=[], seen=new Set();
+  doc.querySelectorAll('.plant-loop-item').forEach(el=>{ const a=el.querySelector('h3 a'); if(!a) return;
+    const href=a.getAttribute('href')||'', m=/\/plants\/([a-z0-9-]+)\/?$/.exec(href); if(!m||seen.has(m[1])) return; seen.add(m[1]);
+    /* The two card templates put the common name in different elements: a <p> after the title on the Plant Finder,
+       <div class="gb-post-content"> on a category page, where the nursery's description follows in
+       <div class="plant-description">. The name is found by role, and the description is never read. */
+    const cn=el.querySelector('.gb-post-content')||[...el.querySelectorAll('p')].find(q=>!q.closest('.plant-description'));
+    const c={slug:m[1],url:href,sci:a.textContent.replace(/\s+/g,' ').trim(),common:cn?cn.textContent.replace(/\s+/g,' ').trim():'',featured:el.classList.contains('category-featured-plant'),terms:{}};
+    el.classList.forEach(cls=>{ for(const [pre,key] of CAT_TAX){ if(cls.startsWith(pre)){ (c.terms[key]=c.terms[key]||[]).push(cls.slice(pre.length)); break; } } });
+    out.push(c); });
+  /* A real Show All page has no page links; if there are some, the nursery returned only a page of results. */
+  return {plants:out,pager:!!doc.querySelector('a.page-numbers')}; }
+/* Flags and search text that depend on the library and the sheet as they are right now. */
+function catAnnotate(){ if(!_catalog) return;
+  const lib=new Set(); S.species.forEach(sp=>{ if(sp.sci) sciKeys(sp.sci).forEach(k=>lib.add(k)); }); const inSheet=new Set(_importDraft.map(d=>d._ig.slug));
+  _catalog.plants.forEach(c=>{ c.inLib=[...sciKeys(c.sci)].some(k=>lib.has(k)); c.inSheet=inSheet.has(c.slug);
+    c._v=CAT_COLS.map(col=>col[2]?col[2](c):catTerms(c,col[0]));
+    c._hay=(c._v.join(' ')+' '+Object.values(c.terms).flat().map(t=>t.replace(/-/g,' ')).join(' ')+' '+(c.inLib?'in library':'')+(c.inSheet?' in sheet':'')).toLowerCase(); }); }
+function catVisible(){ const terms=_catFilter.toLowerCase().split(/\s+/).filter(Boolean); let rows=_catalog.plants;
+  if(terms.length) rows=rows.filter(c=>terms.every(t=>c._hay.includes(t)));
+  const k=Math.max(0,CAT_COLS.findIndex(col=>col[0]===_catSortKey));
+  return rows.slice().sort((a,b)=>{ const x=a._v[k], y=b._v[k]; if(!x&&y) return 1; if(x&&!y) return -1; return x.toLowerCase().localeCompare(y.toLowerCase()); }); }
+function paintCatalog(){ const t=igEl('catTable'); if(!t||!_catalog) return; const rows=catVisible(); _igShown=rows.length;
+  let html='<thead><tr><th title="Tick the plants whose sizes and prices you want to fetch.">Get</th>'+CAT_COLS.map(col=>'<th'+(col[0]===_catSortKey?' class="sorted"':'')+' onclick="catSort(\''+col[0]+'\')">'+esc(col[1])+'</th>').join('')+'<th>Status</th></tr></thead><tbody>';
+  html+=rows.map(c=>'<tr'+((c.inLib||c.inSheet)?' class="cDim"':'')+'><td class="cTick"><input type="checkbox" '+(_catSel.has(c.slug)?'checked':'')+(c.inSheet?' disabled':'')+' onchange="catTick(\''+c.slug+'\',this.checked)"></td>'
+    +c._v.map((v,i)=>'<td'+(i>=2&&i!==3?' class="cTerms"':'')+'>'+esc(v)+'</td>').join('')+'<td>'+(c.inSheet?'in the import sheet':c.inLib?'in your library':'')+'</td></tr>').join('');
+  if(!rows.length) html+='<tr><td colspan="'+(CAT_COLS.length+2)+'" style="padding:14px;color:var(--mute)">No plants match \u201C'+esc(_catFilter)+'\u201D.</td></tr>';
+  t.innerHTML=html+'</tbody>'; catRefresh(); }
+function catRefresh(){ if(!_catalog) return; const tk=[..._catSel].filter(sl=>_catalog.plants.some(c=>c.slug===sl&&!c.inSheet)).length;
+  const c=igEl('igCount'); if(c) c.textContent=(_igFilter.trim()?_igShown+' of ':'')+_catalog.plants.length+' plants · '+tk+' ticked';
+  const f=igEl('igFetch'); if(f){ f.textContent=tk>CFN_MAX_HARVEST?'Fetch details ('+CFN_MAX_HARVEST+' of '+tk+')':'Fetch details'+(tk?' ('+tk+')':''); f.disabled=_igRun.running||!tk; } }
+function catSort(k){ _catSortKey=k; paintCatalog(); }
+function catTick(slug,on){ if(on) _catSel.add(slug); else _catSel.delete(slug); catRefresh(); }
+/* Ticks (or clears) only the rows currently showing, so "Tick all" after a search means the search's results,
+   never the whole catalog. */
+function catTickShown(on){ catVisible().forEach(c=>{ if(c.inSheet) return; if(on) _catSel.add(c.slug); else _catSel.delete(c.slug); }); paintCatalog(); }
+function igShow(v){ _igView=v; const cat=v==='catalog'&&_catalog; if(v==='catalog'&&!_catalog) _igView='sheet';
+  igEl('igScroll').style.display=cat?'none':''; igEl('catScroll').style.display=cat?'':'none'; igEl('igAccept').style.display=cat?'none':''; igEl('igFetch').style.display=cat?'':'none'; igEl('igReload').style.display=cat?'':'none'; igEl('igTickNew').style.display=cat?'none':'';
+  igEl('igVSheet').classList.toggle('primary',!cat); igEl('igVCat').classList.toggle('primary',!!cat);
+  if(cat){ catAnnotate(); paintCatalog(); } else paintImportGrid(); }
+function catSave(){ try{ localStorage.setItem(CAT_CACHE_KEY,JSON.stringify({at:_catalog.at,plants:_catalog.plants.map(c=>({slug:c.slug,url:c.url,sci:c.sci,common:c.common,featured:c.featured,terms:c.terms}))})); }catch(e){ /* too big or storage off: it just will not be cached */ } }
+const NURSERY_RE=/^https:\/\/(?:www\.)?calfloranursery\.com\/plants\/[a-z0-9-]+\/?$/;
+function nurseryUrlOf(sp){ return NURSERY_RE.test((sp&&sp.source)||'')?sp.source:null; }
+function catFromStorage(){ if(_catalog) return; try{ const c=JSON.parse(localStorage.getItem(CAT_CACHE_KEY)||'null'); if(c&&c.plants&&c.plants.length>40&&Date.now()-c.at<CAT_MAX_AGE_MS) _catalog=c; }catch(e){} }
+/* The whole catalog, from the browser's saved copy if it is under two weeks old, else one request. */
+async function loadCatalog(force){ if(!force){ catFromStorage(); if(_catalog) return _catalog; }
+  const r=await fetch(CLOUD_SYNC_BASE+'/catalog-all',{headers:{'Authorization':'Bearer '+accessCode()}});
+  if(!r.ok){ const t=await r.text().catch(()=>''); throw new Error(t||('HTTP '+r.status)); }
+  const plants=parseCatalogHtml(await r.text());
+  if(plants.length<=40) throw new Error('The nursery returned only '+plants.length+' plants, so its Show All page may have changed.');
+  _catalog={at:Date.now(),plants}; catSave(); return _catalog; }
+async function igBrowse(force){ if(_igRun.running) return;
+  if(!force) catFromStorage();
+  if(!force&&_catalog){ igEl('igViews').style.display=''; igShow('catalog'); igSay(_catalog.plants.length+' plants, saved '+new Date(_catalog.at).toLocaleDateString()+'. Search, tick the ones you want, then Fetch details. Reload fetches it again.'); return; }
+  const run={running:true,cancel:false,abandon:false}; _igRun=run; igProblems([]); igSay('Loading the nursery catalog (one request)…'); igRefresh();
+  igp.open(0,{title:'Loading the nursery catalog',unit:'plants'}); igp.set(0,0,'','',{indeterminate:true,countText:'Loading the nursery\u2019s catalog…'});
+  try{
+    const cat=await loadCatalog(true); if(run.abandon) return; if(run.cancel){ igSay('Stopped.'); return; } const plants=cat.plants;
+igEl('igViews').style.display=''; run.running=false; igShow('catalog');
+    igSay(plants.length+' plants. Search by any category (try "under oaks dry"), tick the ones you want, then Fetch details.');
+  }catch(e){ if(!run.abandon) igSay('Could not load the catalog: '+((e&&e.message)||e)); }
+  finally{ run.running=false; igp.close(); if(!run.abandon) igRefresh(); } }
+/* Reads the ticked plants' pages (sizes, prices) and adds them to the import sheet, then shows the sheet. */
+async function igFetchDetails(){ if(_igRun.running||!_catalog) return;
+  const ticked=_catalog.plants.filter(c=>_catSel.has(c.slug)&&!c.inSheet); if(!ticked.length){ igSay('Nothing ticked.'); return; }
+  const capped=ticked.length>CFN_MAX_HARVEST, todo=ticked.slice(0,CFN_MAX_HARVEST).map(c=>({slug:c.slug,url:c.url,name:c.sci}));
+  const run={running:true,cancel:false,abandon:false}; _igRun=run; igProblems([]); igRefresh(); const problems=[];
+  igp.open(todo.length,{title:'Fetching details',unit:'plants'});
+  try{
+    const res=await igHarvestList(run,todo,CFN_DELAY_MS,problems,{tickAll:true}); if(res.aborted) return;
+    const got=new Set(_importDraft.map(d=>d._ig.slug)); todo.forEach(p=>{ if(got.has(p.slug)) _catSel.delete(p.slug); });
+    run.running=false; igShow('sheet');
+    const c=res.counts;
+    igSay((run.cancel?'Stopped. ':'')+'Added '+res.got+' plant'+(res.got===1?'':'s')+' to the import sheet ('+c.nw+' new species, '+c.nsel+' named selections, '+c.up+' updating existing).'+(capped?' Only the first '+CFN_MAX_HARVEST+' ticked were fetched; press Fetch details again for the rest.':'')+(res.got?' All are ticked because you chose them. Check or edit the rows, then press Accept.':''));
+  }catch(e){ if(!run.abandon) igSay('Could not fetch details: '+((e&&e.message)||e)); }
+  finally{ run.running=false; igp.close(); if(!run.abandon) igRefresh(); } }
+/* ---- Updating a species from the nursery ----
+   For one species, or every species in a spreadsheet or a hedgerow. The nursery page is the saved link if the species
+   has one, else the catalog entry with the same scientific name (the brackets are handled as for the import
+   window), else you can paste its address. The page is then harvested and merged into the species the way a
+   re-import is: blanks are filled, and the nursery's prices, stock and containers are refreshed if newer than
+   the ones held; a price you typed yourself and everything you edited stay as they are. A page for a different
+   plant is refused. */
+/* "Nothing" means null, blank, 0, false or an empty list: an entry that lacked a goal score gets the import's
+   default 0, which is not a change anyone needs to see. */
+function changedPaths(before,after){ const cv=v=>(v==null||v===''||v===0||v===false||(Array.isArray(v)&&!v.length))?null:JSON.stringify(v);
+  return sgColumns().map(c=>c.path).filter(pth=>cv(sgGet(before,pth))!==cv(sgGet(after,pth))); }
+/* A named selection (cultivar) is often recorded the way the nursery's cards show it: the common name carries the
+   selection ("Bearberry 'Point Reyes'") while the scientific name is just the species. Such an entry must be matched
+   to that selection's page, never to the plain species' page, or the wrong plant's sizes and prices would be merged
+   in. entryCultivar() finds the selection named in the common name when the scientific name has none. */
+function entryCultivar(sp){ if(/['\u2018\u2019]/.test(sp.sci||'')) return null; const m=/['\u2018]([^'\u2018\u2019]{2,40})['\u2019]/.exec(sp.common||''); return m?m[1].trim():null; }
+/* Two names are the same species, whatever selection or form either carries: their first two words agree. */
+function baseBinomials(n){ return [...sciKeys(n)].map(k=>k.replace(/['"].*$/,'').trim().split(/\s+/).slice(0,2).join(' ')); }
+function sameBinomial(a,b){ const x=baseBinomials(a), y=baseBinomials(b); return x.some(k=>y.includes(k)); }
+async function findNurseryUrl(sp){ const u=nurseryUrlOf(sp); if(u) return {url:u,how:'saved link'};
+  const cat=await loadCatalog(false), cv=entryCultivar(sp);
+  if(cv){ const key=normSci("'"+cv+"'"), m=cat.plants.filter(c=>sameBinomial(c.sci,sp.sci)&&normSci(c.sci).includes(key));
+    return m.length?{url:m[0].url,how:'matched by scientific name and cultivar'}:null; }
+  const m=cat.plants.filter(c=>sciMatches(c.sci,sp.sci)); if(!m.length) return null;
+  const exact=m.find(c=>normSci(c.sci)===normSci(sp.sci)); return {url:(exact||m[0]).url,how:'matched by scientific name'}; }
+function nurseryNotFound(sp){ const cv=entryCultivar(sp), nm=sp.sci+(cv?" '"+cv+"'":'');
+  const e=new Error('The nursery does not list \u201C'+nm+'\u201D under that name'+(cv?'.':' (it may sell only named forms).')); e.notFound=true; return e; }
+async function fetchNurseryUpdate(sp,opts){ opts=opts||{}; if(!sp.sci) throw new Error('this species has no scientific name to look up');
+  const f=opts.url?{url:opts.url,how:'the address you gave'}:await findNurseryUrl(sp); if(!f) throw nurseryNotFound(sp);
+  const r=await fetch(CLOUD_SYNC_BASE+'/harvest?url='+encodeURIComponent(f.url),{headers:{'Authorization':'Bearer '+accessCode()}});
+  if(!r.ok) throw new Error((await r.text().catch(()=>''))||('HTTP '+r.status));
+  const h=await r.json(); h.sourceUrl=f.url;
+  if(!h.botanicalName) throw new Error('no scientific name was found on that page (its layout may have changed)');
+  /* The name on the page must match the species, with two exceptions: a link already saved on the species is
+     trusted (it was matched by name, or confirmed, when it was set, and the nursery may since have renamed the
+     plant), and so is a page found deliberately for a selection named in the common name. An address you paste
+     that is a different selection of the same species is not refused outright but put to you (see below). */
+  const nameOk=sciMatches(h.botanicalName,sp.sci), trusted=nurseryUrlOf(sp)===f.url||f.how==='matched by scientific name and cultivar';
+  if(!nameOk&&!trusted&&!opts.force){ const e=new Error('that page is for \u201C'+h.botanicalName+'\u201D, not \u201C'+sp.sci+'\u201D'); const cv=entryCultivar(sp);
+    e.mismatch={page:h.botanicalName,entry:sp.sci,related:sameBinomial(h.botanicalName,sp.sci),cultivarInCommon:!!cv&&normSci(h.botanicalName).includes(normSci("'"+cv+"'"))}; throw e; }
+  const merged=mapHarvestToDraft(h,{strict:true,factsOnly:true,into:sp}); delete merged.matchedId; if(opts.rename) merged.sci=h.botanicalName;
+  /* A draft (freshly harvested, never reviewed) that the nursery has been found to list, and whose page has just been
+     read and merged, is checked against the nursery's own record: it becomes literature. Observed and literature
+     entries keep their confidence, and a species that is not found, fails, or is stopped never reaches this line. */
+  if(merged.conf==='draft') merged.conf='lib';
+  return {merged,changed:changedPaths(sp,merged),url:f.url,how:f.how,pageName:h.botanicalName,nameDiffers:!nameOk&&!opts.rename}; }
+async function askNurseryAddress(sp){
+  const cv=entryCultivar(sp), nm=sp.sci+(cv?" '"+cv+"'":'');
+  const v=await UI.prompt('\u201C'+sp.common+'\u201D ('+nm+') is not listed at the nursery under that name. If you know its page, paste the address:','',{title:'Not found at the nursery',ok:'Use this page',placeholder:'https://www.calfloranursery.com/plants/…'});
+  if(!v) return null; const u=v.trim();
+  if(!NURSERY_RE.test(u)){ await UI.alert('That is not a plant page on calfloranursery.com. It should look like https://www.calfloranursery.com/plants/quercus-douglasii/'); return null; }
+  return u; }
+/* The page you pasted is a different selection of the same species (the usual case: an entry recorded as the plain
+   species whose common name carries the selection). Ask, and offer to fix the entry's name so it is found by name from
+   now on. A page for a different SPECIES is still refused outright, by the error thrown above. */
+async function confirmRelatedPage(sp,m){
+  return UI.open('Different name at the nursery',
+    `<p>That page is for <b>${esc(m.page)}</b>. This entry is <b>${esc(sp.common)}</b> (${esc(m.entry)}).</p>
+     <p>The page is a named selection of the same species${m.cultivarInCommon?', and this entry\u2019s common name mentions it':''}, so it is probably the same plant.</p>
+     <p class="small mute">Using the nursery\u2019s name makes the library more accurate, and lets future updates and imports find this plant by name.</p>`,
+    [{label:'Cancel',value:null},{label:'Update, keep my name',value:'keep'},{label:'Update and use the nursery\u2019s name',primary:true,value:'rename'}]); }
+
+async function fetchNurseryUpdateAsk(sp,hooks){ hooks=hooks||{};
+  /* hooks.before / hooks.after run around each question put to the user, so a progress dialog can step aside. */
+  const ask=async(fn)=>{ if(hooks.before) hooks.before(); try{ return await fn(); } finally{ if(hooks.after) hooks.after(); } };
+  const withAddress=async(url)=>{ try{ return await fetchNurseryUpdate(sp,{url}); }
+    catch(e){ if(!(e&&e.mismatch&&e.mismatch.related)) throw e;
+      const c=await ask(()=>confirmRelatedPage(sp,e.mismatch)); if(!c) return null; return fetchNurseryUpdate(sp,{url,force:true,rename:c==='rename'}); } };
+  try{ return await fetchNurseryUpdate(sp); }
+  catch(e){ if(!(e&&e.notFound)) throw e; const u=await ask(()=>askNurseryAddress(sp)); return u?withAddress(u):null; } }
+
+function updateSummary(sp,r){ const labels=r.changed.map(pth=>(sgColumns().find(c=>c.path===pth)||{}).label||pth);
+  return (labels.length?sp.common+': updated '+labels.slice(0,6).join(', ')+(labels.length>6?' and '+(labels.length-6)+' more':'')+'.':sp.common+' is already up to date.')
+    +(r.nameDiffers?' The nursery lists it as \u201C'+r.pageName+'\u201D.':''); }
+async function updateSpeciesFromNursery(id){ const sp=SP(id); if(!sp) return null;
+  UI.toast('Asking the nursery about '+sp.common+'…'); let r;
+  try{ r=await fetchNurseryUpdateAsk(sp); }catch(e){ await UI.alert(((e&&e.message)||String(e)),'Could not update '+sp.common); return null; }
+  if(!r) return null;
+  commit('Update '+sp.common+' from the nursery',()=>{ const k=S.species.findIndex(x=>x.id===id); if(k>=0) S.species[k]=r.merged; });
+  pushSharedSpecies(); drawAll(); renderPanels(); UI.toast(updateSummary(sp,r)); return r; }
+/* Opens the species' page on the nursery in a new tab. With no saved link it is looked up first; the tab is opened
+   straight away, inside the click, so a popup blocker allows it, and pointed at the page once it is found. */
+async function openNurseryPage(x){ const sp=typeof x==='string'?SP(x):x; if(!sp) return; const u=nurseryUrlOf(sp);
+  if(u){ window.open(u,'_blank','noopener,noreferrer'); return; }
+  const tab=window.open('about:blank','_blank');
+  try{ const f=await findNurseryUrl(sp);
+    if(f){ if(tab) tab.location.href=f.url; else window.open(f.url,'_blank'); }
+    else{ if(tab) tab.close(); await UI.alert('The nursery does not list \u201C'+sp.sci+'\u201D under that name.'); } }
+  catch(e){ if(tab) tab.close(); await UI.alert('Could not look it up at the nursery: '+((e&&e.message)||e)); } }
+function nurseryLinkHtml(sp){ const u=nurseryUrlOf(sp), own=canEditSpecies();
+  if(u) return ` <a href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="Open this plant's page on the nursery's site in a new tab">↗</a>`;
+  return own?` <a href="#" onclick="openNurseryPage('${esc(sp.id)}');return false" title="Find this plant on the nursery's site and open its page in a new tab">↗</a>`:''; }
+/* Adds the ticked rows to the library as one undoable step, pushes the library to the shared store, then
+   empties the sheet. The spreadsheet underneath edits a COPY of the library and replaces the library with
+   it on Save, so the accepted species are written into that copy too; otherwise its next Save would
+   silently delete them. */
+async function igAccept(){ if(_igRun.running) return;
+  const rows=_importDraft.filter(d=>d._ig.accept); if(!rows.length){ igSay('Nothing is ticked.'); return; }
+  const discarded=_importDraft.length-rows.length, added=[], updated=[], ids=new Set(S.species.map(x=>x.id));
+  commit('Import '+rows.length+' species from Cal Flora Nursery',()=>{ rows.forEach(r=>{
+    const d=JSON.parse(JSON.stringify(r)); const mid=d.matchedId; delete d._ig; delete d.matchedId;
+    const k=mid?S.species.findIndex(x=>x.id===mid):-1;
+    if(k>=0){ d.id=mid; S.species[k]=d; updated.push(d); }
+    else{ const base=d.id||'cfn'; let id=base, n=2; while(ids.has(id)) id=base+(n++); d.id=id; ids.add(id); S.species.push(d); added.push(d); } }); });
+  if(_speciesGridDraft){ added.concat(updated).forEach(d=>{ const copy=JSON.parse(JSON.stringify(d)); const k=_speciesGridDraft.findIndex(x=>x.id===d.id); if(k>=0) _speciesGridDraft[k]=copy; else _speciesGridDraft.push(copy); });
+    sortSpeciesGrid(_sgSortPath||'common'); }
+  _importDraft=[]; _igFilter=''; igEl('igSearch').value=''; igEl('igUrl').value=''; igProblems([]);
+  paintImportGrid();
+  igSay('Added '+added.length+' new species'+(updated.length?' and updated '+updated.length+' you already had':'')+(discarded?'; discarded '+discarded+' unticked':'')+'. Paste another address to load more, or press Done.');
+  await pushSharedSpecies(); drawAll(); renderPanels();
+  UI.toast('Added '+added.length+(updated.length?', updated '+updated.length:'')+' from Cal Flora Nursery.'); igEl('igUrl').focus(); }
 function startBlankDraft(){ _harvestDraft=mapHarvestToDraft({}); paintSpeciesAdmin(); }
 function updateDraftField(path,val){ const parts=path.split('.'); let o=_harvestDraft; for(let i=0;i<parts.length-1;i++) o=o[parts[i]]; o[parts[parts.length-1]]=val; }
 function updateDraftGoal(g,val){ _harvestDraft.goals[g]=+val||0; }
@@ -1034,8 +1666,10 @@ const SG_VOCAB={ sun:['any','shade','hot'], moisture:['dry','moderate','wet'], d
 const SG_VOCAB_LABELS={ sun:{hot:'full'}, conf:{obs:'observed', lib:'literature', draft:'draft'} };
 const SG_COLUMNS=[
   {path:'common',label:'Common name',type:'text',w:150,freeze:true,title:'Common name shown throughout the app.'},
+  {path:'source',label:'Nursery',type:'nursery',w:64,title:'↗ opens this plant\'s page on Cal Flora Nursery in a new tab. ↻ fetches the latest sizes, prices and stock for this species from the nursery; the fields it changes are shown in bold italic, and Save keeps them.'},
   {path:'sci',label:'Scientific name',type:'text',w:180,title:'Scientific (binomial) name.'},
-  {path:'conf',label:'Confidence',type:'select',vocab:'conf',w:95,title:"How this entry's data should be trusted — observed (confirmed on this ranch), literature (a horticultural reference default), or draft (freshly harvested, not yet reviewed)."},
+  {path:'conf',label:'Confidence',type:'select',vocab:'conf',w:95,title:"How this entry's data should be trusted — observed (confirmed on this ranch), literature (a horticultural reference default), or draft (freshly harvested, not yet reviewed). Updating a draft from the nursery moves it to literature."},
+  {path:'northBay',label:'North Bay',type:'tri',w:72,title:'Native to the North Bay (Sonoma, Napa, Marin) according to the nursery. Blank means no information, which is not the same as No. Feeds the "Local native" goal and the Explore tab\'s North Bay exclusion.'},
   {path:'color',label:'Map color',type:'color',title:'Color used for this species on the map and in the legend.'},
   {path:'ht',label:'Height ft',type:'number',title:'Mature height, feet.'},
   {path:'rad',label:'Radius ft',type:'number',title:'Mature canopy radius, feet (half of mature width).'},
@@ -1059,6 +1693,8 @@ const SG_COLUMNS=[
   {path:'spacingFt',label:'Spacing ft',type:'number',title:'Default spacing between plants of this species, feet.'},
   {path:'risk',label:'Risk yr3 %',type:'number',title:'Expected loss by year 3, percent.'},
   {path:'allelo',label:'Allelo',type:'number',title:'Allelopathy radius, feet (0 = none) — other plants within this distance are suppressed.'},
+  {path:'$size',label:'Container · price',type:'size',w:240,title:'The container this species is bought in, and its price, chosen from the sizes the nursery lists (this month\'s price and how many are in stock). Pick "Other price…" to enter your own, which a harvest will never overwrite. This is the default; the Cost tab can plant it in any size.'},
+  {path:'priceAsOf',label:'Price as of',type:'text',w:80,title:'Month the price and stock were taken, as YYYY-MM. A newer harvest replaces the price and stock; a price you typed without a date is never replaced.'},
   {path:'replace',label:'Replace with',type:'replace',w:150,title:'Species to substitute if this one fails, if any.'},
   {path:'fail',label:'Failure mode',type:'longtext',title:'How this species typically fails.'},
   {path:'trigger',label:'Trigger',type:'longtext',title:'What to watch for that signals failure.'},
@@ -1072,40 +1708,53 @@ const SG_COLUMNS=[
    water" both start with a word that reads as just "Low" out of context once
    truncated, which was genuinely ambiguous. Each column's title attribute (see
    SG_TITLES) carries the full description for anyone who wants it. */
-const SG_GOAL_LABELS={poll:'Pollinator',wild:'Wildlife',screen:'Screen',barrier:'Barrier',bank:'Bank/erosion',fire:'Fire',lowWater:'Low water',fodder:'Fodder',fast:'Fast estab.',lowMaint:'Low maint.'};
-function sgColumns(){ return SG_COLUMNS.concat(Object.keys(GOALS).map(g=>({path:'goals.'+g,label:SG_GOAL_LABELS[g]||g,type:'goal',title:'Goal weight (0–3): '+GOALS[g]}))); }
-function sgGet(sp,path){ const parts=path.split('.'); let o=sp; for(const p of parts){ if(o==null) return null; o=o[p]; } return o; }
-function updateGridCell(idx,path,val){ const parts=path.split('.'); let o=_speciesGridDraft[idx]; for(let i=0;i<parts.length-1;i++) o=o[parts[i]]; o[parts[parts.length-1]]=val; }
-function sgCellHtml(sp,idx,col){
+const SG_GOAL_LABELS={poll:'Pollinator',wild:'Wildlife',screen:'Screen',barrier:'Barrier',bank:'Bank/erosion',fire:'Fire',lowWater:'Low water',fodder:'Fodder',fast:'Fast estab.',lowMaint:'Low maint.',local:'Local native'};
+function sgColumns(){ return SG_COLUMNS.concat(Object.keys(GOALS).filter(g=>g!=='local').map(g=>({path:'goals.'+g,label:SG_GOAL_LABELS[g]||g,type:'goal',title:'Goal weight (0–3): '+GOALS[g]}))); }
+/* The "Container · price" column stands for four fields at once, so what is compared for changes is all of them together. */
+function sizeSig(sp){ if(!sp.container&&sp.price==null&&sp.stock==null&&!(sp.containers&&sp.containers.length)) return '';
+  return [sp.container||'',sp.price==null?'':sp.price,sp.stock==null?'':sp.stock,JSON.stringify(sp.containers||null)].join('|'); }
+function sgGet(sp,path){ if(path==='$size') return sizeSig(sp); const parts=path.split('.'); let o=sp; for(const p of parts){ if(o==null) return null; o=o[p]; } return o; }
+function updateGridCell(idx,path,val){ if(path==='$size'){ applySizeChoice(_speciesGridDraft[idx],val,paintSpeciesGrid); return; } const parts=path.split('.'); let o=_speciesGridDraft[idx]; for(let i=0;i<parts.length-1;i++) o=o[parts[i]]; o[parts[parts.length-1]]=val; }
+function sgCellHtml(sp,idx,col,upd){ upd=upd||'updateGridCell'; /* the import window passes its own update function */
   const val=sgGet(sp,col.path);
   const w=col.w?` style="min-width:${col.w}px"`:'';
   if(col.type==='readonly') return `<td class="sgId">${esc(val||'')}</td>`;
-  if(col.type==='text') return `<td${col.freeze?' class="sgFreeze"':''}><input type="text"${w} value="${esc(val||'')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
-  if(col.type==='color') return `<td class="sgColor"><input type="color" value="${esc(val||'#7C8D6B')}" onchange="updateGridCell(${idx},'${col.path}',this.value)"></td>`;
-  if(col.type==='number') return `<td><input type="number"${col.step?` step="${col.step}"`:''} value="${val!=null?val:''}" onchange="updateGridCell(${idx},'${col.path}',this.value===''?null:+this.value)"></td>`;
-  if(col.type==='bool') return `<td class="sgBool"><input type="checkbox" ${val?'checked':''} onchange="updateGridCell(${idx},'${col.path}',this.checked)"></td>`;
-  if(col.type==='goal') return `<td><select onchange="updateGridCell(${idx},'${col.path}',+this.value)">${[0,1,2,3].map(n=>`<option value="${n}"${(val||0)===n?' selected':''}>${n}</option>`).join('')}</select></td>`;
+  if(col.type==='text') return `<td${col.freeze?' class="sgFreeze"':''}><input type="text"${w} value="${esc(val||'')}" onchange="${upd}(${idx},'${col.path}',this.value)"></td>`;
+  if(col.type==='color') return `<td class="sgColor"><input type="color" value="${esc(val||'#7C8D6B')}" onchange="${upd}(${idx},'${col.path}',this.value)"></td>`;
+  if(col.type==='number') return `<td><input type="number"${col.step?` step="${col.step}"`:''} value="${val!=null?val:''}" onchange="${upd}(${idx},'${col.path}',this.value===''?null:+this.value)"></td>`;
+  if(col.type==='bool') return `<td class="sgBool"><input type="checkbox" ${val?'checked':''} onchange="${upd}(${idx},'${col.path}',this.checked)"></td>`;
+  if(col.type==='goal') return `<td><select onchange="${upd}(${idx},'${col.path}',+this.value)">${[0,1,2,3].map(n=>`<option value="${n}"${(val||0)===n?' selected':''}>${n}</option>`).join('')}</select></td>`;
+  if(col.type==='nursery'){ const own=canEditSpecies(), u=nurseryUrlOf(sp), arr=upd==='updateGridCell'?'_speciesGridDraft':'_importDraft';
+    const link=u?`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="Open this plant's page on the nursery's site in a new tab">↗</a>`:(own?`<a href="#" onclick="openNurseryPage(${arr}[${idx}]);return false" title="Find this plant on the nursery's site and open its page in a new tab">↗</a>`:'');
+    const btn=(own&&upd==='updateGridCell')?` <button class="small" onclick="gridUpdate(${idx})" title="Fetch the latest sizes, prices and stock for this species from the nursery. What it changes is shown in bold italic.">↻</button>`:'';
+    return `<td class="sgId" style="white-space:nowrap">${link}${btn}</td>`; }
+  if(col.type==='size'){ const opts=spContainers(sp), cur=normContainer(sp.container)||'';
+    return `<td><select${w} onchange="${upd}(${idx},'$size',this.value)"><option value=""${cur?'':' selected'}>${opts.length?'— none chosen —':'no nursery sizes'}</option>`
+      +opts.map(c=>`<option value="${esc(c.container)}"${c.container===cur?' selected':''}>${esc(containerLabelLong(c.container))} · $${fmtMoney(c.price)}${c.stock!=null?' · '+c.stock+' in stock':''}</option>`).join('')
+      +`<option value="__other">Other price…</option></select></td>`; }
+  if(col.type==='tri') return `<td><select${w} onchange="${upd}(${idx},'${col.path}',this.value===''?null:this.value==='yes')"><option value="">—</option><option value="yes"${val===true?' selected':''}>Yes</option><option value="no"${val===false?' selected':''}>No</option></select></td>`;
   if(col.type==='select'){ const opts=SG_VOCAB[col.vocab]; const labels=SG_VOCAB_LABELS[col.vocab]||{};
-    return `<td><select${w} onchange="updateGridCell(${idx},'${col.path}',this.value||null)"><option value="">—</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${esc(labels[o]||o)}</option>`).join('')}</select></td>`; }
-  if(col.type==='bloom') return `<td><input type="text" value="${val?val.join(','):''}" onchange="updateGridCell(${idx},'bloom',this.value.split(',').map(x=>+x.trim()).filter(Boolean))"></td>`;
-  if(col.type==='longtext') return `<td><textarea rows="2" onchange="updateGridCell(${idx},'${col.path}',this.value)">${esc(val||'')}</textarea></td>`;
-  if(col.type==='replace'){ const others=_speciesGridDraft.filter(s=>s.id!==sp.id).map(s=>({id:s.id,label:s.common||s.id})).sort((a,b)=>a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
-    return `<td><select${w} onchange="updateGridCell(${idx},'replace',this.value||null)"><option value="">—</option>${others.map(o=>`<option value="${o.id}"${val===o.id?' selected':''}>${esc(o.label)}</option>`).join('')}</select></td>`; }
+    return `<td><select${w} onchange="${upd}(${idx},'${col.path}',this.value||null)"><option value="">—</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${esc(labels[o]||o)}</option>`).join('')}</select></td>`; }
+  if(col.type==='bloom') return `<td><input type="text" value="${val?val.join(','):''}" onchange="${upd}(${idx},'bloom',this.value.split(',').map(x=>+x.trim()).filter(Boolean))"></td>`;
+  if(col.type==='longtext') return `<td><textarea rows="2" onchange="${upd}(${idx},'${col.path}',this.value)">${esc(val||'')}</textarea></td>`;
+  if(col.type==='replace'){ const others=(_speciesGridDraft||S.species).filter(s=>s.id!==sp.id).map(s=>({id:s.id,label:s.common||s.id})).sort((a,b)=>a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
+    return `<td><select${w} onchange="${upd}(${idx},'replace',this.value||null)"><option value="">—</option>${others.map(o=>`<option value="${o.id}"${val===o.id?' selected':''}>${esc(o.label)}</option>`).join('')}</select></td>`; }
   return '<td></td>'; }
 /* Ascending-only, click-to-sort. Blank/null always sorts last regardless of the
    column's own ordering, so incomplete data doesn't crowd the top. bloom (an array
    of month numbers) sorts by its earliest month; booleans sort unchecked-first. */
 let _sgSortPath=null;
-function sgSortKey(sp,path){ let v=sgGet(sp,path);
-  if(Array.isArray(v)) v=v.length?Math.min(...v):null;
+function sgSortKey(sp,path){ if(path==='$size') return sp.price>0?+sp.price:null; let v=sgGet(sp,path);
+  if(Array.isArray(v)) v=v.length?(typeof v[0]==='object'?v.length:Math.min(...v)):null;
   if(typeof v==='boolean') v=v?1:0;
   return v; }
-function sortSpeciesGrid(path){ _sgSortPath=path;
-  _speciesGridDraft.sort((a,b)=>{ const va=sgSortKey(a,path), vb=sgSortKey(b,path);
+function sgSorter(path){ return (a,b)=>{ const va=sgSortKey(a,path), vb=sgSortKey(b,path);
     const ae=va==null||va==='', be=vb==null||vb==='';
     if(ae&&be) return 0; if(ae) return 1; if(be) return -1;
     if(typeof va==='number'&&typeof vb==='number') return va-vb;
-    return String(va).toLowerCase().localeCompare(String(vb).toLowerCase()); });
+    return String(va).toLowerCase().localeCompare(String(vb).toLowerCase()); }; }
+function sortSpeciesGrid(path){ _sgSortPath=path;
+  _speciesGridDraft.sort(sgSorter(path));
   paintSpeciesGrid(); }
 /* View-only filter over the staged draft: it hides rows, it never removes them, so Save and
    Download still carry the whole library, and every cell keeps its index into the real array
@@ -1119,13 +1768,69 @@ let _sgFilter='', _sgShown=0;
 const SG_MONTHS=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 function sgHaystack(sp){ const out=[];
   sgColumns().forEach(c=>{ const v=sgGet(sp,c.path); if(v==null||v===''||v===false) return;
-    if(c.type==='bool') out.push(c.label);
+    if(c.type==='bool'||c.type==='tri') out.push(c.label); /* a tri column only gets here when true; No and blank add nothing, so "north bay" finds only the natives */
     else if(c.type==='goal'){ if(+v>0) out.push(c.label+' '+v); }
     else if(c.type==='select'){ out.push(String(v)); const lab=(SG_VOCAB_LABELS[c.vocab]||{})[v]; if(lab) out.push(lab); }
     else if(c.type==='bloom'){ (Array.isArray(v)?v:[]).forEach(m=>{ out.push(String(m)); if(SG_MONTHS[m-1]) out.push(SG_MONTHS[m-1]); }); }
-    else if(c.type==='replace'){ out.push(String(v)); const r=_speciesGridDraft.find(x=>x.id===v); if(r) out.push(r.common||''); }
+    else if(c.type==='size') out.push(containerSummary(spContainers(sp)));
+    else if(c.type==='nursery'){ /* an address: nothing to search */ }
+    else if(c.type==='replace'){ out.push(String(v)); const r=(_speciesGridDraft||S.species).find(x=>x.id===v); if(r) out.push(r.common||''); }
     else out.push(String(v)); });
   return out.join('\n').toLowerCase(); }
+/* Fields an update changed in this editing session, by species id, so they can be shown in bold italic until you save. */
+let _sgChanged={}, _sgUpd=null;
+function sgSay(t){ const el=document.getElementById('sgStatus'); if(el) el.textContent=t||''; }
+/* One row: the same progress dialog as "Update all", counting 1 species, so the two feel alike. Stop discards the
+   result (it cannot recall a request already sent, but nothing is applied). The dialog steps aside while a question
+   of its own is on screen. */
+async function gridUpdate(idx){ const sp=_speciesGridDraft&&_speciesGridDraft[idx]; if(!sp) return; if(_sgUpd&&_sgUpd.running) return;
+  const run={running:true,cancel:false}; _sgUpd=run; sgSay('Asking the nursery about '+sp.common+'…'); sgpOpen(1); sgpSet(0,1,sp.common,'');
+  const hooks={before:()=>sgpClose(),after:()=>{ if(_speciesGridDraft&&!run.cancel) sgpReopen(); }};
+  try{ const r=await fetchNurseryUpdateAsk(sp,hooks); if(!_speciesGridDraft) return;
+    if(run.cancel){ sgSay('Stopped. Nothing was changed.'); return; } if(!r){ sgSay(''); return; }
+    const k=_speciesGridDraft.findIndex(x=>x.id===sp.id); if(k<0) return; _speciesGridDraft[k]=r.merged; _sgChanged[sp.id]=new Set(r.changed); paintSpeciesGrid(); sgSay(updateSummary(sp,r)+' Save to keep it.');
+  }catch(e){ sgpClose(); sgSay(''); if(!run.cancel) await UI.alert(((e&&e.message)||String(e)),'Could not update '+sp.common); }
+  finally{ run.running=false; sgpClose(); } }
+/* Every species in the editing copy, one a second. A species the nursery does not list is skipped and counted; three
+   failures in a row stop the run. Nothing is kept until you press Save. */
+/* ---- Progress dialog ----
+   Shown over a window while a long run is going: what is being done, how far along, which item is current, a running
+   tally, and Stop (also Escape). One instance per window, each with its own markup (ids <prefix>Progress, <prefix>pBar,
+   <prefix>pCount, <prefix>pNow, <prefix>pTally, <prefix>pStop): the spreadsheet's "Update all" ('sg') and the import
+   window ('ig'). Stopping takes effect after the request in flight, so the button says so and is disabled. */
+function makeProgress(pre,onStop){
+  const $=n=>document.getElementById(pre+n), st={open:false,unit:'items'};
+  const key=e=>{ if(e.key==='Escape'&&st.open&&onStop){ e.preventDefault(); e.stopPropagation(); onStop(); } };
+  return {
+    isOpen:()=>st.open,
+    open(total,o){ o=o||{}; const bar=$('pBar'); if(!bar) return; st.unit=o.unit||'items'; if(o.title) $('pTitle').textContent=o.title;
+      bar.max=Math.max(1,total||0); bar.value=0; $('pCount').textContent=o.countText!=null?o.countText:'0 of '+(total||0)+' '+st.unit; $('pNow').textContent=''; $('pTally').textContent='';
+      const stop=$('pStop'); stop.disabled=false; stop.textContent='Stop'; $('Progress').classList.add('show'); st.open=true; document.addEventListener('keydown',key,true); stop.focus(); },
+    set(done,total,now,tally,o){ o=o||{}; const bar=$('pBar'); if(!bar) return; bar.max=Math.max(1,total||0); if(o.indeterminate) bar.removeAttribute('value'); else bar.value=done;
+      $('pCount').textContent=o.countText!=null?o.countText:(o.indeterminate?'Working…':done+' of '+total+' '+st.unit); $('pNow').textContent=now||''; if(tally!=null) $('pTally').textContent=tally; },
+    stopping(){ const stop=$('pStop'); if(stop){ stop.disabled=true; stop.textContent='Stopping…'; } },
+    /* shows it again, as it was, after a question of its own has been answered */
+    reopen(){ const el=$('Progress'); if(!el) return; el.classList.add('show'); st.open=true; document.addEventListener('keydown',key,true); const stop=$('pStop'); if(stop) stop.focus(); },
+    close(){ const el=$('Progress'); if(el) el.classList.remove('show'); st.open=false; document.removeEventListener('keydown',key,true); } }; }
+const sgp=makeProgress('sg',()=>{ if(_sgUpd&&_sgUpd.running) sgUpdateAll(); });
+function sgpOpen(total){ sgp.open(total,{title:'Updating from the nursery',unit:'species'}); }
+function sgpSet(done,total,now,tally,indeterminate){ sgp.set(done,total,now,tally,{indeterminate,countText:indeterminate?'Loading the nursery\u2019s catalog…':undefined}); }
+function sgpReopen(){ sgp.reopen(); } function sgpStopping(){ sgp.stopping(); } function sgpClose(){ sgp.close(); }
+async function sgUpdateAll(){ if(_sgUpd&&_sgUpd.running){ _sgUpd.cancel=true; sgSay('Stopping after the current plant…'); sgpStopping(); return; }
+  if(!_speciesGridDraft) return; const run={running:true,cancel:false}; _sgUpd=run; const btn=document.getElementById('sgUpdAll'); if(btn) btn.textContent='Stop updating';
+  let ok=0,changed=0,missing=0,failed=0,streak=0; const total=_speciesGridDraft.length;
+  const tally=()=>changed+' updated · '+(ok-changed)+' already current · '+missing+' not at the nursery'+(failed?' · '+failed+' failed':'');
+  sgpOpen(total);
+  try{ sgSay('Loading the nursery catalog…'); sgpSet(0,total,'',tally(),true); await loadCatalog(false);
+    for(let i=0;i<_speciesGridDraft.length&&!run.cancel;i++){ const sp=_speciesGridDraft&&_speciesGridDraft[i]; if(!sp) break; sgSay('Updating '+(i+1)+' of '+total+': '+sp.common+'…'); sgpSet(i,total,sp.common,tally()); let requested=false;
+      try{ const r=await fetchNurseryUpdate(sp); requested=true; if(!_speciesGridDraft) break; _speciesGridDraft[i]=r.merged; _sgChanged[sp.id]=new Set(r.changed); if(r.changed.length) changed++; ok++; streak=0; }
+      catch(e){ if(e&&e.notFound) missing++; else{ failed++; requested=true; if(++streak>=3){ run.cancel=true; sgSay('Stopped after 3 failures in a row: '+((e&&e.message)||e)); } } }
+      sgpSet(i+1,total,sp.common,tally());
+      if(requested&&!run.cancel&&i<_speciesGridDraft.length-1) await cfnSleep(CFN_DELAY_MS); }
+  }catch(e){ run.running=false; if(btn) btn.textContent='Update all from nursery'; sgSay('Could not load the nursery catalog: '+((e&&e.message)||e)); return; }
+  finally{ sgpClose(); }
+  run.running=false; if(btn) btn.textContent='Update all from nursery'; if(!_speciesGridDraft) return; paintSpeciesGrid();
+  if(!/^Stopped after 3/.test((document.getElementById('sgStatus')||{}).textContent||'')) sgSay((run.cancel?'Stopped. ':'')+'Checked '+(ok+missing+failed)+' of '+total+': '+changed+' updated, '+(ok-changed)+' already current, '+missing+' not at the nursery'+(failed?', '+failed+' failed':'')+'. Save to keep the changes.'); }
 function setSgFilter(v){ _sgFilter=v||''; paintSpeciesGrid(); }
 function speciesGridHtml(){
   const cols=sgColumns();
@@ -1133,7 +1838,7 @@ function speciesGridHtml(){
     return `<th${c.title?` title="${esc(c.title)}"`:''}${cls?` class="${cls}"`:''} onclick="sortSpeciesGrid('${c.path}')">${esc(c.label)}</th>`; }).join('')+'</tr></thead><tbody>';
   const terms=_sgFilter.toLowerCase().split(/\s+/).filter(Boolean);
   const shown=_speciesGridDraft.map((sp,idx)=>({sp,idx})).filter(({sp})=>{ if(!terms.length) return true; const hay=sgHaystack(sp); return terms.every(t=>hay.includes(t)); });
-  html+=shown.map(({sp,idx})=>'<tr>'+cols.map(c=>sgCellHtml(sp,idx,c)).join('')+'</tr>').join('');
+  html+=shown.map(({sp,idx})=>'<tr>'+cols.map(c=>igMark(sgCellHtml(sp,idx,c),_sgChanged[sp.id]&&_sgChanged[sp.id].has(c.path))).join('')+'</tr>').join('');
   if(!shown.length) html+=`<tr><td colspan="${cols.length}" style="padding:14px;color:var(--mute);white-space:normal">No species match “${esc(_sgFilter)}”.</td></tr>`;
   _sgShown=shown.length;
   return html+'</tbody>'; }
@@ -1151,9 +1856,11 @@ function downloadSpeciesJSON(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='species-default.json';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
-function openSpeciesGrid(){ if(cloudIdentity.role!=='owner'&&cloudIdentity.role!=='editor') return;
+function openSpeciesGrid(){ if(!canEditSpecies()) return;
   _speciesGridDraft=JSON.parse(JSON.stringify(S.species));
   _sgFilter=''; const _ss=document.getElementById('sgSearch'); if(_ss) _ss.value='';
+  _sgChanged={}; sgSay(''); const _ua=document.getElementById('sgUpdAll'); if(_ua) _ua.style.display=canEditSpecies()?'':'none';
+  const _imp=document.getElementById('sgImport'); if(_imp) _imp.style.display=canEditSpecies()?'':'none'; /* the Worker's harvest routes are open to the owner and editors */
   document.getElementById('speciesGrid').classList.add('show');
   /* Opens pre-sorted by common name rather than raw array order, via the same
      sortSpeciesGrid() a header click uses — so the highlight on open and the
@@ -1165,13 +1872,13 @@ function openSpeciesGrid(){ if(cloudIdentity.role!=='owner'&&cloudIdentity.role!
    actually there right now", not just a revert of this session's own edits, in case
    someone else updated the library while this was open. Falls back to the bundled
    SPECIES_DEFAULT if the server has nothing (cloud not configured, or never pushed). */
-async function cancelSpeciesGrid(){
+async function cancelSpeciesGrid(){ if(_sgUpd) _sgUpd.cancel=true; sgpClose(); _sgChanged={};
   document.getElementById('speciesGrid').classList.remove('show');
   _speciesGridDraft=null;
   const fresh=await loadSharedSpecies();
-  S.species=fresh&&fresh.length?fresh:JSON.parse(JSON.stringify(SPECIES_DEFAULT));
+  S.species=fresh&&fresh.length?fresh:JSON.parse(JSON.stringify(SPECIES_DEFAULT)); markSpeciesSynced();
   renderPanels(); }
-async function saveSpeciesGrid(){ if(!_speciesGridDraft) return;
+async function saveSpeciesGrid(){ if(!_speciesGridDraft) return; if(_sgUpd) _sgUpd.cancel=true; sgpClose(); _sgChanged={};
   const next=_speciesGridDraft;
   commit('Edit species library ('+next.length+' species)',()=>{ S.species=next; });
   document.getElementById('speciesGrid').classList.remove('show');
@@ -1183,7 +1890,7 @@ async function saveSpeciesGrid(){ if(!_speciesGridDraft) return;
      visually-relevant) edit here wouldn't show up on the map until the next
      unrelated pan/zoom/reload happened to trigger a redraw anyway. */
   drawAll(); renderPanels(); UI.toast('Species library saved.'); }
-function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=cloudIdentity.role==='owner'?speciesAdminHtml():''; }); }
+function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=canEditSpecies()?speciesAdminHtml():''; }); }
 function paintSpeciesAdmin(){ renderSpeciesAdmin(); }
 function speciesAdminHtml(){
   let html=`<h2>Species library</h2>
@@ -1238,7 +1945,7 @@ function speciesDraftFormHtml(d){
     <label>Trigger to watch for</label><input type="text" value="${esc(d.trigger||'')}" onchange="updateDraftField('trigger',this.value)">
     <label>Notes</label><input type="text" value="${esc(d.notes||'')}" onchange="updateDraftField('notes',this.value)">
     <h3>Goals (0–3 each)</h3>
-    <div class="row" style="flex-wrap:wrap">${Object.keys(GOALS).map(g=>`<div style="width:48%"><label style="margin:0">${esc(GOALS[g])}</label><input type="number" min="0" max="3" style="width:48px" value="${d.goals[g]||0}" onchange="updateDraftGoal('${g}',this.value)"></div>`).join('')}</div>
+    <div class="row" style="flex-wrap:wrap">${Object.keys(GOALS).filter(g=>g!=='local').map(g=>`<div style="width:48%"><label style="margin:0">${esc(GOALS[g])}</label><input type="number" min="0" max="3" style="width:48px" value="${d.goals[g]||0}" onchange="updateDraftGoal('${g}',this.value)"></div>`).join('')}</div>
     <div class="row" style="margin-top:10px"><button class="small primary" onclick="saveDraftSpecies()">${d.matchedId?'Update in library':'Add to library'}</button><button class="small danger" onclick="discardDraftSpecies()">Discard</button></div>
   </div>`; }
 
@@ -1316,6 +2023,10 @@ function refLinks(sp){ const q=encodeURIComponent(sp.sci||sp.common); const crn=
     {k:'Calscape',u:'https://calscape.org/'+ (sp.sci||'').replace(/ /g,'-') +'-()',t:'garden and restoration guidance, nurseries carrying it'},
     {k:'iNaturalist',u:'https://www.inaturalist.org/search?q='+q,t:'nearby records and seasonal photos'}];
   if((sp.goals&&sp.goals.poll)>=2) out.push({k:'Xerces',u:'https://www.xerces.org/search?search='+q,t:'pollinator value and pesticide cautions'});
+  /* This plant's own page on Cal Flora Nursery (not Calflora, the botanical database, which is the first link): size, price, stock. */
+  const nu=nurseryUrlOf(sp);
+  if(nu) out.unshift({k:'Cal Flora Nursery',u:nu,t:'this plant on the nursery\'s site: size, price, stock'});
+  else if(canEditSpecies()) out.unshift({k:'Cal Flora Nursery',u:'#',js:"openNurseryPage('"+sp.id+"')",t:'find this plant on the nursery\'s site and open its page'});
   return out; }
 const _photoCache={};
 async function loadPhotos(spId,n){ const sp=SP(spId); if(!sp) return []; if(_photoCache[spId]) return _photoCache[spId];
@@ -1330,8 +2041,8 @@ async function showPhotos(spId){ const el=document.getElementById('ph_'+spId); i
   const ps=await loadPhotos(spId,6); if(!ps.length){ el.innerHTML='<span class="small mute">No openly licensed photos found — <a href="'+refLinks(SP(spId))[2].u+'" target="_blank" rel="noopener">CalPhotos</a> has more, under their own terms.</span>'; return; }
   el.innerHTML=ps.map(p=>`<a href="${p.obs}" target="_blank" rel="noopener" title="${esc(p.attr)}${p.place?' — '+esc(p.place):''}"><img src="${p.url}" alt="${esc(SP(spId).common)}" loading="lazy"></a>`).join('')
     +`<div class="small mute" style="flex-basis:100%">${ps.length} photo${ps.length===1?'':'s'} from iNaturalist, CC0 and CC-BY only. Credit: ${esc([...new Set(ps.map(p=>(p.attr||'').replace(/,? some rights reserved.*| \(CC.*/,'').replace(/^\(c\) /,'')))].join(', '))}.</div>`; }
-function refLinksHtml(sp,small){ return refLinks(sp).map(l=>`<a href="${l.u}" target="_blank" rel="noopener" title="${esc(l.t)}">${l.k}</a>`).join(' · ')+(small?'':''); }
-const GOALS={poll:'Pollinator bloom through the calendar',wild:'Wildlife cover and food',screen:'Wind or visual screen',barrier:'Deer or stock barrier',bank:'Bank and erosion hold',fire:'Fire resistance in the row',lowWater:'Little or no summer water',fodder:'Fodder value',fast:'Fast establishment',lowMaint:'Low maintenance'};
+function refLinksHtml(sp,small){ return refLinks(sp).map(l=>l.js?`<a href="#" onclick="${l.js};return false" title="${esc(l.t)}">${l.k}</a>`:`<a href="${l.u}" target="_blank" rel="noopener" title="${esc(l.t)}">${l.k}</a>`).join(' · ')+(small?'':''); }
+const GOALS={poll:'Pollinator bloom through the calendar',wild:'Wildlife cover and food',screen:'Wind or visual screen',barrier:'Deer or stock barrier',bank:'Bank and erosion hold',fire:'Fire resistance in the row',lowWater:'Little or no summer water',fodder:'Fodder value',fast:'Fast establishment',lowMaint:'Low maintenance',local:'Native to the North Bay (Sonoma, Napa, Marin)'};
 const HORIZONS=[1,3,7,15,25];
 const MONTHS=['J','F','M','A','M','J','J','A','S','O','N','D'];
 const CLIMATE_DEFAULT=[{m:'Jan',hi:53,lo:36,rain:7.2},{m:'Feb',hi:54,lo:35,rain:6.8},{m:'Mar',hi:55,lo:35,rain:4.5},{m:'Apr',hi:61,lo:39,rain:2.9},{m:'May',hi:68,lo:43,rain:1.4},{m:'Jun',hi:78,lo:49,rain:0.4},{m:'Jul',hi:86,lo:53,rain:0.1},{m:'Aug',hi:85,lo:53,rain:0.1},{m:'Sep',hi:80,lo:48,rain:0.3},{m:'Oct',hi:70,lo:42,rain:2.2},{m:'Nov',hi:57,lo:37,rain:5.5},{m:'Dec',hi:51,lo:35,rain:6.7}];
@@ -1488,7 +2199,7 @@ function hexRound(q,r){ let x=q,z=r,y=-x-z, rx=Math.round(x),ry=Math.round(y),rz
 function hexCenter(q,r){ return toLL([HEX_S*(Math.sqrt(3)*q+Math.sqrt(3)/2*r), HEX_S*1.5*r]); }
 function hexPoly(q,r){ const c=toXY(hexCenter(q,r)); const out=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-30); out.push(toLL([c[0]+HEX_S*Math.cos(a),c[1]+HEX_S*Math.sin(a)])); } return out; }
 const hkey=(q,r)=>q+','+r;
-let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, tmpPtsLayer, foundLayer, handleLayer, canvasR;
+let map, imagery, rowLayer, plantLayer, waterLayer, tmpLayer, tmpPtsLayer, foundLayer, handleLayer, plantR;
 let hexCanvas=null,hexCtx=null,heatCanvasEl=null,heatCtx=null,hexCells=[],heatCells=[],heatBest=null;
 let mode='select', tmpPts=[], painting=false, hoverHex=null;
 /* Where the map is scrolled to is personal, not shared. It's stored per-person on the
@@ -1511,14 +2222,51 @@ function myViewFor(rid){ return (_myViews&&_myViews[rid])||null; }
    sees the same library, not each ranch's own frozen copy from whenever it was
    created. Returns null (and S.species stays whatever it already was) if cloud isn't
    configured, the fetch fails, or nothing's been pushed to the server yet. */
+/* The owner and editors may change the species list: import from the nursery, update from it, edit the spreadsheet, harvest
+   and paste. Viewers may not. (Managing users stays with the owner.) */
+function canEditSpecies(){ return cloudIdentity.role==='owner'||cloudIdentity.role==='editor'; }
+/* ---- The shared species library: loading it, and saving it without erasing anyone else's work ----
+   A save replaces the WHOLE library on the server, so two people (or two of your own devices) saving from different copies
+   would erase each other. The Worker therefore versions the library: loading records the version we started from, and a save
+   says so (If-Match). If someone has saved since, the Worker refuses (409) and sends back the current library; we then MERGE
+   it with our own changes species by species and save again. "Our own changes" are the species that differ from _spBase, the
+   library as we last loaded or saved it. Where both sides changed the same species ours is kept. A species someone else
+   added or edited, and that we did not touch, is taken as theirs; one we deleted stays deleted. Saves go one at a time, each
+   sending the library as it is when its turn comes. With no version (an older Worker, or a failed load) a save is sent
+   unprotected, as it always was. */
+let _spVer=null, _spBase=null, _spQueue=Promise.resolve();
+const spSnap=list=>new Map((list||[]).map(s=>[s.id,JSON.stringify(s)]));
+function markSpeciesSynced(){ _spBase=spSnap(S.species); }
+const spVersionOf=r=>{ const v=r&&r.headers&&r.headers.get&&r.headers.get('X-Species-Version'); return (v!=null&&v!==''&&!isNaN(+v))?+v:null; };
 async function loadSharedSpecies(){
   if(!cloudConfigured()) return null;
   try{ const r=await fetch(CLOUD_SYNC_BASE+'/species',{headers:{'Authorization':'Bearer '+accessCode()}});
-    if(!r.ok) return null; const js=await r.json(); return (Array.isArray(js)&&js.length)?js:null; }
+    if(!r.ok) return null; _spVer=spVersionOf(r); const js=await r.json(); return (Array.isArray(js)&&js.length)?js:null; }
   catch(e){ return null; } }
-async function pushSharedSpecies(){ if(!cloudConfigured()) return;
-  try{ await fetch(CLOUD_SYNC_BASE+'/species',{method:'PUT',headers:{'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'},body:JSON.stringify(S.species)}); }
-  catch(e){ UI.toast("Added locally, but couldn't save it to the shared library: "+((e&&e.message)||e)); } }
+function mergeSpeciesFromServer(srv,ver){
+  const base=_spBase||new Map(), local=new Map(S.species.map(s=>[s.id,s])), mine=new Set(), gone=new Set(), seen=new Set(), out=[];
+  local.forEach((sp,id)=>{ if(base.get(id)!==JSON.stringify(sp)) mine.add(id); });
+  base.forEach((_,id)=>{ if(!local.has(id)) gone.add(id); });
+  let theirs=0, both=0;
+  (srv||[]).forEach(sp=>{ seen.add(sp.id); if(gone.has(sp.id)) return;
+    if(mine.has(sp.id)){ if(base.has(sp.id)&&JSON.stringify(sp)!==base.get(sp.id)) both++; out.push(local.get(sp.id)); }
+    else{ if(base.get(sp.id)!==JSON.stringify(sp)) theirs++; out.push(sp); } });
+  mine.forEach(id=>{ if(!seen.has(id)&&local.has(id)) out.push(local.get(id)); });
+  S.species=out; _spVer=ver; return {theirs,both}; }
+async function pushSharedSpeciesNow(){ if(!cloudConfigured()) return;
+  let merged=null;
+  for(let attempt=0;attempt<4;attempt++){
+    const body=JSON.stringify(S.species), headers={'Authorization':'Bearer '+accessCode(),'Content-Type':'application/json'}; if(_spVer!=null) headers['If-Match']=String(_spVer);
+    let r; try{ r=await fetch(CLOUD_SYNC_BASE+'/species',{method:'PUT',headers,body}); }
+    catch(e){ UI.toast("Added locally, but couldn't save it to the shared library: "+((e&&e.message)||e)); return; }
+    if(r.status===409){ let cur=null; try{ cur=await r.json(); }catch(e){} const ver=spVersionOf(r); if(cur===null) cur=[];
+      if(!Array.isArray(cur)||ver==null) break; const m=mergeSpeciesFromServer(cur,ver); merged=merged?{theirs:merged.theirs+m.theirs,both:merged.both+m.both}:m; continue; }
+    if(r.ok){ const v=spVersionOf(r); if(v!=null) _spVer=v; _spBase=spSnap(JSON.parse(body));
+      if(merged){ UI.toast('Someone else changed the species library. Their changes are merged with yours'+(merged.theirs?' ('+merged.theirs+' species added or changed by others'+(merged.both?', and '+merged.both+' changed on both sides, where yours were kept':'')+')':(merged.both?' ('+merged.both+' changed on both sides, where yours were kept)':''))+'.'); drawAll(); renderPanels(); }
+      return; }
+    UI.toast("Added locally, but couldn't save it to the shared library (HTTP "+r.status+")."); return; }
+  UI.toast("The shared species library kept changing while saving. Your change is saved here but not shared yet; try again in a moment."); }
+function pushSharedSpecies(){ _spQueue=_spQueue.then(pushSharedSpeciesNow).catch(()=>{}); return _spQueue; }
 let _viewPushT=null;
 function saveMyView(){ if(!map||!_myViews) return; const r=R(); if(!r) return;
   _myViews[r.id]={center:[map.getCenter().lat,map.getCenter().lng],zoom:map.getZoom()};
@@ -1531,8 +2279,14 @@ function initMap(){
   imagery=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19,attribution:'Esri World Imagery'}).addTo(map);
   map.createPane('hexP'); map.getPane('hexP').style.zIndex=350; map.getPane('hexP').style.pointerEvents='none';
   map.createPane('rowP'); map.getPane('rowP').style.zIndex=400;
-  map.createPane('plantP'); map.getPane('plantP').style.zIndex=450;
-  canvasR=L.canvas({padding:0.4,pane:'plantP'});
+  /* Stacking, bottom to top: hexes 350, rows 400, water (pipes, nodes, creeks, ponds) 450, Leaflet's own marker pane 600
+     (hedgerow vertex handles, drawing points), PLANTS 620, tooltips 650, popups 700. Plants are above everything else the
+     page adds, so a plant can always be clicked, even with a pipe or node drawn right over it.
+     Plants are SVG markers, not canvas: a Leaflet canvas takes pointer events across its WHOLE area, so a canvas above the
+     water would have made every pipe and node under it unclickable, while an SVG layer's root has pointer-events:none and
+     only the painted circles catch events. */
+  map.createPane('plantP'); map.getPane('plantP').style.zIndex=620;
+  plantR=L.svg({padding:0.4,pane:'plantP'});
   /* Acre-hex and heat-map fills are painted onto plain <canvas> elements living inside the
      'hexP' pane, positioned in layer-point space rather than through Leaflet's SVG/Canvas
      Renderer. The renderer classes keep a second, independent bounds/position system that can
@@ -1545,7 +2299,7 @@ function initMap(){
   heatCanvasEl=document.createElement('canvas'); heatCanvasEl.style.cssText='position:absolute;pointer-events:none';
   map.getPane('hexP').appendChild(hexCanvas); map.getPane('hexP').appendChild(heatCanvasEl);
   hexCtx=hexCanvas.getContext('2d'); heatCtx=heatCanvasEl.getContext('2d');
-  map.createPane('waterP'); map.getPane('waterP').style.zIndex=500;
+  map.createPane('waterP'); map.getPane('waterP').style.zIndex=450;
   rowLayer=L.layerGroup().addTo(map); plantLayer=L.layerGroup().addTo(map); waterLayer=L.layerGroup().addTo(map); tmpLayer=L.layerGroup().addTo(map); tmpPtsLayer=L.layerGroup().addTo(map); foundLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
   map.on('click',onMapClick); map.on('dblclick',(e)=>{ clearTimeout(_selClickTimer); if(isDrawMode(mode)) finishDraw(); else map.setZoomAround(e.latlng,map.getZoom()+1); });
   map.on('mousedown',onDown); map.on('mousemove',onMove); map.on('mouseup',onUp);
@@ -1583,9 +2337,12 @@ function drawHandles(h){ handleLayer.clearLayers(); h.centerline.forEach((pt,i)=
   mk.on('dragend',()=>{ clampPlants(h); if(before&&JSON.stringify(S)!==before){ HIST.stack.push({label:'Reshape '+h.name,state:before}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0; updateHistButtons(); UI.toast('Reshape '+h.name,{label:'Undo',fn:undo}); } before=null; drawAll(); renderPanels(); saveSoon(); }); }); }
 function clampPlants(h){ h.rows.forEach((r,i)=>{ const L=rowLenFt(h,i); r.plants=r.plants.filter(p=>p.ft<=L+0.5); }); }
 function plantRadius(){ const z=map.getZoom(); return z>=20?7:z>=19?5:z>=18?4:z>=17?3:2; }
-function drawPlants(){ plantLayer.clearLayers(); if(map.getZoom()<15) return; const rad=plantRadius();
-  R().hedgerows.forEach(h=>{ const lines=rowLines(h); h.rows.forEach((r,i)=>{ r.plants.forEach(p=>{ const sp=SP(p.sp); if(!sp) return; const ll=pointAtFt(lines[i],p.ft);
-    const m=L.circleMarker(ll,{pane:'plantP',renderer:canvasR,radius:rad,color:'#111',weight:.6,fillColor:sp.color,fillOpacity:.95,interactive:mode==='select'}).addTo(plantLayer);
+/* Only plants in view, plus a screen of margin on every side, are drawn: an SVG marker costs more than a canvas dot, and the
+   page redraws on every pan and zoom anyway (moveend / zoomend call drawAll). If the map has no size (a hidden tab, say) it
+   draws them all rather than none. */
+function drawPlants(){ plantLayer.clearLayers(); if(map.getZoom()<15) return; const rad=plantRadius(), sz=map.getSize(), keep=(sz.x>0&&sz.y>0)?map.getBounds().pad(1):null;
+  R().hedgerows.forEach(h=>{ const lines=rowLines(h); h.rows.forEach((r,i)=>{ r.plants.forEach(p=>{ const sp=SP(p.sp); if(!sp) return; const ll=pointAtFt(lines[i],p.ft); if(keep&&!keep.contains(ll)) return;
+    const m=L.circleMarker(ll,{pane:'plantP',renderer:plantR,radius:rad,color:'#111',weight:.6,fillColor:sp.color,fillOpacity:.95,interactive:mode==='select'}).addTo(plantLayer);
     if(mode==='select'){ m.bindTooltip(sp.common+' · '+Math.round(p.ft)+' ft · '+r.name+' — click for more info',{sticky:true});
       m.on('dblclick',e=>{ L.DomEvent.stop(e); }); /* swallow it so a fast double-click doesn't fall through to the map's zoom */
       m.on('click',e=>{ L.DomEvent.stop(e); clearTimeout(m._t); m._t=setTimeout(()=>openPlant(h.id,i,p.ft,sp.id),220); }); } }); }); });
@@ -1608,7 +2365,7 @@ function openPlant(hid,rowIdx,ft,spId){
   const ROLE={dom:'the dominant — the plant this row is spaced off',mid:'mid-story, set between the dominant crowns',
     ground:'ground layer, filling between the woody plants and shading the soil',
     vine:'a vine, planted 2–3 ft off a host trunk',nurse:'a nurse plant: fast, short-lived, expected to bow out'};
-  const w=goalWeights(); const served=Object.keys(GOALS).filter(g=>(+w[g]||0)>0&&(sp.goals&&sp.goals[g])>=2)
+  const w=goalWeights(); const served=Object.keys(GOALS).filter(g=>(+w[g]||0)>0&&spGoal(sp,g)>=2)
     .map(g=>GOALS[g].toLowerCase());
   const rowIds=[...new Set(row.plants.map(p=>p.sp))];
   const cov=bloomCoverage(rowIds); const solo=(sp.bloom||[]).filter(m=>cov[m-1]===1);
@@ -1771,7 +2528,7 @@ function brush(ll){ const nr=nearestRow(ll,tolFt()); if(!nr){ return; } const r=
   for(const p of r.plants){ const d=Math.abs(p.ft-ft); if(d<minGap) return; if(p.sp===sp.id&&d<sp.spacingFt) return; }
   if(sp.id==='sage'){ for(const p of r.plants){ if(Math.abs(p.ft-ft)<4) return; } }
   r.plants.push({sp:sp.id,ft}); r.plants.sort((a,b)=>a.ft-b.ft);
-  const ll2=pointAtFt(rowLines(nr.h)[nr.i],ft); L.circleMarker(ll2,{pane:'plantP',renderer:canvasR,radius:plantRadius(),color:'#111',weight:.6,fillColor:sp.color,fillOpacity:.95,interactive:false}).addTo(plantLayer);
+  const ll2=pointAtFt(rowLines(nr.h)[nr.i],ft); L.circleMarker(ll2,{pane:'plantP',renderer:plantR,radius:plantRadius(),color:'#111',weight:.6,fillColor:sp.color,fillOpacity:.95,interactive:false}).addTo(plantLayer);
   const hi=stationInfo(nr.h,nr.i,ft); const fit=(hi.wet!=null&&(hexForRowPoint(nr.h,nr.i,ft)||hi.seep>0))?speciesFit(sp,hi,r):null;
   readout(sp.common+' at '+ft+' ft · '+r.name+' · '+r.plants.length+' plants'+(fit?' · fit '+Math.round(fit.score*100)+'%'+(fit.score<0.4?' — '+fit.why[0]:''):''));
 }
@@ -2448,7 +3205,10 @@ const bloomStr=sp=>{ const b=sp.bloom||[]; if(!b.length) return 'no bloom'; cons
    treats "no weights" / "nothing excluded" as the neutral case. */
 function goalWeights(h){ h=h||curHedge(); return (h&&h.goals)||{}; }
 function hasCriteria(h){ return !!h&&(Object.values(h.goals||{}).some(v=>+v>0)||(h.excluded||[]).length>0); }
-function goalScore(sp){ const w=goalWeights(); let num=0,den=0; Object.keys(GOALS).forEach(g=>{ const wt=+w[g]||0; if(!wt) return; num+=wt*((sp.goals&&sp.goals[g])||0); den+=wt*3; }); return den?num/den:null; }
+/* "Local native" is not a stored score: 3 for a species the nursery lists as native to the North Bay, else 0 (which
+   includes species with no information). Every other goal is the species' own 0-3 score. */
+function spGoal(sp,g){ if(g==='local') return sp.northBay===true?3:0; return (sp.goals&&sp.goals[g])||0; }
+function goalScore(sp){ const w=goalWeights(); let num=0,den=0; Object.keys(GOALS).forEach(g=>{ const wt=+w[g]||0; if(!wt) return; num+=wt*spGoal(sp,g); den+=wt*3; }); return den?num/den:null; }
 function siteSummaryFit(sp){ const h=curHedge(); if(!h) return null;
   const rows=S.sel.row!=null?[S.sel.row]:h.rows.map((_,i)=>i);
   const fits=[]; rows.forEach(i=>{ const L=rowLenFt(h,i); if(!L) return; const row=h.rows[i];
@@ -2471,7 +3231,7 @@ function fitTip(x){ if(x.total==null) return 'No goals set and no ground read fo
   if(x.g!=null&&x.f) lines.push(pc(x.total)+' = 60% of goals ('+pc(x.g)+') + 40% of site fit ('+pc(x.f.score)+')');
   else if(x.g!=null) lines.push(pc(x.total)+' = goals only ('+pc(x.g)+'); no ground has been read yet');
   else lines.push(pc(x.total)+' = site fit only; no goal sliders are set');
-  if(x.g!=null){ const gs=Object.keys(GOALS).filter(k=>+goalWeights()[k]>0).map(k=>(SG_GOAL_LABELS[k]||k)+' '+((x.sp.goals&&x.sp.goals[k])||0)+'/3'); /* the grid's hand-picked labels: the first word of "Little or no summer water" and "Low maintenance" is just "Little" and "Low" */ if(gs.length) lines.push('Its scores for the goals you weighted: '+gs.join(', ')); }
+  if(x.g!=null){ const gs=Object.keys(GOALS).filter(k=>+goalWeights()[k]>0).map(k=>(SG_GOAL_LABELS[k]||k)+' '+spGoal(x.sp,k)+'/3'); /* the grid's hand-picked labels: the first word of "Little or no summer water" and "Low maintenance" is just "Little" and "Low" */ if(gs.length) lines.push('Its scores for the goals you weighted: '+gs.join(', ')); }
   if(x.f&&x.f.why&&x.f.why.length) lines.push('Site: '+x.f.why.join('; '));
   return lines.join('\n'); }
 function planExcluded(h){ h=h||curHedge(); if(!h) return []; h.excluded=h.excluded||[]; return h.excluded; }
@@ -2579,7 +3339,11 @@ function regimeForMoisture(m,i,n,isDriest){ if(n===1) return 'perm'; if(m<0.33) 
 function shadeUnder(dom){ return !!dom&&(dom.cast==='dense'||(dom.cast==='light'&&dom.rad>=6)); }
 function fitForRow(sp,h,i,moist,regime){ const L=rowLenFt(h,i); const info=Object.assign({soil:null,waterFt:null,aspectDeg:null,slopePct:0},stationInfo(h,i,L/2)); info.wet=moist; return speciesFit(sp,info,{regime}); }
 function fitAtStation(sp,h,i,ft,regime){ if(!hedgeHexes(h).length&&!ponds().length) return null; return speciesFit(sp,stationInfo(h,i,ft),{regime}); }
-function candidatePool(){ const excluded=new Set(planExcluded()); return shortlist().filter(x=>!excluded.has(x.sp.id)).slice(0,16).map(x=>x.sp); }
+/* The Explore tab's Shortlist and Auto-fill's candidates are the same list: the top SHORTLIST_N species by the percentages
+   shown there, less any you have unticked. Auto-fill chooses ONLY from it (see buildComp), so what you see is what can be
+   planted. Species outside it, however well they would fit a particular row, are never chosen. */
+const SHORTLIST_N=40;
+function candidatePool(){ const excluded=new Set(planExcluded()); return shortlist().slice(0,SHORTLIST_N).filter(x=>!excluded.has(x.sp.id)).map(x=>x.sp); }
 /* Does a species' regime tag fit a line's regime? The tag is how the species wants to be watered over
    time (wean: nothing once established; reduce: taper by year 3; perm: water all year); a line
    delivers one of those. Two things this used to get wrong:
@@ -2593,7 +3357,20 @@ function candidatePool(){ const excluded=new Set(planExcluded()); return shortli
    Left strict on purpose: a wean-tagged species on a Permanent line. Those are the drought-adapted
    plants (oaks, ceanothus, flannelbush) that summer water harms, and no site moisture changes that. */
 function regimeOk(sp,regime){ if(!sp.regime) return true; if(regime==='wean') return sp.regime==='wean'||sp.story==='nurse'; if(regime==='reduce') return sp.regime!=='perm'; return sp.regime!=='wean'; }
-function regimeEligible(sp,regime,moistureOk){ return regimeOk(sp,regime)||(regime!=='perm'&&sp.regime==='perm'&&sp.moisture==='wet'&&moistureOk(sp)); }
+/* Water comes from two places: the irrigation line (the row's regime) and the ground. The line carries a plant through
+   establishment; after that a species that wants more water than the line will give, one tagged permanent on a wean or reduce
+   row or reduce on a wean row, is still eligible where the GROUND supplies it (a pond edge, a seep, a wet swale). groundOk is
+   the row-level test (groundGate: at least a quarter of the row's stations are at GROUND_WET or wetter). A wet-site species
+   keeps its own moisture test as before. Callers that pass no groundOk get the earlier behaviour. Dry-site species are
+   unaffected: the moisture gate still bars them from wet ground. */
+const GROUND_WET=0.48;
+function needsGround(sp,regime){ return !regimeOk(sp,regime); }
+function groundGate(h,i,moist){ const prof=rowMoistureProfile(h,i,5).filter(p=>p.wet!=null);
+  if(!prof.length) return ()=>moist>=GROUND_WET;
+  const frac=prof.filter(p=>p.wet>=GROUND_WET).length/prof.length; return ()=>frac>=0.25; }
+function regimeEligible(sp,regime,moistureOk,groundOk){ if(regimeOk(sp,regime)) return true;
+  if(regime==='perm'||!(sp.regime==='perm'||(regime==='wean'&&sp.regime==='reduce'))) return false;
+  return sp.moisture==='wet'?moistureOk(sp):!!(groundOk&&groundOk(sp)); }
 /* Which species the row's moisture allows, by the same rule layoutRow's suits() applies at each
    spot: a 'dry' species needs the ground at 0.6 or drier, a 'wet' one at 0.48 or wetter. Selection
    used to apply that to the row's AVERAGE moisture, so a row averaging 0.61 lost every dry species
@@ -2633,9 +3410,11 @@ function buildComp(h,i,moist,regime,pool,coveredMonths,usedDom,seed){ usedDom=us
      selection honest about what can really be placed — a role with no
      moisture-compatible candidate in the library now comes back genuinely empty
      instead of picking something unplaceable and failing silently downstream. */
-  const moistureOk=moistureGate(h,i,moist);
+  const moistureOk=moistureGate(h,i,moist), groundOk=groundGate(h,i,moist);
   const excluded=new Set(planExcluded());
-  const inPool=new Set(pool.map(x=>x.id)); const scores=S.species.filter(sp=>regimeEligible(sp,regime,moistureOk)&&!excluded.has(sp.id)&&moistureOk(sp)).map(scoreOf).map(x=>{ if(!inPool.has(x.sp.id)) x.s-=0.25; return x; }).sort((a,b)=>b.s-a.s);
+  /* Only species on the Shortlist are candidates: a species outside it is removed here, not merely marked down, so Auto-fill
+     never plants something the list does not show. A role the list cannot fill stays empty. */
+  const inPool=new Set(pool.map(x=>x.id)); const scores=S.species.filter(sp=>inPool.has(sp.id)&&regimeEligible(sp,regime,moistureOk,groundOk)&&!excluded.has(sp.id)&&moistureOk(sp)).map(scoreOf).sort((a,b)=>b.s-a.s);
   const comp=(seed||[]).map(c=>({sp:c.sp,role:c.role})); const used=new Set(comp.map(c=>c.sp)); const take=(pred,role,n)=>{ let c=0; for(const x of scores){ if(c>=n) break; if(used.has(x.sp.id)||!pred(x.sp)) continue; comp.push({sp:x.sp.id,role}); used.add(x.sp.id); c++; } };
   const w=goalWeights(); const wantOver=((+w.screen||0)+(+w.wild||0))>=3||moist>0.55; const L=rowLenFt(h,i);
   /* Per-row species counts for the top two layers (the ground layer has its own, below). Unset
@@ -2700,7 +3479,7 @@ function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const c
      crash or a silent no-op. Species added via the admin harvest/paste/JSON tools
      frequently have no sourced spacingFt at all, so this isn't a rare edge case. */
   const spacingOf0=id=>{ const c=comp.find(x=>x.sp===id); const sp=SP(id); return (c&&c.spacing)||(sp&&sp.spacingFt)||10; };
-  const prof=rowMoistureProfile(h,i,5); const wetAt=ft=>{ let b=prof[0]; for(const p of prof){ if(Math.abs(p.ft-ft)<Math.abs(b.ft-ft)) b=p; } return b.wet; }; const anyInfo=prof.some(p=>p.wet!=null); const suits=(ft,sp)=>{ if(!anyInfo) return true; const w=wetAt(ft); if(w==null) return true; if(sp.moisture==='wet') return w>=0.48; if(sp.moisture==='dry') return w<=0.6; return true; };
+  const prof=rowMoistureProfile(h,i,5); const wetAt=ft=>{ let b=prof[0]; for(const p of prof){ if(Math.abs(p.ft-ft)<Math.abs(b.ft-ft)) b=p; } return b.wet; }; const anyInfo=prof.some(p=>p.wet!=null); const suits=(ft,sp)=>{ if(!anyInfo) return true; const w=wetAt(ft); if(w==null) return true; if(sp.moisture==='wet') return w>=0.48; if(sp.moisture==='dry') return w<=0.6; if(needsGround(sp,h.rows[i].regime)) return w>=GROUND_WET; return true; };
   const free=(ft,sp)=>ft>=0&&ft<=L&&suits(ft,sp)&&plants.every(p=>{ const d=Math.abs(p.ft-ft); const q=SP(p.sp); if(d<minGap) return false; if(q&&q.id===sp.id&&d<spacingOf0(sp.id)*0.9) return false; if(q&&q.allelo&&d<q.allelo) return false; if(sp.allelo&&d<sp.allelo) return false;
     if(keptSet.size&&q&&q.story===sp.story&&(sp.story==='over'||sp.story==='mid')&&d<k*(sp.rad+q.rad)/2) return false; return true; });
   const put=(ft,sp)=>{ ft=Math.round(ft*2)/2; for(const dx of [0,1,-1,2,-2,3,-3]){ if(free(ft+dx,sp)){ plants.push({sp:sp.id,ft:ft+dx}); return true; } } return false; };
@@ -2734,11 +3513,11 @@ function domRadius(h,i){ const r=h.rows[i]; const ids=(r.comp||[]).filter(c=>c.r
    so, which read as a bug (3 overstory asked, 1 delivered, no explanation). This finds the first
    filter that left too few and names it. Only rows where you set a count are checked. */
 function shortfalls(h,i,moist){ const r=h.rows[i], out=[], L=rowLenFt(h,i), cap=Math.max(1,Math.floor(L/60));
-  const regimeName=REGIMES[r.regime].split(' ')[0].toLowerCase(), ok=moistureGate(h,i,moist), ex=new Set(planExcluded(h));
+  const regimeName=REGIMES[r.regime].split(' ')[0].toLowerCase(), ok=moistureGate(h,i,moist), gok=groundGate(h,i,moist), ex=new Set(planExcluded(h));
   const firstDom=SP((r.comp.find(c=>c.role==='dom')||{}).sp);
   [['domCount','dom','overstory',firstDom?firstDom.story:'over',cap],['midCount','mid','mid-story','mid',cap],['groundCount','ground','ground','ground',99]].forEach(([key,role,label,story,capN])=>{
     const asked=r[key]; if(asked==null||asked<=0) return; const want=Math.min(asked,capN), got=r.comp.filter(c=>c.role===role).length; if(got>=want) return;
-    const all=S.species.filter(sp=>sp.story===story), a=all.filter(sp=>regimeEligible(sp,r.regime,ok)), b=a.filter(sp=>!ex.has(sp.id)), c=b.filter(ok);
+    const all=S.species.filter(sp=>sp.story===story), a=all.filter(sp=>regimeEligible(sp,r.regime,ok,gok)), b=a.filter(sp=>!ex.has(sp.id)), c=b.filter(ok);
     const why=a.length<want?`the ${regimeName} regime only accepts ${a.length} of ${all.length} ${label} species`
       :b.length<want?`only ${b.length} are left after your exclusions`
       :c.length<want?`only ${c.length} of the ${b.length} that accept a ${regimeName} line suit this row's moisture (dry species need ground at 0.6 or drier, wet species 0.48 or wetter)`
@@ -2765,9 +3544,11 @@ function populateHedge(h){ h.accepted=[]; const n=h.rows.length; const moist=row
     const label=kinds.length>1?'Water influence':kinds[0]==='creek'?'Creek influence':'Pond influence';
     log.unshift(label+' detected: '+((w[0].src&&w[0].src.name)||(kinds[0]==='creek'?'a creek':'a pond'))+' reaches '+w.map(x=>x.r.name+' ('+Math.round(x.ft)+' ft)').join(', ')+' — see the Plan tab for what changed.'); } if(anyKept){ const kt=keptN.reduce((a,b)=>a+b,0), at=h.rows.reduce((a,r)=>a+r.plants.length,0)-kt; log.unshift('Filled around '+kt+' plants already in '+h.name+': every one kept exactly as placed, '+at+' added.'); }
   h.autoLog=log.concat(fixes); return h.autoLog; }
-function substitutes(h,i,spId){ const r=h.rows[i]; const sp=SP(spId); if(!sp) return []; const moist=rowMoistures(h)[i]; const inRow=new Set((r.comp||[]).map(c=>c.sp));
-  const ex=new Set(planExcluded(h)), gate=moistureGate(h,i,moist); /* repairHedge picks swaps from here, so without this auto-fill itself could put an excluded species back in */
-  const cands=S.species.filter(x=>x.id!==spId&&!ex.has(x.id)&&!inRow.has(x.id)&&regimeEligible(x,r.regime,gate)&&(x.story===sp.story||(sp.story==='nurse'&&x.story==='ground'))).map(x=>{ const g=goalScore(x), f=fitForRow(x,h,i,moist,r.regime); return {sp:x,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+(sp.replace===x.id?0.15:0)}; }).sort((a,b)=>b.s-a.s);
+/* poolOnly: restrict to the Shortlist. Auto-fill's repair pass uses it so a swap never brings in a species the list does not show;
+   the swap dialog does not, so you can still look beyond the list by hand. */
+function substitutes(h,i,spId,poolOnly){ const r=h.rows[i]; const pl=poolOnly?new Set(candidatePool().map(x=>x.id)):null; const sp=SP(spId); if(!sp) return []; const moist=rowMoistures(h)[i]; const inRow=new Set((r.comp||[]).map(c=>c.sp));
+  const ex=new Set(planExcluded(h)), gate=moistureGate(h,i,moist), gground=groundGate(h,i,moist); /* repairHedge picks swaps from here, so without this auto-fill itself could put an excluded species back in */
+  const cands=S.species.filter(x=>x.id!==spId&&!ex.has(x.id)&&!inRow.has(x.id)&&(!pl||pl.has(x.id))&&regimeEligible(x,r.regime,gate,gground)&&(x.story===sp.story||(sp.story==='nurse'&&x.story==='ground'))).map(x=>{ const g=goalScore(x), f=fitForRow(x,h,i,moist,r.regime); return {sp:x,s:(g!=null?0.55*g:0.3)+0.45*(f?f.score:0.5)+(sp.replace===x.id?0.15:0)}; }).sort((a,b)=>b.s-a.s);
   return cands.slice(0,6); }
 let lastSwap=null;
 function swapSpecies(h,i,fromId,toId){ const r=h.rows[i]; const from=SP(fromId), to=SP(toId);
@@ -2796,14 +3577,14 @@ function repairHedge(h){ const log=[]; const tried=new Set(); for(let pass=0;pas
           c.spacing=(cur===base?null:cur); autoRowGaps(h); layoutRow(h,i); return false; };
         const accept=(other)=>{ h.accepted=h.accepted||[]; const key=[b.sp.id,other].sort().join('|'); if(!h.accepted.includes(key)){ h.accepted.push(key);
           log.push(r.name+': '+b.sp.common+' and '+(SP(other)||{common:'its neighbour'}).common+' share the '+b.sp.root.cls+'-depth layer at any workable spacing — accepted as normal for a closed hedgerow, not flagged.'); return true; } return false; };
-        if(b.shade/b.n>0.5&&(c.role==='ground'||c.role==='mid')){ const alt=substitutes(h,i,b.sp.id).find(x=>x.sp.tol!=='sun'&&!tried.has(i+':'+x.sp.id)); tried.add(key); if(alt){ swapSpecies(h,i,b.sp.id,alt.sp.id); log.push(r.name+': '+b.sp.common+' would be shaded out by yr 7 — swapped for shade-tolerant '+alt.sp.common+'.'); changed=true; } }
+        if(b.shade/b.n>0.5&&(c.role==='ground'||c.role==='mid')){ const alt=substitutes(h,i,b.sp.id,true).find(x=>x.sp.tol!=='sun'&&!tried.has(i+':'+x.sp.id)); tried.add(key); if(alt){ swapSpecies(h,i,b.sp.id,alt.sp.id); log.push(r.name+': '+b.sp.common+' would be shaded out by yr 7 — swapped for shade-tolerant '+alt.sp.common+'.'); changed=true; } }
         else if(b.crowd/b.n>0.5&&c.role!=='dom'){ if(widen('crowns crowding by yr 7')){ changed=true; return; } }
         else if(b.crowd/b.n>0.5&&c.role==='dom'){ if(h.density!=='open'){ h.density=h.density==='closed'?'touching':'open'; autoRowGaps(h); h.rows.forEach((_,j)=>layoutRow(h,j)); log.push(r.name+': '+b.sp.common+' crowns crowding by yr 7 — opened the row density to '+DENSITY[h.density].label+'.'); changed=true; } }
         else if(b.root/b.n>0.6&&c.role!=='dom'){ const dom=SP((r.comp.find(x=>x.role==='dom')||{}).sp);
           if(widen('roots contested in the '+b.sp.root.cls+' layer')){ changed=true; return; }
           const withWhom=(()=>{ const AA=assess(h,7); let who=null; AA.P.forEach((p,k)=>{ if(p.i===i&&p.sp.id===b.sp.id) AA.notes[k].forEach(x=>{ if(x.k==='root'&&!who) who=x.other.sp.id; }); }); return who; })();
           if(withWhom&&accept(withWhom)){ changed=true; return; }
-          tried.add(key); const alt=substitutes(h,i,b.sp.id).find(x=>(!dom||x.sp.root.cls!==dom.root.cls)&&!tried.has(i+':'+x.sp.id)&&(!shadeUnder(dom)||x.sp.tol!=='sun')); if(alt){ swapSpecies(h,i,b.sp.id,alt.sp.id); log.push(r.name+': '+b.sp.common+' contests the '+b.sp.root.cls+' root layer — swapped for '+alt.sp.common+' ('+alt.sp.root.cls+' roots).'); changed=true; } } }); });
+          tried.add(key); const alt=substitutes(h,i,b.sp.id,true).find(x=>(!dom||x.sp.root.cls!==dom.root.cls)&&!tried.has(i+':'+x.sp.id)&&(!shadeUnder(dom)||x.sp.tol!=='sun')); if(alt){ swapSpecies(h,i,b.sp.id,alt.sp.id); log.push(r.name+': '+b.sp.common+' contests the '+b.sp.root.cls+' root layer — swapped for '+alt.sp.common+' ('+alt.sp.root.cls+' roots).'); changed=true; } } }); });
     if(!changed) break; } return log; }
 function pondInfluence(h){ if(!ponds().length&&!creeks().length) return null; const n=h.rows.length; const rows=[]; let any=false;
   h.rows.forEach((r,i)=>{ const prof=rowMoistureProfile(h,i,10); let maxSeep=0,ft=0,pond=null,creek=null,why=''; prof.forEach(p=>{ const si=stationInfo(h,i,p.ft); if(si.seep>0.3) ft+=10; if(si.seep>maxSeep){ maxSeep=si.seep; pond=si.seepPond; creek=si.seepCreek; why=si.seepWhy; } }); const wetMax=Math.max(...prof.map(p=>p.wet||0));
@@ -2916,7 +3697,7 @@ function openSettingsDialog(){
            switch is treated as happening first, name/location edits second. */
         if(_dlgPendingCode!==null&&_dlgPendingCode!==accessCode()){
           setAccessCode(_dlgPendingCode);
-          if(_dlgPendingCode){ const data=await cloudPull(); await cloudWhoAmI(); const [,sharedSpecies]=await Promise.all([loadMyViews(),loadSharedSpecies()]); if(data){ S=data; normalizeState(); } if(sharedSpecies) S.species=sharedSpecies; }
+          if(_dlgPendingCode){ const data=await cloudPull(); await cloudWhoAmI(); const [,sharedSpecies]=await Promise.all([loadMyViews(),loadSharedSpecies()]); if(data){ S=data; normalizeState(); } if(sharedSpecies) S.species=sharedSpecies; markSpeciesSynced(); }
           else { cloudStatus={state:'unconfigured',msg:'',at:null}; cloudIdentity={role:null,name:null}; }
         }
         if(_dlgPendingName!==null&&_dlgPendingName!==R().name) commit('Rename ranch',()=>{ R().name=_dlgPendingName; });
@@ -3101,8 +3882,10 @@ function renderGoals(){ const h=curHedge(); const r=R(); let html;
   if(!aoi()) html+=`<p class="small mute">Outline the ground you're considering and every acre gets read and ranked by fit. <button class="small" onclick="toggleMode('aoi')">Draw study area</button></p>`;
   else html+=`<p class="small">${aoiAcres().toFixed(1)} acres, ${(hexesInAoi()||[]).length} hexes.</p><label><input type="checkbox" ${heatOn?'checked':''} onchange="document.getElementById('lyHeat').checked=this.checked;heatToggle()"> Show suitability heat map</label>
     <div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`;
-  html+=`<h2>Shortlist</h2>`+(h?`<p class="small mute">Checked species are eligible for ${esc(h.name)}'s auto-fill.</p>`:'');
-  const sl=shortlist().slice(0,24);
+  html+=`<h2>Shortlist</h2>`+(h?`<p class="small mute">Auto-fill chooses only from these ${SHORTLIST_N} species, and only the checked ones, for ${esc(h.name)}. Within them it also checks each row's water and moisture, so a species can be passed over on a row it does not suit.</p>`:'');
+  if(h){ const nb=S.species.filter(sp=>sp.northBay===false); if(nb.length){ const ex=new Set(planExcluded(h)), out=nb.filter(sp=>ex.has(sp.id)).length;
+    html+=`<p class="small">${nb.length} species are marked as not native to the North Bay${out?` (${out} already excluded)`:''}. <button class="small" onclick="setNorthBayExclusion(true)">Exclude them</button> <button class="small" onclick="setNorthBayExclusion(false)">Include them again</button><br><span class="mute">Species with no North Bay information are left as they are.</span></p>`; } }
+  const sl=shortlist().slice(0,SHORTLIST_N);
   html+=sl.map(x=>{ const excluded=planExcluded().includes(x.sp.id);
     return `<div class="sp${excluded?' excluded':''}" onclick="openSpeciesInfo('${x.sp.id}')">
       <input type="checkbox" onclick="event.stopPropagation();toggleExcluded('${x.sp.id}')" ${excluded?'':'checked'} title="${excluded?'Excluded from auto-fill':'Eligible for auto-fill'}">
@@ -3110,18 +3893,27 @@ function renderGoals(){ const h=curHedge(); const r=R(); let html;
       <span class="n">${esc(x.sp.common)}<i>${esc(bloomStr(x.sp))} · ${x.sp.moisture}</i></span>
       <span class="fit ${x.total>=0.7?'ok':x.total<0.45?'alert':''}" title="${esc(fitTip(x))}">${x.total!=null?Math.round(x.total*100)+'%':'—'}</span></div>`; }).join('');
   setHtml('tab-goals',html); }
+/* Adds every species marked not native to the North Bay to this hedgerow's exclusion list (or takes them off
+   again). It uses the same list as the checkboxes, so each one shows as unticked, auto-fill and the swap dialog
+   already honour it, and it undoes and copies with the rest of the hedgerow's criteria. */
+function setNorthBayExclusion(on){ const h=curHedge(); if(!h) return; const ids=S.species.filter(sp=>sp.northBay===false).map(sp=>sp.id);
+  commit((on?'Exclude ':'Include ')+ids.length+' non-North-Bay species'+(on?' from':' in')+' auto-fill',()=>{ const set=planExcluded(h);
+    ids.forEach(id=>{ const i=set.indexOf(id); if(on&&i<0) set.push(id); if(!on&&i>=0) set.splice(i,1); }); }); renderPanels(); }
 function toggleExcluded(id){ if(!curHedge()){ UI.toast('Select a hedgerow first — exclusions are set per hedgerow'); renderPanels(); return; } const was=planExcluded().includes(id); const label=(was?'Include ':'Exclude ')+((SP(id)||{}).common||'species')+(was?' in auto-fill again':' from auto-fill');
   commit(label,()=>{ const set=planExcluded(); const i=set.indexOf(id); if(i>=0) set.splice(i,1); else set.push(id); }); renderPanels(); }
 async function openSpeciesInfo(id){ const sp=SP(id); if(!sp) return; const sf=siteSummaryFit(sp); const g=goalScore(sp);
   const body=`<p class="small"><i>${esc(sp.sci)}</i> ${prov('lib')}<br>${esc(sp.notes||'')}</p>
-    <p class="small"><span class="pill">${esc(sp.story)}</span><span class="pill">${sp.ht}×${sp.rad*2} ft</span><span class="pill">bloom ${esc(bloomStr(sp))}</span><span class="pill">${esc(sp.moisture)}</span></p>
+    <p class="small"><span class="pill">${esc(sp.story)}</span><span class="pill">${sp.ht}×${sp.rad*2} ft</span><span class="pill">bloom ${esc(bloomStr(sp))}</span><span class="pill">${esc(sp.moisture)}</span>${sp.northBay===true?'<span class="pill">North Bay native</span>':''}${(()=>{ const L=spContainers(sp); return L.length?'<span class="pill">'+L.map(c=>esc(containerLabel(c.container))+' $'+fmtMoney(c.price)+(c.stock!=null?' ('+c.stock+' in stock)':'')).join(' · ')+(sp.priceAsOf?' · '+esc(fmtAsOf(sp.priceAsOf)):'')+'</span>':''; })()}</p>
     ${sf?`<p class="small">Site fit here: <b>${Math.round(sf.score*100)}%</b> — ${esc(sf.why.join('; '))}</p>`:'<p class="small mute">Select a hedgerow, or read the ground, to see site fit.</p>'}
     ${g!=null?`<p class="small">Matches your goals: <b>${Math.round(g*100)}%</b></p>`:''}
     <div id="diag_${id}">${diagnosisHtml(id)}</div>
     ${photoStrip(id)}
     <div class="refs">${refLinksHtml(sp)}</div>`;
   const excluded=planExcluded().includes(id);
-  UI.open(sp.common,body,[{label:excluded?'Include in auto-fill':'Exclude from auto-fill',primary:true,value:'toggle'},{label:'Close',value:null}]).then(v=>{ if(v==='toggle') toggleExcluded(id); }); }
+  const acts=[{label:excluded?'Include in auto-fill':'Exclude from auto-fill',primary:true,value:'toggle'}];
+  if(canEditSpecies()) acts.push({label:'Update from nursery',value:'update'});
+  acts.push({label:'Close',value:null});
+  UI.open(sp.common,body,acts).then(async v=>{ if(v==='toggle') toggleExcluded(id); else if(v==='update'){ await updateSpeciesFromNursery(id); openSpeciesInfo(id); } }); }
 function renderPaint(){ const h=curHedge(); let html='';
   /* Owner and editor only (not viewer) — matches the Worker's own permission on
      PUT /species, which allows the same two roles. Shown regardless of whether a
@@ -3130,7 +3922,7 @@ function renderPaint(){ const h=curHedge(); let html='';
      tools above it — this is a library-maintenance action, not a row-painting one,
      and sitting in the same button row as Auto-fill made it read as part of that
      toolbar rather than a separate thing. */
-  const editBtn=(cloudIdentity.role==='owner'||cloudIdentity.role==='editor')
+  const editBtn=canEditSpecies()
     ?`<div class="row" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><button class="small" onclick="openSpeciesGrid()">Edit species library (spreadsheet view)</button></div>`:'';
   if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`+editBtn); return; }
   const r=h.rows[S.sel.row||0];
@@ -3271,7 +4063,7 @@ function bloomDialBlock(ids){ const cov=bloomCoverage(ids); const gaps=cov.map((
 let bvYear=7, bvPlaying=false, bvTimer=null;
 function bvHedge(){ return curHedge(); }
 function bvPlants(h){ return plantsXY(h); }
-function plantingOrder(h){ const A=assess(h,7); const scored=A.P.map((p,k)=>{ const notes=A.notes[k]; const risk=p.sp.risk+(notes.filter(n=>n.lvl==='bad').length*10); return {p,risk,seq:p.sp.story==='nurse'?0:p.sp.story==='over'?1:p.sp.story==='mid'?2:p.sp.story==='vine'?3:4}; });
+function plantingOrder(h){ const A=assess(h,7); const scored=A.P.map((p,k)=>{ const notes=A.notes[k]; const risk=Math.round((p.sp.risk||0)*lossMult(chosenSize(h,p.sp)))+(notes.filter(n=>n.lvl==='bad').length*10); return {p,risk,seq:p.sp.story==='nurse'?0:p.sp.story==='over'?1:p.sp.story==='mid'?2:p.sp.story==='vine'?3:4}; });
   return scored.sort((a,b)=>a.seq-b.seq||a.p.i-b.p.i||a.p.ft-b.p.ft); }
 function bloomStats(h){ const ids=[]; h.rows.forEach(r=>r.plants.forEach(p=>ids.push(p.sp))); return ids; }
 function bvSvg(h,y){ return crossSection(h,y); }
@@ -3297,10 +4089,46 @@ function bvPlayToggle(){ bvPlaying=!bvPlaying; if(bvPlaying){ let idx=HORIZONS.i
 function bvWhy(hid,i,ft,spId){ openPlant(hid,i,ft,spId); }
 function bvOrderSvg(){ return ''; }
 const VEHICLES={truck:{label:'Pickup bed',cuft:70},trailer:{label:'Utility trailer',cuft:180},cart:{label:'Garden cart',cuft:12}};
-const CONTAINER={1:{label:'1 gal',cuft:0.3},5:{label:'5 gal',cuft:1.2},15:{label:'15 gal',cuft:3.5}};
-function containerForTier(sp){ if(sp.story==='over') return 5; if(sp.story==='mid') return 5; return 1; }
+/* ---- Container sizes ----
+   A plant's container matters for survival as well as cost: a big pot is far likelier to get a plant through its
+   first year than a small start. So each hedgerow records, per species, the container it will be planted in
+   (h.sizes), chosen on the Cost tab from what the nursery actually sells plus the standard sizes (priced as
+   estimates, so a size can be planned even when none is in stock). The choice carries through to the price, the
+   stock check, the pot volume that sizes a truck load, and the expected loss.
+   The nursery's own container table (calfloranursery.com/about-us#containers) gives each pot's real volume: RP 0.06
+   gal, 5 in sleeve 0.12, 4 in 0.2, STP 0.43, "1 gallon" 0.6, TTP 0.8, 2 gallon 1.63, "5 gallon" 3.26. Its gallon
+   names are well under nominal. `vol` is that actual volume.
+   `cuft` is the room a potted plant takes on a truck: the pot's bounding box (diameter squared x height, from the
+   same table) scaled so the 1 gallon keeps its earlier 0.3 (which allowed for foliage above the pot); 5g keeps its
+   earlier figure.
+   `generic` is a price estimate for a size the nursery is not listing, set from its own September 2026 prices (4in
+   about $7, 1g $13 to 15.50, 5g $36 to 44). Sizes with no observed price get no generic price and are offered only
+   when the nursery lists them.
+   There is no 15 gallon: the nursery's table has none, and larger pots are left out for now. A size the app has no
+   entry for (one the nursery lists in an inventory, say) is still shown, with its own price, a neutral loss factor
+   of 1, and truck room estimated from its nominal gallons.
+   `loss` scales a species' own "expected loss by year 3", with 1 gallon as the baseline of 1.0. THOSE FACTORS ARE
+   ASSUMPTIONS, NOT MEASURED DATA: 4in 1.5, 1g 1.0 and 5g 0.75 are my own starting points, and the sizes between them
+   are interpolated on the log of the pot's actual volume. They are editable on the Cost tab and kept with the ranch
+   (R().lossMult). */
+const CONTAINER_INFO={'rp':{vol:0.06,cuft:0.018,loss:2},'5in':{vol:0.12,cuft:0.035,loss:1.75},'4in':{vol:0.2,cuft:0.07,generic:7,loss:1.5},'stp':{vol:0.43,cuft:0.17,loss:1.15},'1g':{vol:0.6,cuft:0.3,generic:15,loss:1},'ttp':{vol:0.8,cuft:0.29,loss:0.95},'2g':{vol:1.63,cuft:0.77,loss:0.85},'5g':{vol:3.26,cuft:1.2,generic:40,loss:0.75}};
+function containerVolumes(){ return CONTAINER_ORDER.filter(k=>CONTAINER_INFO[k].vol).map(k=>containerLabel(k)+' = '+CONTAINER_INFO[k].vol+' gal').join(', '); }
+function containerCuft(k){ if(CONTAINER_INFO[k]) return CONTAINER_INFO[k].cuft; const g=/^(\d+)g$/.exec(k||''); return g?+g[1]*0.24+0.05:0.3; }
+function lossMult(k){ const o=R().lossMult; if(o&&o[k]!=null&&o[k]!=='') return +o[k]; return CONTAINER_INFO[k]?CONTAINER_INFO[k].loss:1; }
+/* What a species is planted in when nothing has been chosen: the container its nursery price is for, else a size by layer. */
+function containerForTier(sp){ return (sp.story==='over'||sp.story==='mid')?'5g':'1g'; }
+/* A choice stored earlier for a size this species no longer offers (15 gal, which has been dropped) is ignored, so the
+   plant falls back to its default size rather than being priced as something it is not. */
+function chosenSize(h,sp){ const set=h&&h.sizes&&h.sizes[sp.id]; if(set&&sizeOptions(sp).some(o=>o.key===set)) return set; const np=nurseryPrice(sp); return np?np.container:containerForTier(sp); }
+function sizeOptions(sp){ const have=spContainers(sp), keys=new Set(have.map(c=>c.container));
+  return have.map(c=>({key:c.container,label:containerLabel(c.container),unit:c.price,stock:c.stock,src:'nursery'}))
+    .concat(CONTAINER_ORDER.filter(k=>!keys.has(k)&&CONTAINER_INFO[k]&&CONTAINER_INFO[k].generic).map(k=>({key:k,label:containerLabel(k),unit:CONTAINER_INFO[k].generic,stock:null,src:'estimate'})))
+    .sort((a,b)=>orderIdx(a.key)-orderIdx(b.key)); }
+function sizeInfo(h,sp){ const key=chosenSize(h,sp), o=sizeOptions(sp).find(x=>x.key===key);
+  return o||{key,label:containerLabel(key),unit:(CONTAINER_INFO[key]||CONTAINER_INFO['1g']).generic,stock:null,src:'estimate'}; }
+function lossPct(sp,key){ if(sp.risk==null||sp.risk==='') return null; return Math.min(95,Math.round(+sp.risk*lossMult(key))); }
 function loadPlan(h,vehicle){ const items=plantingOrder(h); const cap=(VEHICLES[vehicle]||VEHICLES.truck).cuft; let loads=[[]],cur=0;
-  items.forEach(x=>{ const c=CONTAINER[containerForTier(x.p.sp)].cuft; if(cur+c>cap){ loads.push([]); cur=0; } loads[loads.length-1].push(x); cur+=c; }); return loads; }
+  items.forEach(x=>{ const c=containerCuft(chosenSize(h,x.p.sp)); if(cur+c>cap){ loads.push([]); cur=0; } loads[loads.length-1].push(x); cur+=c; }); return loads; }
 function batchPlan(h){ const order=plantingOrder(h); const batches={}; order.forEach(x=>{ const k=x.p.sp.story; (batches[k]=batches[k]||[]).push(x); }); return batches; }
 function dayPlan(h,vehicle){ const loads=loadPlan(h,vehicle||'truck'); const batches=batchPlan(h); return {loads,batches,total:plantingOrder(h).length}; }
 function renderDay(){ const h=curHedge(); if(!h) return;
@@ -3310,11 +4138,19 @@ function renderDay(){ const h=curHedge(); if(!h) return;
 function markSectionsOnMap(){ }
 function exportDayCSV(){ const h=curHedge(); if(!h) return; const rows=[['#','species','row','ft']]; plantingOrder(h).forEach((x,k)=>rows.push([k+1,x.p.sp.common,x.p.r.name,x.p.ft]));
   downloadCSV('planting-day.csv',rows); }
-const PLANT_PRICE={1:6,5:22,15:65};
 const STATUS=['needed','ordered','picked up','planted'];
 function catalog(h){ const cnt={}; h.rows.forEach(r=>r.plants.forEach(p=>cnt[p.sp]=(cnt[p.sp]||0)+1)); return Object.keys(cnt).map(id=>({sp:SP(id),n:cnt[id]})).filter(x=>x.sp); }
 function shopState(){ R().shop=R().shop||{}; return R().shop; }
-function shopLines(h){ return catalog(h).map(c=>{ const tier=containerForTier(c.sp); return {id:c.sp.id,sp:c.sp,n:c.n,tier,unit:PLANT_PRICE[tier],status:shopState()[c.sp.id]||'needed'}; }); }
+/* Each line is a species in the container chosen for it in this hedgerow: priced from the nursery's own list when
+   it sells that container, else the generic estimate for the size (marked "~"). */
+function shopLines(h){ return catalog(h).map(c=>{ const o=sizeInfo(h,c.sp), nur=o.src==='nursery';
+  return {id:c.sp.id,sp:c.sp,n:c.n,key:o.key,unit:o.unit,sizeLabel:o.label,src:o.src,asOf:nur?(c.sp.priceAsOf||null):null,stock:nur?o.stock:null,loss:lossPct(c.sp,o.key),options:sizeOptions(c.sp),status:shopState()[c.sp.id]||'needed'}; }); }
+/* Whole dollars stay whole ($22); anything with cents always shows two ($15.50, $46.50). */
+function fmtMoney(v){ v=+v||0; return v.toLocaleString(undefined,{minimumFractionDigits:Number.isInteger(v)?0:2,maximumFractionDigits:2}); }
+function eachTip(l){ return l.src==='nursery'?'Cal Flora Nursery price for a '+l.sizeLabel+(l.asOf?', '+fmtAsOf(l.asOf):''):'Generic estimate for a '+l.sizeLabel+' plant. The nursery is not listing this species in that size.'; }
+function lossTip(l){ return l.loss==null?'No expected loss is recorded for this species.':l.sp.risk+'% expected loss by year 3 for this species, x '+lossMult(l.key)+' for a '+l.sizeLabel+' container (an assumption you can change below).'; }
+function stockWarn(l){ return l.stock!=null&&l.n>l.stock?`<br><span class="small" style="color:var(--bad,#a33)">only ${l.stock} in stock${l.asOf?' ('+esc(fmtAsOf(l.asOf))+')':''}</span>`:''; }
+function lineLost(l){ return l.loss==null?0:l.n*l.loss/100; }
 function lineCost(l){ return l.n*l.unit; }
 function shopTotals(lines){ return lines.reduce((a,l)=>a+lineCost(l),0); }
 function setShop(id,status){ shopState()[id]=status; saveSoon(); renderShop(); }
@@ -3322,22 +4158,50 @@ function cycleStatus(id){ const cur=shopState()[id]||'needed'; const i=STATUS.in
 const CA_PROGRAMS=[{name:'NRCS EQIP — hedgerow planting',url:'https://www.nrcs.usda.gov/programs-initiatives/eqip-environmental-quality-incentives-program',note:'Cost-share for conservation plantings; apply through your local NRCS office.'},
   {name:'CDFA Healthy Soils Program',url:'https://www.cdfa.ca.gov/oefi/healthysoils/',note:'Hedgerow and cover crop incentives on ag land.'},
   {name:'RCD technical assistance',url:'https://www.carcd.org/',note:'Your local Resource Conservation District can help design and often part-fund a hedgerow.'}];
+let _shopUpd=null;
+async function updateHedgeFromNursery(){ const h=curHedge(); if(!h) return;
+  if(_shopUpd&&_shopUpd.running){ _shopUpd.cancel=true; return; }
+  const ids=catalog(h).map(c=>c.sp.id), run={running:true,cancel:false}; _shopUpd=run; const say=t=>{ const el=document.getElementById('shopStatus'); if(el) el.textContent=t; };
+  const btn=document.getElementById('shopUpd'); if(btn) btn.textContent='Stop updating'; const results=[]; let missing=0,failed=0,streak=0;
+  try{ say('Loading the nursery catalog…'); await loadCatalog(false);
+    for(let i=0;i<ids.length&&!run.cancel;i++){ const sp=SP(ids[i]); if(!sp) continue; say('Updating '+(i+1)+' of '+ids.length+': '+sp.common+'…'); let requested=false;
+      try{ const r=await fetchNurseryUpdate(sp); requested=true; results.push({id:sp.id,r}); streak=0; }
+      catch(e){ if(e&&e.notFound) missing++; else{ failed++; requested=true; if(++streak>=3) run.cancel=true; } }
+      if(requested&&!run.cancel&&i<ids.length-1) await cfnSleep(CFN_DELAY_MS); }
+  }catch(e){ run.running=false; if(btn) btn.textContent='Update these species from nursery'; say('Could not load the nursery catalog: '+((e&&e.message)||e)); return; }
+  run.running=false;
+  if(results.length){ commit('Update '+results.length+' species from the nursery',()=>{ results.forEach(({id,r})=>{ const k=S.species.findIndex(x=>x.id===id); if(k>=0) S.species[k]=r.merged; }); }); pushSharedSpecies(); drawAll(); }
+  const changed=results.filter(x=>x.r.changed.length).length; renderShop();
+  const el=document.getElementById('shopStatus'); if(el) el.textContent=(run.cancel?'Stopped. ':'')+'Updated '+changed+' of '+ids.length+' species ('+(results.length-changed)+' already current, '+missing+' not at the nursery'+(failed?', '+failed+' failed':'')+').'; }
+function sizeSelect(l){ return `<select class="small" onchange="setSize('${l.id}',this.value)" title="${esc('The container to plant this species in. Nursery sizes show the price and how many are in stock; the others are generic estimates. Actual pot volumes, from the nursery: '+containerVolumes()+'.')}">`
+  +l.options.map(o=>`<option value="${esc(o.key)}"${o.key===l.key?' selected':''}>${esc(containerLabelLong(o.key))} · ${o.src==='nursery'?'$'+fmtMoney(o.unit)+(o.stock!=null?' · '+o.stock+' in stock':''):'~$'+fmtMoney(o.unit)+' est.'}</option>`).join('')+`</select>`; }
+function setSize(id,key){ const h=curHedge(), sp=SP(id); if(!h||!sp) return; commit('Plant '+sp.common+' in '+containerLabel(key),()=>{ h.sizes=h.sizes||{}; h.sizes[id]=key; }); renderShop(); }
+function setLossMult(k,v){ commit('Change container loss factors',()=>{ const r=R(); if(k===null){ delete r.lossMult; return; } r.lossMult=r.lossMult||{}; const n=parseFloat(v); if(n>0) r.lossMult[k]=n; else delete r.lossMult[k]; }); renderShop(); }
+function lossAssumptionsHtml(){ return `<details style="margin:8px 0"><summary class="small">How container size changes expected loss</summary>
+  <p class="small mute">Each species has its own expected loss by year 3. The container it is planted in scales that: bigger plants establish better, small starts are more fragile. These factors are <b>starting assumptions, not measured data</b>, with 1 gal as the baseline of 1. Three are my own starting points (4 in, 1 gal, 5 gal); the rest are interpolated from those by the pot's actual volume (shown beside each; the nursery's "1 gallon" is really 0.6 gal and its "5 gallon" 3.26). Change them to match your own experience.</p>
+  <div>${CONTAINER_ORDER.map(k=>`<label class="small" style="display:inline-flex;gap:4px;align-items:center;margin-right:10px">${esc(containerLabel(k))}${CONTAINER_INFO[k]&&CONTAINER_INFO[k].vol?' <span class="mute">'+CONTAINER_INFO[k].vol+' gal</span>':''}<input type="number" step="0.05" min="0.05" style="width:62px" value="${lossMult(k)}" onchange="setLossMult('${k}',this.value)"></label>`).join('')}</div>
+  <div class="row"><button class="small" onclick="setLossMult(null)">Reset to defaults</button></div></details>`; }
 function renderShop(){ const h=curHedge(); if(!h){ setHtml('tab-shop',`<p class="small mute">Select a hedgerow.</p>`); return; }
   const lines=shopLines(h); if(!lines.length){ setHtml('tab-shop',`<p class="small mute">Nothing planted yet.</p>`); return; }
-  const total=shopTotals(lines);
-  let html=`<h2>${esc(h.name)} — cost</h2><p class="small">${lines.reduce((a,l)=>a+l.n,0)} plants · <b>$${total.toLocaleString()}</b> at retail nursery prices</p>`;
-  html+=`<table><tr><th>Species</th><th class="num">Qty</th><th>Size</th><th class="num">Cost</th><th>Status</th></tr>`
-    +lines.map(l=>`<tr><td>${esc(l.sp.common)}</td><td class="num">${l.n}</td><td>${CONTAINER[l.tier].label}</td><td class="num">$${lineCost(l).toLocaleString()}</td>
+  const total=shopTotals(lines), plants=lines.reduce((a,l)=>a+l.n,0);
+  const nur=lines.filter(l=>l.src==='nursery'), asOfs=[...new Set(nur.map(l=>l.asOf).filter(Boolean))].sort();
+  const lost=lines.reduce((a,l)=>a+lineLost(l),0), lostCost=lines.reduce((a,l)=>a+lineLost(l)*l.unit,0), anyLoss=lines.some(l=>l.loss!=null);
+  let html=`<h2>${esc(h.name)} — cost</h2><p class="small">${plants} plants · <b>$${fmtMoney(total)}</b>`
+    +(nur.length?` · ${nur.length} of ${lines.length} species at Cal Flora Nursery prices${asOfs.length?' ('+asOfs.map(fmtAsOf).join(', ')+')':''}; the rest are generic estimates, marked ~`:` · generic estimates, marked ~`)
+    +(anyLoss?`<br>Expect to lose about <b>${Math.round(lost)}</b> of them by year 3 (about $${fmtMoney(Math.round(lostCost))} to replace), at the sizes chosen below.`:'')+`</p>`;
+  html+=`<table><tr><th>Species</th><th class="num">Qty</th><th>Size</th><th class="num">Each</th><th class="num">Cost</th><th class="num" title="Expected loss by year 3 at this size">Yr-3 loss</th><th>Status</th></tr>`
+    +lines.map(l=>`<tr><td>${esc(l.sp.common)}${nurseryLinkHtml(l.sp)}${stockWarn(l)}</td><td class="num">${l.n}</td><td>${sizeSelect(l)}</td><td class="num" title="${esc(eachTip(l))}">${l.src==='nursery'?'':'~'}$${fmtMoney(l.unit)}</td><td class="num">$${fmtMoney(lineCost(l))}</td><td class="num" title="${esc(lossTip(l))}">${l.loss==null?'—':l.loss+'%'}</td>
       <td><button class="small" onclick="cycleStatus('${l.id}')">${l.status}</button></td></tr>`).join('')+`</table>`;
-  html+=`<div class="row"><button class="small" onclick="exportShopCSV()">Export CSV</button></div>`;
+  html+=lossAssumptionsHtml();
+  html+=`<div class="row"><button class="small" onclick="exportShopCSV()">Export CSV</button>`+(canEditSpecies()?` <button class="small" id="shopUpd" onclick="updateHedgeFromNursery()" title="Asks the nursery about each species in this hedgerow, one a second, for current prices and what is in stock. One undo reverses all of it.">Update these species from nursery</button>`:'')+`</div><p class="small mute" id="shopStatus"></p>`;
   html+=`<h2>Funding</h2>`+CA_PROGRAMS.map(p=>`<p class="small"><a href="${p.url}" target="_blank" rel="noopener">${esc(p.name)}</a><br><span class="mute">${esc(p.note)}</span></p>`).join('');
   setHtml('tab-shop',html); }
 function addShopLine(){ }
-function exportShopCSV(){ const h=curHedge(); if(!h) return; const lines=shopLines(h); const rows=[['species','qty','size','unit cost','line cost','status']];
-  lines.forEach(l=>rows.push([l.sp.common,l.n,CONTAINER[l.tier].label,l.unit,lineCost(l),l.status])); downloadCSV('plant-shopping-list.csv',rows); }
-function shopDocHtml(h){ const lines=shopLines(h); const total=shopTotals(lines);
-  return `<h2>Shopping list</h2><table border="1" cellpadding="4" style="border-collapse:collapse;width:100%"><tr><th>Species</th><th>Qty</th><th>Size</th><th>Cost</th></tr>`
-    +lines.map(l=>`<tr><td>${esc(l.sp.common)}</td><td>${l.n}</td><td>${CONTAINER[l.tier].label}</td><td>$${lineCost(l)}</td></tr>`).join('')+`</table><p><b>Total: $${total.toLocaleString()}</b></p>`; }
+function exportShopCSV(){ const h=curHedge(); if(!h) return; const lines=shopLines(h); const rows=[['species','qty','size','unit cost','line cost','status','price source','price as of','in stock','expected loss % by yr 3']];
+  lines.forEach(l=>rows.push([l.sp.common,l.n,l.sizeLabel,l.unit,lineCost(l),l.status,l.src,l.asOf||'',l.stock==null?'':l.stock,l.loss==null?'':l.loss])); downloadCSV('plant-shopping-list.csv',rows); }
+function shopDocHtml(h){ const lines=shopLines(h); const total=shopTotals(lines); const yrs=[...new Set(lines.filter(l=>l.asOf).map(l=>fmtAsOf(l.asOf)))];
+  return `<h2>Shopping list</h2><table border="1" cellpadding="4" style="border-collapse:collapse;width:100%"><tr><th>Species</th><th>Qty</th><th>Size</th><th>Each</th><th>Cost</th><th>Yr-3 loss</th></tr>`
+    +lines.map(l=>`<tr><td>${esc(l.sp.common)}</td><td>${l.n}</td><td>${esc(l.sizeLabel)}</td><td>${l.src==='nursery'?'':'~'}$${fmtMoney(l.unit)}</td><td>$${fmtMoney(lineCost(l))}</td><td>${l.loss==null?'—':l.loss+'%'}</td></tr>`).join('')+`</table><p><b>Total: $${fmtMoney(total)}</b></p><p style="font-size:12px">~ is a generic estimate; other prices are Cal Flora Nursery's${yrs.length?' ('+yrs.join(', ')+')':''}. Yr-3 loss scales each species' expected loss by the container chosen; the factors are assumptions.</p>`; }
 function downloadCSV(name,rows){ const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
   const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); }
 function shoppingHtml(h){ return shopDocHtml(h); }
@@ -3526,7 +4390,7 @@ async function trySignIn(){
   if(!cloudIdentity.role){ setAccessCode(''); if(status) status.textContent="That code wasn't recognized. Check it and try again."; return; }
   const [,sharedSpecies]=await Promise.all([loadMyViews(),loadSharedSpecies()]);
   S=data||defaultState(); normalizeState();
-  if(sharedSpecies) S.species=sharedSpecies;
+  if(sharedSpecies) S.species=sharedSpecies; markSpeciesSynced();
   hideStart(); finishBoot(); }
 function showMapLoadError(){
   document.getElementById('start').classList.add('show');
@@ -3562,7 +4426,7 @@ function finishBoot(){
     catch(e){ S=defaultState(); }
   }
   normalizeState();
-  if(sharedSpecies) S.species=sharedSpecies;
+  if(sharedSpecies) S.species=sharedSpecies; markSpeciesSynced();
   finishBoot();
 })();
 </script>
