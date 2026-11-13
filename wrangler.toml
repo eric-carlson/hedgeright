@@ -1,0 +1,7 @@
+name = "hedgeright-sync"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[[kv_namespaces]]
+binding = "DESIGN_KV"
+id = "098f746a5cc84cbeb25e1afe0e559bbc"
