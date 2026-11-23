@@ -38,6 +38,10 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 3px}
 h1{font-size:19px;margin:0;font-weight:700;letter-spacing:-.01em}
 .stitle .hrlogo{width:132px;height:78px}
 #panelHead h1{gap:10px}
+#headBtns{margin-left:auto;display:flex;gap:6px;align-items:center}
+body.viewer [data-vl]{opacity:.45;cursor:not-allowed}
+#speciesGrid.ro #sgTable input:disabled,#speciesGrid.ro #sgTable select:disabled,#speciesGrid.ro #sgTable textarea:disabled{opacity:1;color:inherit;background:transparent;border-color:transparent}
+#speciesGrid.ro .sgDel{display:none}
 h2{font-size:15px;margin:16px 0 6px;font-weight:700}
 h3{font-size:14px;margin:12px 0 4px;font-weight:700}
 p{margin:6px 0}
@@ -480,6 +484,7 @@ body.wide{--panelW:560px}
     <span class="small mute" id="sgStatus"></span>
     <span class="grow"></span>
     <button class="small" id="sgUpdAll" style="display:none" onclick="sgUpdateAll()" title="Asks the nursery about every species here, one a second: refreshes prices, stock and sizes available, and fills what is blank. Species it does not list are skipped. Nothing is kept until you press Save.">Update all from nursery</button>
+    <button class="small" id="sgWeb" style="display:none" onclick="sgWebFill()" title="Looks up every species that has blank fields (height, width, bloom months, flower color, sun, water, cold tolerance, deer, leaf habit, native) on Calscape and Calflora and fills only the blanks. Nothing is kept until you press Save.">Fill blanks from the web</button>
     <button class="small" id="sgUt" style="display:none" onclick="utAddDialog()" title="Search the Urban Tree Farm inventory and add plants to the library as drafts.">Add Urban Tree Farm plants</button>
     <button class="small" id="sgWs" style="display:none" onclick="wsAddMissing()" title="Adds the species the Watershed Nursery Cooperative lists that the library does not have, as drafts with only a name, layer and sizes filled in.">Add Watershed species</button>
     <button class="small" id="sgNative" style="display:none" onclick="sgFillNative()" title="One-time pass: fills the blank Native status cells from the nursery's North Bay flag, from cultivar names, and from a built-in list of California natives, and shows you what it will write first. Cells that already have a value are never touched; Save keeps the result.">Fill native status</button>
@@ -541,7 +546,7 @@ body.wide{--panelW:560px}
   <div id="panel">
     <div id="panelHead">
       <button id="panelToggle" class="small" onclick="togglePanel()">Panel</button>
-      <h1 style="display:flex;align-items:center;gap:8px"><svg class="hrlogo" viewBox="0 0 96 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <h1 style="display:flex;align-items:center;gap:8px;flex:1"><svg class="hrlogo" viewBox="0 0 96 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <line class="ground" x1="3" y1="49.0" x2="93" y2="49.0" stroke="#8A6B4A" stroke-width="1.6" stroke-linecap="round"/>
   <g class="p p1"><rect x="8" y="45.0" width="14" height="4" fill="#3D6B45"/><circle cx="8.0" cy="43.0" r="5.6" fill="#3D6B45"/><circle cx="22.0" cy="43.0" r="5.6" fill="#3D6B45"/><circle cx="15.0" cy="43.0" r="6.0" fill="#6FAF6A"/><circle cx="12.0" cy="39.0" r="6.0" fill="#6FAF6A"/><circle cx="18.5" cy="38.5" r="6.2" fill="#6FAF6A"/></g>
   <g class="p p2"><path d="M30.7,49.5 C30.3,41.0 27.4,33.0 24.6,30.0 C28.7,34.0 32.0,41.6 32.5,49.5 Z" fill="#B39A55"/><path d="M32.0,49.5 C31.9,38.1 30.6,27.2 29.2,23.0 C32.4,28.5 34.3,38.9 34.4,49.5 Z" fill="#C9B273"/><path d="M33.4,49.5 C33.8,36.4 34.3,23.8 34.8,19.0 C36.4,25.3 36.5,37.3 36.2,49.5 Z" fill="#C9B273"/><path d="M35.2,49.5 C36.1,38.5 38.7,28.0 41.4,24.0 C40.5,29.2 38.3,39.2 37.6,49.5 Z" fill="#B39A55"/><path d="M37.1,49.5 C38.3,41.4 42.6,33.9 47.0,31.0 C43.9,34.8 39.9,42.0 38.9,49.5 Z" fill="#C9B273"/><path d="M33.4,49.5 C32.6,43.1 28.4,37.2 24.1,35.0 C29.3,37.9 33.9,43.5 34.8,49.5 Z" fill="#B39A55"/><path d="M36.6,49.5 C37.9,43.5 43.0,38.1 48.2,36.0 C43.9,38.7 39.0,43.9 37.8,49.5 Z" fill="#C9B273"/></g>
@@ -558,8 +563,8 @@ body.wide{--panelW:560px}
       <path d="M-4.7 -1.3 L-6.2 -3.1 M-4.1 -1.5 L-4.5 -3.5" stroke="#1E2A22" stroke-width=".5" stroke-linecap="round" fill="none"/>
     </g>
   </g>
-</svg><span id="buildTag" title="">HedgeRight</span></h1>
-      <div id="histBar"><button onclick="openSettingsDialog()" title="Settings" style="font-size:19px;line-height:1;padding:3px 9px">⚙</button><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download</button><button id="btnUndo" class="small" onclick="undo()" disabled>Undo</button><button id="btnRedo" class="small" onclick="redo()" disabled>Redo</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span></div>
+</svg><span id="buildTag" title="">HedgeRight</span><span id="headBtns"><button class="small" id="btnSpecies" onclick="openSpeciesGrid()" title="Browse the species library as a spreadsheet">Species</button><button onclick="openSettingsDialog()" title="Settings" style="font-size:19px;line-height:1;padding:3px 9px">⚙</button></span></h1>
+      <div id="histBar"><span id="saveWrap"><button id="saveBtn" onclick="manualSaveClick()" title="Save now (Ctrl+S)">Save</button><button id="saveMore" onclick="toggleSaveMenu(event)" title="More ways to save">▾</button><span id="saveMenuHolder"></span></span><span id="netBadge"></span></div>
       <div class="sub" id="ranchSub">California native hedgerows, planned by goal and grown on paper first</div>
     </div>
     <div id="grip" title="Drag to resize"></div>
@@ -1870,7 +1875,7 @@ function makeProgress(pre,onStop){
     reopen(){ const el=$('Progress'); if(!el) return; el.classList.add('show'); st.open=true; document.addEventListener('keydown',key,true); const stop=$('pStop'); if(stop) stop.focus(); },
     close(){ const el=$('Progress'); if(el) el.classList.remove('show'); st.open=false; document.removeEventListener('keydown',key,true); } }; }
 const sgp=makeProgress('sg',()=>{ if(_sgUpd&&_sgUpd.running) sgUpdateAll(); });
-function sgpOpen(total){ sgp.open(total,{title:'Updating from the nursery',unit:'species'}); }
+function sgpOpen(total,title){ sgp.open(total,{title:title||'Updating from the nursery',unit:'species'}); }
 function sgpSet(done,total,now,tally,indeterminate){ sgp.set(done,total,now,tally,{indeterminate,countText:indeterminate?'Loading the nursery\u2019s catalog…':undefined}); }
 function sgpReopen(){ sgp.reopen(); } function sgpStopping(){ sgp.stopping(); } function sgpClose(){ sgp.close(); }
 async function sgUpdateAll(){ if(_sgUpd&&_sgUpd.running){ _sgUpd.cancel=true; sgSay('Stopping after the current plant…'); sgpStopping(); return; }
@@ -1888,6 +1893,103 @@ async function sgUpdateAll(){ if(_sgUpd&&_sgUpd.running){ _sgUpd.cancel=true; sg
   finally{ sgpClose(); }
   run.running=false; if(btn) btn.textContent='Update all from nursery'; if(!_speciesGridDraft) return; paintSpeciesGrid();
   if(!/^Stopped after 3/.test((document.getElementById('sgStatus')||{}).textContent||'')) sgSay((run.cancel?'Stopped. ':'')+'Checked '+(ok+missing+failed)+' of '+total+': '+changed+' updated, '+(ok-changed)+' already current, '+missing+' not at the nursery'+(failed?', '+failed+' failed':'')+'. Save to keep the changes.'); }
+/* ---- Fill blank species fields from web pages (Calscape, Calflora) ----
+   The Worker's /source route fetches one page (allowlisted hosts, robots.txt obeyed); an adapter in WEB_SOURCES
+   reads the facts out of it and returns them under this app's own field names. Only blank fields are ever
+   filled, nothing you have entered is touched, and the result goes into the Species sheet's draft (changed cells
+   are highlighted) so you press Save to keep it. To add another site: allow its host and path in the Worker's
+   SRC_SITES, then add an entry here with urlFor(sp,ctx) and parse(html,finalUrl). Fields a source can set go in
+   its `fields`; WEB_PRIORITY says which source wins where two know the same thing. */
+const WEB_FIELDS=[['ht','Height'],['rad','Width'],['bloom','Bloom months'],['flowerColor','Flower color'],['sun','Sun'],['tol','Shade tolerance'],['moisture','Water'],['drainage','Drainage'],['cold','Cold tolerance'],['deer','Deer'],['leaf','Leaf habit'],['origin','Native']];
+const WEB_PRIORITY={bloom:['calflora','calscape']};
+const WEB_DELAY_MS=1200;
+function webBlank(sp,k){ const v=sp[k]; return v==null||v===''||(Array.isArray(v)&&!v.length)||((k==='ht'||k==='rad')&&!(+v>0)); }
+function webMissing(sp){ return WEB_FIELDS.map(x=>x[0]).filter(k=>webBlank(sp,k)); }
+/* The name to look a species up by: its binomial. A cultivar-only entry ("Symphoricarpos 'San Bruno Mt'") has none, so the lookup
+   falls back to the Calflora page's accepted name (through its Calflora number), or to a name you type in the webSci field. */
+function webSciOf(sp){ const s=String(sp.webSci||sp.sci||'').replace(/\s+[x×]\s+/i,' ').trim(), w=s.split(/\s+/); return (w.length>=2&&/^[a-z][a-z-]+$/.test(w[1]))?w[0]+' '+w[1]:''; }
+function webDom(html){ return new DOMParser().parseFromString(html,'text/html'); }
+function webTxt(el){ return el?el.textContent.replace(/\s+/g,' ').trim():''; }
+const WEB_SOURCES={
+  calscape:{label:'Calscape',
+    urlFor(sp,ctx){ if(sp.calscapeUrl) return sp.calscapeUrl; if(!ctx.sci) return null; return 'https://calscape.org/'+encodeURIComponent(ctx.sci.replace(/\s+/g,'-')).replace(/%2D/g,'-')+'-('+encodeURIComponent(String(sp.common||ctx.sci).trim().replace(/\s+/g,'-'))+')'; },
+    parse(html,url){ const d=webDom(html); const m=/\/plant\/\d+\/([^(\/]+?)-\(/.exec(decodeURIComponent(url||'')); if(!m) return null; const name=m[1].replace(/-/g,' ');
+      const L={}; d.querySelectorAll('.calscape-profile-overview__item').forEach(i=>{ const lb=i.querySelector('.calscape-profile-overview__label'), v=i.querySelector('.calscape-profile-overview__value'); if(lb&&v) L[webTxt(lb).replace(/\s*Season\(s\).*$/i,'').trim().toLowerCase()]=v.innerHTML.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').replace(/[ \t]+/g,' ').trim(); });
+      d.querySelectorAll('.calscape-profile-detail-grid__item').forEach(i=>{ const lb=i.querySelector('strong'), v=i.querySelector('p'); if(lb&&v) L[webTxt(lb).toLowerCase()]=webTxt(v); });
+      const f={}, size=L['size']||''; const tall=/([\d.]+(?:\s*-\s*[\d.]+)?)\s*ft\s*tall/i.exec(size), wide=/([\d.]+(?:\s*-\s*[\d.]+)?)\s*ft\s*wide/i.exec(size);
+      if(tall) f.ht=parseSizeMid(tall[1]); if(wide){ const w=parseSizeMid(wide[1]); if(w) f.rad=Math.round(w/2*10)/10; }
+      if(L['flower color']) f.flowerColor=L['flower color'];
+      const fs=mapBloomMonths(L['flowering season']); if(fs&&fs.length<=8) f.bloom=fs; /* a season list covering most of the year (an oak's "Winter, Spring, Summer, Fall") says nothing; Calflora's wheel is the better source */
+      const sun=L['sun']; if(sun){ const s=mapSun(sun); if(s) f.sun=s; const t=mapTol(sun); if(t) f.tol=t; }
+      const w=mapWaterNeeds(L['water needs']); if(w) f.moisture=w;
+      const dr=mapSoilDrainage(L['soil drainage']); if(dr) f.drainage=dr;
+      const cold=/to\s+(-?\d+\s*°\s*F)/i.exec(L['cold tolerance']||''); if(cold) f.cold=cold[1].replace(/\s+/g,' ');
+      const dm=(L['dormancy']||'').toLowerCase(); if(dm) f.leaf=/evergreen/.test(dm)?'Evergreen':/semi/.test(dm)?'Semi-deciduous':/decid/.test(dm)?'Deciduous':undefined;
+      if(/deer/i.test(L['special uses']||'')) f.deer='Resistant';
+      f.origin='Native'; /* Calscape lists California natives only */
+      const pt=mapStory(L['plant type']); if(pt&&pt!=='vine') f._story=pt; /* used only to correct the layer of a freshly added draft */
+      Object.keys(f).forEach(k=>{ if(f[k]===undefined||f[k]===null||f[k]==='') delete f[k]; });
+      return {name,fields:f,link:url}; }},
+  calflora:{label:'Calflora',
+    urlFor(sp,ctx){ const crn=ctx.crn||sp.crn||CALFLORA_CRN[sp.id]; if(crn) return 'https://www.calflora.org/app/taxon?crn='+crn; return ctx.sci?'https://www.calflora.org/cgi-bin/species_query.cgi?where-taxon='+encodeURIComponent(ctx.sci).replace(/%20/g,'+'):null; },
+    parse(html,url){ const t=/<title>\s*([^<]*?)\s+-\s+Calflora\s*<\/title>/i.exec(html); if(!t) return null; const name=t[1].trim();
+      const w=[...html.matchAll(/<path d='M50 50 L[^']*' style='fill:\s*([^;']*)/g)].map(m=>m[1].trim().toLowerCase()); const f={};
+      if(w.length===12){ const on=[]; w.forEach((c,i)=>{ if(c!=='#ffffff'&&c!=='#fff'&&c!=='white'&&c!=='') on.push(i+1); }); if(on.length) f.bloom=on; } /* the wheel runs clockwise from the top, January first */
+      const crn=/crn=(\d+)/.exec(url||''); return {name,fields:f,crn:crn?crn[1]:null,link:url}; }},
+};
+async function webFetch(url){ const r=await fetch(CLOUD_SYNC_BASE+'/source?url='+encodeURIComponent(url),{headers:{'Authorization':'Bearer '+accessCode()}});
+  if(r.status===404) return null; if(!r.ok) throw new Error((await r.text().catch(()=>''))||('HTTP '+r.status));
+  return {html:await r.text(),finalUrl:r.headers.get('X-Final-Url')||url,delay:parseFloat(r.headers.get('X-Crawl-Delay'))||0}; }
+/* One species: look it up at each chosen source, and fill whichever of its fields are blank. Returns what it did and why it could not. */
+async function webFillOne(sp,ids,opts){ opts=opts||{}; const missing=webMissing(sp); const out={merged:sp,changed:[],filled:[],still:missing.slice(),notes:[],used:[]}; if(!missing.length){ out.skipped=true; return out; }
+  const ctx={sci:webSciOf(sp),crn:sp.crn||CALFLORA_CRN[sp.id]||null}, got={}, ran=new Set(); let pace=WEB_DELAY_MS;
+  const run=async id=>{ if(ran.has(id)||!ids.includes(id)) return; ran.add(id); const src=WEB_SOURCES[id]; const url=src.urlFor(sp,ctx); if(!url){ out.notes.push(src.label+': nothing to look it up by'+(id==='calflora'?' (no Calflora number)':' (no scientific name)')); return; }
+    let r; try{ r=await webFetch(url); }catch(e){ out.notes.push(src.label+': '+((e&&e.message)||e)); out.failed=true; return; } pace=Math.max(pace,(r&&r.delay||0)*1000); await cfnSleep(pace);
+    if(!r){ out.notes.push(src.label+': page not found'); return; }
+    const p=src.parse(r.html,r.finalUrl); if(!p){ out.notes.push(src.label+': could not read the page'); return; }
+    if(ctx.sci&&!sciMatches(p.name,ctx.sci)){ out.notes.push(src.label+': page is for '+p.name+', not '+ctx.sci); return; }
+    if(!ctx.sci) ctx.sci=p.name; if(p.crn&&!ctx.crn) ctx.crn=p.crn; got[id]=Object.assign({link:p.link},p.fields); out.used.push(id); };
+  if(ctx.crn) await run('calflora'); await run('calscape'); if(!ran.has('calflora')) await run('calflora'); /* by Calflora number when known, otherwise by name */
+  const merged=JSON.parse(JSON.stringify(sp));
+  missing.forEach(k=>{ for(const id of (WEB_PRIORITY[k]||ids)){ const v=got[id]&&got[id][k]; if(v!=null&&v!==''&&!(Array.isArray(v)&&!v.length)){ merged[k]=v; out.filled.push(k); break; } } });
+  if(opts.story&&got.calscape&&got.calscape._story&&got.calscape._story!==merged.story&&!merged.vine){ merged.story=got.calscape._story; if(!merged.cast||merged.cast==='') merged.cast=mapCast(merged.story)||merged.cast; out.filled.push('story'); }
+  if(got.calscape&&!merged.calscapeUrl) merged.calscapeUrl=got.calscape.link; if(ctx.crn&&!merged.crn&&got.calflora) merged.crn=String(ctx.crn);
+  out.merged=merged; out.changed=changedPaths(sp,merged); out.still=missing.filter(k=>!out.filled.includes(k)); return out; }
+const WEB_LABEL=Object.fromEntries(WEB_FIELDS); WEB_LABEL.story='Layer';
+async function sgWebFill(){ if(_sgUpd&&_sgUpd.running){ _sgUpd.cancel=true; sgSay('Stopping after the current plant…'); return; } if(!_speciesGridDraft||!canEditSpecies()) return;
+  const todo=_speciesGridDraft.filter(sp=>webMissing(sp).length).length; if(!todo){ UI.alert('Every species already has all of these fields: '+WEB_FIELDS.map(x=>x[1].toLowerCase()).join(', ')+'.'); return; }
+  const ok=await UI.confirm(todo+' of '+_speciesGridDraft.length+' species have at least one blank among: '+WEB_FIELDS.map(x=>x[1].toLowerCase()).join(', ')+'. This looks each one up on Calscape and Calflora (about a second per page) and fills only the blank cells. Nothing you have entered is changed, and nothing is kept until you press Save. Continue?',{title:'Fill blanks from the web',ok:'Start'}); if(!ok||!_speciesGridDraft) return;
+  const run={running:true,cancel:false}; _sgUpd=run; const btn=document.getElementById('sgWeb'); if(btn) btn.textContent='Stop filling';
+  const ids=Object.keys(WEB_SOURCES), report=[]; let filled=0,nothing=0,failed=0,streak=0,done=0; const total=_speciesGridDraft.length;
+  const tally=()=>filled+' filled · '+nothing+' nothing found'+(failed?' · '+failed+' failed':'');
+  sgpOpen(total,'Filling blanks from the web');
+  try{ for(let i=0;i<_speciesGridDraft.length&&!run.cancel;i++){ const sp=_speciesGridDraft[i]; if(!sp) break; if(!webMissing(sp).length){ continue; }
+      sgSay('Looking up '+(i+1)+' of '+total+': '+sp.common+'…'); sgpSet(i,total,sp.common,tally());
+      try{ const r=await webFillOne(sp,ids); if(!_speciesGridDraft) break; if(r.failed&&!r.filled.length){ failed++; if(++streak>=3){ run.cancel=true; sgSay('Stopped after 3 failures in a row: '+r.notes.join('; ')); } } else streak=0;
+        if(r.filled.length){ _speciesGridDraft[i]=r.merged; _sgChanged[sp.id]=new Set(r.changed); filled++; } else if(!r.failed) nothing++;
+        report.push({name:sp.common,filled:r.filled,still:r.still,notes:r.notes}); }
+      catch(e){ failed++; report.push({name:sp.common,filled:[],still:webMissing(sp),notes:[(e&&e.message)||String(e)]}); if(++streak>=3){ run.cancel=true; sgSay('Stopped after 3 failures in a row: '+((e&&e.message)||e)); } }
+      done++; sgpSet(i+1,total,sp.common,tally()); }
+  }finally{ run.running=false; if(btn) btn.textContent='Fill blanks from the web'; sgpClose(); paintSpeciesGrid(); }
+  if(!/^Stopped after 3/.test((document.getElementById('sgStatus')||{}).textContent||'')) sgSay((run.cancel?'Stopped. ':'')+'Looked up '+done+': '+tally()+'. Changed cells are highlighted; Save to keep them.');
+  window._webFillReport=report; webFillReportShow(report); }
+function webFillReportShow(report){ const miss=report.filter(r=>r.still.length||r.notes.length); if(!report.length) return;
+  const lines=report.filter(r=>r.filled.length).map(r=>'<b>'+esc(r.name)+'</b>: filled '+r.filled.map(k=>esc(WEB_LABEL[k]||k).toLowerCase()).join(', ')+(r.still.length?'; still blank: '+r.still.map(k=>esc(WEB_LABEL[k]||k).toLowerCase()).join(', '):''));
+  const rest=report.filter(r=>!r.filled.length).map(r=>'<b>'+esc(r.name)+'</b>: '+(r.notes.length?esc(r.notes.join('; ')):'no new information'));
+  UI.open('Fill blanks from the web',`<p class="small">${lines.length} species had blanks filled. The cells are highlighted on the sheet and are kept when you press Save.</p>${lines.length?'<h3>Filled</h3><p class="small">'+lines.join('<br>')+'</p>':''}${rest.length?'<h3>Not filled</h3><p class="small">'+rest.join('<br>')+'</p><p class="small mute">Common reasons: the entry is a cultivar with no species name (type the species name into its scientific name, or a Calflora number), or the site does not list the plant.</p>':''}`,[{label:'Close',primary:true,value:'ok'}]); }
+/* A species just added from a nursery list (Watershed, Urban Tree Farm) has only a name, a layer guessed from the pot sizes and its container
+   sizes. This runs the same web lookup on it straight away, so its size, bloom, sun, water and so on arrive filled in, and corrects the layer
+   from Calscape's plant type where it has one. Failures are reported and leave the draft as it was. */
+async function webFillAdded(spIds,opts){ opts=opts||{}; const ids=Object.keys(WEB_SOURCES), report=[], results=[], total=spIds.length;
+  if(opts.progress) sgpOpen(total,'Filling in the new species from the web');
+  try{ for(let i=0;i<spIds.length;i++){ const sp=S.species.find(x=>x.id===spIds[i]); if(!sp) continue; if(opts.say) opts.say('Looking up '+sp.common+' on Calscape and Calflora…'); if(opts.progress) sgpSet(i,total,sp.common,results.length+' filled in');
+      try{ const r=await webFillOne(sp,ids,{story:true}); report.push({name:sp.common,filled:r.filled,still:r.still,notes:r.notes}); if(r.filled.length){ r.merged.notes=String(r.merged.notes||'').replace(/ Only the name[^.]*filled in\./,'')+' Details filled in from '+r.used.map(u=>WEB_SOURCES[u].label).join(' and ')+' on '+new Date().toLocaleDateString()+'.'; results.push({id:sp.id,merged:r.merged,changed:r.changed}); } }
+      catch(e){ report.push({name:sp.common,filled:[],still:webMissing(sp),notes:[(e&&e.message)||String(e)]}); } }
+  }finally{ if(opts.progress) sgpClose(); }
+  if(results.length){ commit('Fill in new species from the web',()=>{ results.forEach(r=>{ const k=S.species.findIndex(x=>x.id===r.id); if(k>=0) S.species[k]=r.merged; }); });
+    if(typeof _speciesGridDraft!=='undefined'&&_speciesGridDraft){ results.forEach(r=>{ const k=_speciesGridDraft.findIndex(x=>x.id===r.id); if(k>=0){ _speciesGridDraft[k]=JSON.parse(JSON.stringify(r.merged)); _sgChanged[r.id]=new Set(r.changed); } }); try{ paintSpeciesGrid(); }catch(e){} }
+    try{ await pushSharedSpecies(); }catch(e){} drawAll(); renderPanels(); }
+  return {report,filled:results.length}; }
 /* Deleting is part of the sheet's draft: nothing is removed from the library until you press Save. A species that is planted in a hedgerow cannot be deleted, so no plan is left pointing at nothing. */
 async function sgDeleteRow(idx){ const sp=_speciesGridDraft&&_speciesGridDraft[idx]; if(!sp) return; const where=[]; S.ranches.forEach(r=>r.hedgerows.forEach(h=>{ const n=h.rows.reduce((a,row)=>a+row.plants.filter(p=>p.sp===sp.id).length,0); if(n) where.push(h.name+' ('+n+')'); }));
   if(where.length){ UI.alert(sp.common+' is planted in '+where.join(', ')+'. Remove or swap those plants first (the Swap… button on the Cost tab replaces a species in a hedgerow), then delete it.'); return; }
@@ -1918,12 +2020,12 @@ function downloadSpeciesJSON(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='species-default.json';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
-function openSpeciesGrid(){ if(!canEditSpecies()) return;
+function openSpeciesGrid(){
   _speciesGridDraft=JSON.parse(JSON.stringify(S.species));
   _sgFilter=''; const _ss=document.getElementById('sgSearch'); if(_ss) _ss.value='';
   _sgChanged={}; sgSay(''); const _ua=document.getElementById('sgUpdAll'); if(_ua) _ua.style.display=canEditSpecies()?'':'none';
-  const _imp=document.getElementById('sgImport'); if(_imp) _imp.style.display=canEditSpecies()?'':'none'; const _ws=document.getElementById('sgWs'); if(_ws) _ws.style.display=canEditSpecies()?'':'none'; const _ut=document.getElementById('sgUt'); if(_ut) _ut.style.display=canEditSpecies()?'':'none'; const _nat=document.getElementById('sgNative'); if(_nat) _nat.style.display=canEditSpecies()?'':'none'; /* the Worker's harvest routes are open to the owner and editors */
-  document.getElementById('speciesGrid').classList.add('show');
+  const _imp=document.getElementById('sgImport'); if(_imp) _imp.style.display=canEditSpecies()?'':'none'; const _ws=document.getElementById('sgWs'); if(_ws) _ws.style.display=canEditSpecies()?'':'none'; const _web=document.getElementById('sgWeb'); if(_web) _web.style.display=canEditSpecies()?'':'none'; const _ut=document.getElementById('sgUt'); if(_ut) _ut.style.display=canEditSpecies()?'':'none'; const _nat=document.getElementById('sgNative'); if(_nat) _nat.style.display=canEditSpecies()?'':'none'; /* the Worker's harvest routes are open to the owner and editors */
+  document.getElementById('speciesGrid').classList.add('show'); viewerSgBar();
   /* Opens pre-sorted by common name rather than raw array order, via the same
      sortSpeciesGrid() a header click uses — so the highlight on open and the
      highlight after clicking a different header are the same mechanism, not two
@@ -1934,7 +2036,7 @@ function openSpeciesGrid(){ if(!canEditSpecies()) return;
    actually there right now", not just a revert of this session's own edits, in case
    someone else updated the library while this was open. Falls back to the bundled
    SPECIES_DEFAULT if the server has nothing (cloud not configured, or never pushed). */
-async function cancelSpeciesGrid(){ if(_sgUpd) _sgUpd.cancel=true; sgpClose(); _sgChanged={};
+async function cancelSpeciesGrid(){ if(isViewer()){ document.getElementById('speciesGrid').classList.remove('show'); _speciesGridDraft=null; return; } if(_sgUpd) _sgUpd.cancel=true; sgpClose(); _sgChanged={};
   document.getElementById('speciesGrid').classList.remove('show');
   _speciesGridDraft=null;
   const fresh=await loadSharedSpecies();
@@ -1952,7 +2054,23 @@ async function saveSpeciesGrid(){ if(!_speciesGridDraft) return; if(_sgUpd) _sgU
      visually-relevant) edit here wouldn't show up on the map until the next
      unrelated pan/zoom/reload happened to trigger a redraw anyway. */
   drawAll(); renderPanels(); UI.toast('Species library saved.'); }
-function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=canEditSpecies()?speciesAdminHtml():''; }); }
+function renderSpeciesAdmin(){ document.querySelectorAll('.speciesAdminEl').forEach(el=>{ el.innerHTML=canEditSpecies()?speciesAdminHtml():''; }); applyViewerMode(); }
+/* View-only mode: a Viewer sees every control but cannot change anything. commit() is the hard stop; this greys out the controls so it is clear before they click. Controls with no inline handler (search boxes, sliders wired in script) and the handlers listed here are left alone. */
+const VIEW_OK=/^\s*(showTab|toggleMode\('select'|setMode\('select'|dock|sampleHex|setDockView|toggleHexLayer|toggleSoilLayer|heatToggle|flyTo|fitAllView|gotoPlant|gotoHedge|cycleHedge|hedgeSelChange|export|rcd|printDaySheet|bv|renderTape|renderGoals|setSlFilter|slRowClick|setPaintFilter|showPhotos|openSpeciesInfo|openSpeciesGrid|togglePanel|downloadApp|downloadSpeciesJSON|toggleSaveMenu|openSettingsDialog|dayVehicle=|setSgFilter|sortSpeciesGrid|cancelSpeciesGrid|setAutoSave|manualSaveClick|openSave|promptSaveAs)/;
+let _vmBusy=false;
+function lockViewerUI(){ if(_vmBusy) return; _vmBusy=true; try{ const v=isViewer(); document.body.classList.toggle('viewer',v);
+  const sg=document.getElementById('speciesGrid'); if(sg) sg.classList.toggle('ro',v);
+  document.querySelectorAll('[data-vl]').forEach(el=>{ if(!v){ el.disabled=false; el.removeAttribute('data-vl'); } });
+  if(!v) return;
+  document.querySelectorAll('#panel input,#panel select,#panel textarea,#panel button,#modebar button,#speciesGrid input,#speciesGrid select,#speciesGrid textarea,#speciesGrid button,#dock input,#dock select,#dock button').forEach(el=>{
+    if(el.dataset.ro!==undefined||el.disabled) return;
+    const hs=['onclick','onchange','oninput'].map(a=>el.getAttribute(a)).filter(x=>x&&!/^\s*event\./.test(x));
+    if(!hs.length) return; if(hs.every(x=>VIEW_OK.test(x))) return;
+    el.disabled=true; el.setAttribute('data-vl','1'); if(!/view-only/.test(el.title||'')) el.title=(el.title?el.title+' ':'')+'(view-only access)'; }); }
+  finally{ _vmBusy=false; } }
+function applyViewerMode(){ lockViewerUI(); const sg=document.getElementById('speciesGrid'); if(sg&&sg.classList.contains('show')) viewerSgBar(); }
+function viewerSgBar(){ const v=isViewer(); const h=document.querySelector('#sgBar h2'); if(h) h.textContent=v?'Species library':'Edit species library'; const bs=document.querySelectorAll('#sgBar > button'); bs.forEach(b=>{ if(/saveSpeciesGrid/.test(b.getAttribute('onclick')||'')) b.style.display=v?'none':''; if(/cancelSpeciesGrid/.test(b.getAttribute('onclick')||'')){ b.textContent=v?'Close':'Cancel'; b.classList.toggle('danger',!v); } }); }
+{ let _vmT=null; const kick=()=>{ if(!isViewer()) return; clearTimeout(_vmT); _vmT=setTimeout(lockViewerUI,30); }; document.addEventListener('DOMContentLoaded',()=>{ new MutationObserver(kick).observe(document.body,{childList:true,subtree:true}); }); }
 function paintSpeciesAdmin(){ renderSpeciesAdmin(); }
 function speciesAdminHtml(){
   let html=`<h2>Species library</h2>
@@ -2140,7 +2258,8 @@ const UI={
     clearTimeout(UI._tt); UI._tt=setTimeout(()=>t.classList.remove('show'), action?6000:3200); }
 };
 const HIST={stack:[],redo:[],max:40};
-function commit(label,fn){ const before=JSON.stringify(S); const r=fn?fn():undefined;
+function isViewer(){ return cloudIdentity.role==='viewer'; }
+function commit(label,fn){ if(isViewer()){ UI.toast('View-only access: this change was not made.'); return undefined; } const before=JSON.stringify(S); const r=fn?fn():undefined;
   if(JSON.stringify(S)===before) return r;
   HIST.stack.push({label,state:before}); if(HIST.stack.length>HIST.max) HIST.stack.shift(); HIST.redo.length=0;
   UI.toast(label, {label:'Undo', fn:undo}); updateHistButtons(); markDirty(); saveSoon();
@@ -3397,6 +3516,12 @@ function justify(h){ const A=assessAll(h); const out=[];
         replace:sp.replace?SP(sp.replace):null,fail:sp.fail,trigger:sp.trigger}); });
     out.push({row:r,i,items,stats:rowStats(h,i)}); }); return out; }
 const DENSITY={closed:{k:1.7,label:'Closed Canopy (Overlapping)'},touching:{k:2.0,label:'Canopies Touching at Maturity'},open:{k:2.6,label:'Open, Room Between Crowns'}};
+/* Understory planting density, set per row. It scales the spacing of ground, nurse and mid-story plants (never the dominant trees, never a spacing you typed): at "dense" they go in at 1.5 times the
+   normal number of plants per foot (spacing x 2/3), at "very dense" 2 times (spacing x 1/2). Crowns will overlap by year 7 on purpose, so repair does not widen them. Separate from h.density, which is about the trees' crowns. */
+const FILL={standard:{m:1,x:1,label:'Standard'},dense:{m:2/3,x:1.5,label:'Dense (1.5× the plants)'},veryDense:{m:0.5,x:2,label:'Very dense (2× the plants)'}}; /* x = plants per foot relative to normal; m = the spacing that gives it */
+const TREEFILL={fewer:{x:2/3,label:'Fewer trees (⅔ as many)'},standard:{x:1,label:'Standard'},more:{x:1.5,label:'More trees (1.5× as many)'},many:{x:2,label:'Many trees (2× as many)'}};
+function treeMult(r){ return (TREEFILL[(r&&r.treeFill)||'standard']||TREEFILL.standard).x; }
+function fillMult(r){ return (FILL[(r&&r.fill)||'standard']||FILL.standard).m; }
 function densityK(h){ return (DENSITY[h.density||'touching']||DENSITY.touching).k; }
 function rowMoistures(h){ const n=h.rows.length; const lines=rowLines(h); const infos=lines.map(pts=>{ const k=hexKeyFor(pointAtFt(pts,pathLenFt(pts)/2)); return hexInfo(k[0],k[1]); });
   const stat=h.rows.map((r,i)=>{ const sm=stationMoistures(h,i,10); return sm.reduce((a,b)=>a+b.wet,0)/Math.max(1,sm.length); });
@@ -3633,7 +3758,7 @@ function buildComp(h,i,moist,regime,pool,coveredMonths,usedDom,seed){ usedDom=us
    handful of yarrow stays a handful; paint more if you want more), and new woody plants keep canopy
    clearance from same-layer neighbours, since the usual designed spacing doesn't apply when the
    existing plants aren't on its grid. With no fixed plants nothing below behaves differently. */
-function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const comp=r.comp||[]; const plants=[]; const k=densityK(h); const minGap=h.minGapFt||2;
+function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const comp=r.comp||[]; const plants=[]; const k=densityK(h); const dm=fillMult(r); const minGap=dm<1?Math.min(h.minGapFt||2,1):(h.minGapFt||2);
   const keptSet=new Set(); if(fixed&&fixed.length) fixed.forEach(p=>{ plants.push(p); keptSet.add(p); });
   const seeded=new Set([...keptSet].map(p=>p.sp));
   /* Falls back to 10 whenever spacingFt is missing, not just when the species is
@@ -3643,9 +3768,9 @@ function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const c
      S=null, which JS coerces to ft+=0 — an infinite loop that hangs the tab, not a
      crash or a silent no-op. Species added via the admin harvest/paste/JSON tools
      frequently have no sourced spacingFt at all, so this isn't a rare edge case. */
-  const spacingOf0=id=>{ const c=comp.find(x=>x.sp===id); const sp=SP(id); return (c&&c.spacing)||(sp&&sp.spacingFt)||10; };
+  const spacingOf0=id=>{ const c=comp.find(x=>x.sp===id); const sp=SP(id); let b=(c&&c.spacing)||(sp&&sp.spacingFt)||10; if(dm<1&&!(c&&c.spacingSet)&&c&&c.role!=='dom'&&c.role!=='vine'&&!(sp&&sp.story==='over')) b*=dm; if(sp&&sp.story==='over'&&!(c&&c.spacingSet)) b/=treeMult(r); return b; }; /* a spacing you typed is used as typed */
   const prof=rowMoistureProfile(h,i,5); const wetAt=ft=>{ let b=prof[0]; for(const p of prof){ if(Math.abs(p.ft-ft)<Math.abs(b.ft-ft)) b=p; } return b.wet; }; const anyInfo=prof.some(p=>p.wet!=null); const suits=(ft,sp)=>{ if(!anyInfo) return true; const w=wetAt(ft); if(w==null) return true; if(sp.moisture==='wet') return w>=0.48; if(sp.moisture==='dry') return w<=0.6; if(needsGround(sp,h.rows[i].regime)) return w>=GROUND_WET; return true; };
-  const free=(ft,sp)=>ft>=0&&ft<=L&&suits(ft,sp)&&plants.every(p=>{ const d=Math.abs(p.ft-ft); const q=SP(p.sp); if(d<minGap) return false; if(q&&q.id===sp.id&&d<spacingOf0(sp.id)*0.9) return false; if(q&&q.allelo&&d<q.allelo) return false; if(sp.allelo&&d<sp.allelo) return false;
+  const free=(ft,sp)=>ft>=0&&ft<=L&&suits(ft,sp)&&plants.every(p=>{ const d=Math.abs(p.ft-ft); const q=SP(p.sp); if(d<minGap) return false; if(q&&q.id===sp.id&&d<spacingOf0(sp.id)*0.9) return false; if(q&&q.allelo&&d<q.allelo) return false; if(sp.allelo&&d<sp.allelo) return false; if(+r.domMinFt>0&&sp.story==='over'&&q&&q.story==='over'&&d<+r.domMinFt) return false; /* trees kept at least this far apart, whichever step places them */
     if(keptSet.size&&q&&q.story===sp.story&&(sp.story==='over'||sp.story==='mid')&&d<k*(sp.rad+q.rad)/2) return false; return true; });
   const put=(ft,sp)=>{ ft=Math.round(ft*2)/2; for(const dx of [0,1,-1,2,-2,3,-3]){ if(free(ft+dx,sp)){ plants.push({sp:sp.id,ft:ft+dx}); return true; } } return false; };
   const spacingOf=spacingOf0;
@@ -3653,10 +3778,11 @@ function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const c
     const saved=plants.slice(); bad.forEach(b=>plants.splice(plants.indexOf(b),1)); if(free(ft,sp)){ plants.push({sp:sp.id,ft}); return true; } plants.length=0; plants.push(...saved); return false; }; /* a ground plant (mugwort's wide allelopathy, say) may give way to a shrub that closes a gap */
   const doms=comp.filter(c=>c.role==='dom'&&!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(Boolean); const domPos=[];
   const anyPond=ponds().length>0||creeks().length>0;
-  const gate=(sp,ft)=>{ if(!anyPond) return true; const f=fitAtStation(sp,h,i,ft,r.regime); return !f||f.score>=FIT_GATE; };
+  const shadedAt=(sp,ft)=>{ if(sp.tol!=='shade'||sp.story==='over') return true; const cu=canopyAt(sp,3); return plants.some(p=>{ const T=SP(p.sp); if(!T||T===sp||STORY_RANK[T.story]<=STORY_RANK[sp.story]||castOf(T)==='open') return false; const ct=canopyAt(T,3); return ct.ht>cu.ht*1.2&&Math.abs(p.ft-ft)<ct.rad+cu.rad; }); };
+  const gate=(sp,ft)=>{ if(!shadedAt(sp,ft)) return false; if(!anyPond) return true; const f=fitAtStation(sp,h,i,ft,r.regime); return !f||f.score>=FIT_GATE; };
   if(doms.length){ const explicit=doms.map(sp=>(comp.find(c=>c.sp===sp.id)||{}).spacing).filter(v=>v>0);
-    const sd=explicit.length?Math.max(...explicit)
-                           :Math.max(...doms.map(sp=>Math.max(spacingOf(sp.id),k*sp.rad))); const margin=Math.min(sd/2,6); let j=0; for(let ft=margin;ft<=L-margin+0.01;ft+=sd){ let sp=doms[j%doms.length]; if(doms.length>1&&anyPond){ sp=doms.map(d=>({d,f:fitAtStation(d,h,i,ft,r.regime)})).sort((a,b)=>((b.f?b.f.score:0.5)-(a.f?a.f.score:0.5)))[0].d; } /* With several dominants in rotation, one scheduled for a spot it doesn't suit (a dry oak where the row
+    const sd0=explicit.length?Math.max(...explicit)
+                           :Math.max(...doms.map(sp=>Math.max(spacingOf(sp.id),k*sp.rad))); const sd=Math.max(sd0/treeMult(r),+r.domMinFt>0?+r.domMinFt:0); /* r.domMinFt: you asked for the trees at least this far apart */ const margin=Math.min(sd/2,6); let j=0; for(let ft=margin;ft<=L-margin+0.01;ft+=sd){ let sp=doms[j%doms.length]; if(doms.length>1&&anyPond){ sp=doms.map(d=>({d,f:fitAtStation(d,h,i,ft,r.regime)})).sort((a,b)=>((b.f?b.f.score:0.5)-(a.f?a.f.score:0.5)))[0].d; } /* With several dominants in rotation, one scheduled for a spot it doesn't suit (a dry oak where the row
          is wet) would leave that slot empty; take the next in the rotation that does suit it instead. */
         /* Each slot goes to the suitable dominant with the fewest plants so far, so every dominant gets its share (a strict rotation let a dominant that did not suit
            its scheduled slots, a dry oak on wet ground, miss the whole row). */
@@ -3675,6 +3801,7 @@ function layoutRow(h,i,fixed){ const r=h.rows[i]; const L=rowLenFt(h,i); const c
   const vines=comp.filter(c=>c.role==='vine'&&!seeded.has(c.sp)).map(c=>SP(c.sp)).filter(Boolean); if(vines.length&&domPos.length){ domPos.forEach((ft,q)=>{ if(q%2) return; const sp=vines[q%vines.length]; if(gate(sp,ft+3)) put(ft+3,sp); }); }
   const mids=comp.filter(c=>c.role==='mid'&&!seeded.has(c.sp)&&!c.count).map(c=>SP(c.sp)).filter(Boolean);
   if(mids.length){ if(domPos.length>1){ let j=0; for(let q=1;q<domPos.length;q++){ const sp=mids[j%mids.length]; const mid=(domPos[q-1]+domPos[q])/2; if(gate(sp,mid)&&plants.filter(p=>p.sp===sp.id).every(p=>Math.abs(p.ft-mid)>=spacingOf(sp.id)*0.9)) put(mid,sp); j++; } } else { mids.forEach((sp,j)=>{ const S=spacingOf(sp.id); for(let ft=S/2+j*3;ft<=L;ft+=S) put(ft,sp); }); } }
+  if(dm<1&&mids.length&&domPos.length>1){ mids.forEach(sp=>{ for(let ft=1;ft<=L-1;ft+=1){ if(!gate(sp,ft)) continue; if(plants.some(p=>{ const q=SP(p.sp); if(!q) return false; const d=Math.abs(p.ft-ft); return (q.story==='over'&&d<0.5*(q.rad+sp.rad))||(q.story==='mid'&&d<0.6*dm*(q.rad+sp.rad)); })) continue; if(plants.filter(p=>p.sp===sp.id).every(p=>Math.abs(p.ft-ft)>=spacingOf(sp.id)*0.9)) put(ft,sp); } }); } /* dense: more shrubs than one between each pair of trees */
   const grounds=comp.filter(c=>(c.role==='ground'||c.role==='nurse')&&!seeded.has(c.sp)&&!c.count).map(c=>SP(c.sp)).filter(Boolean);
   grounds.forEach((sp,j)=>{ const S=spacingOf(sp.id); const off=(j+0.5)*S/Math.max(1,grounds.length); for(let ft=off;ft<=L;ft+=S) if(gate(sp,ft)) put(ft,sp); });
   const countedSp=new Set(comp.filter(c=>c.count>0).map(c=>c.sp));
@@ -3742,8 +3869,12 @@ function populateHedge(h){ h.accepted=[]; const n=h.rows.length; const moist=row
     shortfalls(h,i,moist[i]).forEach(t=>log.push(t)); });
   const fixes=anyKept?['Conflict repair and row re-spacing were skipped, because both rearrange rows and some of these plants are yours.']:repairHedge(h);
   const dupNotes=dedupeGroups(h); fixes.push(...dupNotes);
+  h.rows.forEach(r=>{ if(fillMult(r)<1) fixes.push(r.name+': ground and mid-story plants set at '+FILL[r.fill].x+' times the normal number of plants per foot ('+FILL[r.fill].label.split(' (')[0].toLowerCase()+' planting). Their crowns will overlap by year 7 on purpose; thin them later if the row gets too tight.'); if(treeMult(r)!==1) fixes.push(r.name+': trees set at '+treeMult(r).toFixed(2).replace(/\.?0+$/,'')+' times the normal number ('+TREEFILL[r.treeFill].label.split(' (')[0].toLowerCase()+').'); });
   /* With "only species in stock" on, a species the other hedgerows have already used up (or that this row asks for more of than is left) is swapped, here and now, for the best in-stock fit. */
-  if(R().inStockOnly){ const reqS=new Set(reqIds(h)); shopLines(h).filter(l=>shortOnStock(l)&&!reqS.has(l.id)).forEach(l0=>{ const l=shopLines(h).find(x=>x.id===l0.id); if(!l||!shortOnStock(l)) return; const c=swapCandidates(h,l.id).find(x=>x.enough&&x.at&&x.sp.tol!=='shade'); if(c){ const n=swapApply(h,l.id,c.sp.id,'only '+Math.max(0,l.stock)+' are in stock and the ranch plans '+l.rn); fixes.push('Swapped '+l.sp.common+' for '+c.sp.common+' ('+n+' plants): only '+Math.max(0,l.stock)+' '+l.sp.common+' are in stock and the plan needs '+l.rn+' across the ranch.'); } else fixes.push(l.sp.common+': only '+Math.max(0,l.stock)+' in stock and the plan needs '+l.rn+' across the ranch, and no in-stock substitute fits. See the Cost tab.'); }); }
+  if(R().inStockOnly){ const reqS=new Set(reqIds(h)); shopLines(h).filter(l=>shortOnStock(l)&&!reqS.has(l.id)).forEach(l0=>{ const l=shopLines(h).find(x=>x.id===l0.id); if(!l||!shortOnStock(l)) return;
+      /* Stock covers at least 40% of it: take out only the surplus (evenly), which leaves the plants thinner there, instead of replacing the whole species. */
+      { const role=((h.rows.map(r=>(r.comp||[]).find(x=>x.sp===l.id)).find(Boolean))||{}).role, over=shortBy(l); if(role&&role!=='dom'&&over>0&&over<l.n*0.6){ const n=trimSpecies(h,l.id,over); fixes.push('Trimmed '+n+' '+l.sp.common+': only '+Math.max(0,l.stock)+' are in stock and the plan needs '+l.rn+' across the ranch, so '+n+' fewer than the spacing calls for were planted.'); return; } }
+      const c=swapCandidates(h,l.id).find(x=>x.enough&&x.at&&x.sp.tol!=='shade'); if(c){ const n=swapApply(h,l.id,c.sp.id,'only '+Math.max(0,l.stock)+' are in stock and the ranch plans '+l.rn); fixes.push('Swapped '+l.sp.common+' for '+c.sp.common+' ('+n+' plants): only '+Math.max(0,l.stock)+' '+l.sp.common+' are in stock and the plan needs '+l.rn+' across the ranch.'); } else fixes.push(l.sp.common+': only '+Math.max(0,l.stock)+' in stock and the plan needs '+l.rn+' across the ranch, and no in-stock substitute fits. See the Cost tab.'); }); }
   /* The per-row lines are written from the FINAL rows. They used to be written right after the first layout, before conflict repair,
      which swaps species and re-lays rows out, so they could name species that repair had since replaced (and miss the ones it brought in). */
   const whyNotes=[]; fin.forEach(({i})=>{ const r=h.rows[i]; if(r.comp.midWhy&&r.comp.midWhy.length) whyNotes.push(r.name+': mid-story species not used (asked for '+r.comp.midAsked+'): '+r.comp.midWhy.map(x=>x.name+' ('+x.why+')').join('; ')+'.'); }); const ROLEN={dom:'tree/dominant',mid:'mid-story',ground:'ground',nurse:'nurse',vine:'vine'}; fin.forEach(({i})=>{ const r=h.rows[i]; const bits=r.comp.filter(c=>c.g!==undefined||c.fit!==undefined||c.gapMonth).map(c=>{ const q=SP(c.sp); if(!q) return null; return q.common+' ('+(ROLEN[c.role]||c.role)+'; goal '+(c.g!=null?Math.round(c.g*100)+'%':'n/a')+', row fit '+(c.fit!=null?Math.round(c.fit*100)+'%':'n/a')+(c.gapMonth?'; added to cover '+MON_FULL[c.gapMonth-1]+' bloom':'')+')'; }).filter(Boolean); if(bits.length) whyNotes.push(r.name+' picks: '+bits.join('; ')+'.'); });
@@ -3785,7 +3916,7 @@ function repairHedge(h){ const log=[]; const tried=new Set(); for(let pass=0;pas
         const key=i+':'+b.sp.id; if(tried.has(key)) return; const locked=reqIds(h).includes(b.sp.id);
         const base=b.sp.spacingFt, cap=base*2.4, cur=c.spacing||base;
         const contestCount=(spId)=>{ const AA=assess(h,7); let n=0; AA.P.forEach((p,k)=>{ if(p.i===i&&p.sp.id===spId) AA.notes[k].forEach(x=>{ if(x.k==='root'||x.k==='crowd'&&x.lvl==='bad') n++; }); }); return n; };
-        const widen=(why)=>{ if(cur>=cap||c.count) return false; const before=contestCount(b.sp.id); const next=Math.min(cap,Math.round(cur*1.35*2)/2);
+        const widen=(why)=>{ if(cur>=cap||c.count||c.spacingSet||(fillMult(r)<1&&c.role!=='dom'&&c.role!=='vine')) return false; const before=contestCount(b.sp.id); const next=Math.min(cap,Math.round(cur*1.35*2)/2);
           c.spacing=next; autoRowGaps(h); layoutRow(h,i); const after=contestCount(b.sp.id); const nPl=row0Count(h,i,b.sp.id);
           if(after<before&&nPl>=3){ log.push(r.name+': '+b.sp.common+' '+why+' — spacing widened '+cur.toFixed(1)+' → '+next.toFixed(1)+' ft ('+nPl+' plants).'); return true; }
           c.spacing=(cur===base?null:cur); autoRowGaps(h); layoutRow(h,i); return false; };
@@ -3947,7 +4078,8 @@ function renderRanch(){ const r=R();
   if(aoi()){ html+=`<p class="small">${aoiAcres().toFixed(1)} acres outlined, ${(hexesInAoi()||[]).length} acre hexes.</p><div class="row"><button class="small" onclick="flyToAoi()">Zoom to it</button><button class="small danger" onclick="commit('Clear study area',()=>setAoi(null));renderPanels()">Clear</button></div>`; }
   else html+=`<p class="small mute">Outline the ground you are considering and every acre in it gets read and ranked. <button class="small" onclick="toggleMode('aoi')">Draw study area</button></p>`;
   html+=`<p class="small mute">Lost track of what you've drawn? <button class="small" onclick="fitAllView()">Zoom to everything</button> frames every hedgerow and water node on the ranch.</p>`;
-  setHtml('tab-ranch',html); renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); }
+  html+=`<h2>Save and backup</h2><div class="row" style="align-items:center"><button class="small" onclick="downloadApp()" title="Save this whole app as an HTML file you can open in a real browser">⬇ Download app</button><label class="small" style="display:flex;align-items:center;gap:4px;margin:0;cursor:pointer" title="Automatically save every change to this browser, and to the cloud if configured"><input type="checkbox" id="autoSaveBox" checked onchange="setAutoSave(this.checked)"> Auto-save</label></div><p class="small mute">Download keeps a copy of the whole app, with your data, as one file. Auto-save writes every change to this browser, and to the cloud if it is set up.</p>`;
+  setHtml('tab-ranch',html); saveBadge(); renderCloudStatus(); renderPeopleAccess(); renderSpeciesAdmin(); }
 /* Accepts either "lat, lng" (jumps instantly, no network) or a free-text place/address
    (geocoded via Nominatim — needs a real browser tab, not the sandboxed preview). */
 function geocode(inputId){ inputId=inputId||'geo'; const input=document.getElementById(inputId); const q=(input&&input.value||'').trim(); if(!q) return;
@@ -3991,13 +4123,15 @@ function renderRows(){ const h=curHedge(); const r=R(); let html='';
       <label style="margin:4px 0 0" title="How many distinct mid-story species Auto-fill picks for this row. Blank is automatic (${recSpecies(rowLenFt(h,i)).mid} for this length, from the diversity guidance). A number asks for that many, capped at one per 60 ft of row; 0 means none.">Mid-story species, Auto-fill</label><input type="number" min="0" max="4" placeholder="auto" value="${r0.midCount!=null?r0.midCount:''}" onclick="event.stopPropagation()" onchange="commit('Set mid-story species count',()=>{curHedge().rows[${i}].midCount=this.value===''?null:+this.value});renderPanels()">
       <label style="margin:4px 0 0" title="How many distinct ground-layer species Auto-fill picks for this row. Blank is automatic (${recSpecies(rowLenFt(h,i)).ground} for this length). Nurse and vine species aren't set here; they follow the row's regime and canopy.">Ground species, Auto-fill</label><input type="number" min="0" max="8" placeholder="auto" value="${r0.groundCount!=null?r0.groundCount:''}" onclick="event.stopPropagation()" onchange="commit('Set ground species count',()=>{curHedge().rows[${i}].groundCount=this.value===''?null:+this.value});renderPanels()">
       <label style="margin:4px 0 0" title="Blank lets HedgeRight work out this row's moisture from the soil map and any pond or creek seep (capped at 0.95). Enter 0 to 1 (0.15 dry, 0.5 moderate, 0.85 wet) to use your own figure for every point on the row. Auto-fill and the site-fit scores both use it. Run Auto-fill again after changing it.">Row moisture, 0 to 1 (blank = automatic)</label><input type="number" min="0.05" max="1" step="0.05" placeholder="auto ${m.toFixed(2)}" value="${r0.moistSet!=null?r0.moistSet:''}" onclick="event.stopPropagation()" onchange="commit('Set row moisture',()=>{const rr=curHedge().rows[${i}]; rr.moistSet=this.value===''?null:Math.max(0.05,Math.min(1,+this.value))});afterChange(()=>{drawAll();renderPanels();saveSoon();})">
+      <label style="margin:4px 0 0" title="How closely the ground-layer and mid-story plants are set. Dense plants 1.5 times as many per foot as normal (each species' spacing cut to two thirds), very dense 2 times as many (half the spacing). Their crowns overlap by year 7 on purpose, which suits erosion control and keeping weeds out. Trees are not affected. Costs more plants: you are shown the change before it applies.">Understory density</label><select onclick="event.stopPropagation()" onchange="fillChange(${i},this.value)">${Object.keys(FILL).map(k=>`<option value="${k}"${(r0.fill||'standard')===k?' selected':''}>${FILL[k].label}</option>`).join('')}</select>
+      <label style="margin:4px 0 0" title="How many trees go in this row. Standard spaces them by crown size and the hedgerow's canopy setting. Fewer leaves more sun for the hedge plants under them; more gives faster, denser canopy. You are shown the change before it applies.">Tree density</label><select onclick="event.stopPropagation()" onchange="treeFillChange(${i},this.value)">${Object.keys(TREEFILL).map(k=>`<option value="${k}"${(r0.treeFill||'standard')===k?' selected':''}>${TREEFILL[k].label}</option>`).join('')}</select>
     </div>`; }).join('');
   html+=stockToggleHtml();
   html+=`<div class="row" style="margin-top:8px"><button class="small primary" onclick="doPopulate()" title="${h.rows.some(r=>r.plants.length)?'Adds species around the plants already here. Nothing you have placed is moved, replaced or removed, and a species already here is not added again. To start over, Clear plants first.':'Fills the hedgerow from your goals and the ground.'}">${h.rows.some(r=>r.plants.length)?'Fill in around plants':'Auto-fill from goals'}</button>
     <button class="small" onclick="commit('Clear all plants',()=>curHedge().rows.forEach(r=>r.plants=[]));drawAll();renderPanels();saveSoon()">Clear plants</button></div>`
     +(h.rows.some(r=>r.plants.length)?`<p class="small mute" style="margin:4px 0 0">Auto-fill works around the plants already here: it keeps every one where it is and won't add more of a species you've placed. If there's nothing left to add, “Why it filled this way” says why. To redo a row from scratch, Clear plants first.</p>`:'');
-  { const sc=speciesCounts(h); if(sc.length) html+=`<details open><summary>Plants by species (${sc.length})</summary><p class="small mute" style="margin:2px 0">Change a number and Auto-fill re-runs with that count fixed (it also appears under Goals, Required species). 0 removes the species.</p>`
-    +sc.map(x=>`<div class="row" style="align-items:center"><span class="grow small">${esc(x.sp.common)}${reqIds(h).includes(x.id)?' <span class="mute">(required)</span>':''}</span><input type="number" min="0" max="999" value="${x.n}" style="width:60px" onchange="setSpeciesCount('${x.id}',this.value)"></div>`).join('')+`</details>`; }
+  { const sc=speciesCounts(h); if(sc.length) html+=`<details open><summary>Plants by species (${sc.length})</summary><p class="small mute" style="margin:2px 0">Change the first number and Auto-fill re-runs with that count fixed (it also appears under Goals, Required species). 0 removes the species. The second box sets the spacing in feet for that species; blank is automatic.</p>`
+    +sc.map(x=>`<div class="row" style="align-items:center"><span class="grow small">${esc(x.sp.common)}${reqIds(h).includes(x.id)?' <span class="mute">(required)</span>':''}</span><input type="number" min="0" max="999" value="${x.n}" style="width:60px" title="How many" onchange="setSpeciesCount('${x.id}',this.value)"><input type="number" min="0.5" max="80" step="0.5" style="width:62px" placeholder="auto ft" title="Spacing between plants of this species, in feet. Blank is automatic. Used exactly as typed." value="${spacingSetOf(h,x.id)}" onchange="setSpeciesSpacing('${x.id}',this.value)"></div>`).join('')+`</details>`; }
   if(h.autoLog&&h.autoLog.length) html+=`<details open><summary>Why it filled this way</summary>`+h.autoLog.map(l=>`<div class="small" style="padding:2px 0">${esc(l)}</div>`).join('')+`</details>`;
   html+=waterInfluenceHtml(h);
   setHtml('tab-rows',html); }
@@ -4159,9 +4293,40 @@ function unplacedWhy(h,i,x,m,kept){ const sp=SP(x.sp); if(!sp) return '?'; const
   if(x.count>0) return sp.common+' (asked for '+x.count+' but no spot was free at '+Math.round(sp.spacingFt||6)+' ft spacing from its neighbours)';
   return sp.common+(kept?' (too close to plants already here)':' (every spot along the row was within the spacing of other plants, or failed the water fit there)'); }
 function plantSig(h){ return h.rows.map(r=>r.plants.map(p=>p.sp+'@'+p.ft).sort().join(',')).join('|'); }
+function spacingSetOf(h,id){ for(const r of h.rows){ const c=(r.comp||[]).find(x=>x.sp===id&&x.spacingSet); if(c) return c.spacing; } return ''; }
 function speciesCounts(h){ const c={}; h.rows.forEach(r=>r.plants.forEach(p=>{ c[p.sp]=(c[p.sp]||0)+1; })); return Object.keys(c).map(id=>({id,n:c[id],sp:SP(id)})).filter(x=>x.sp).sort((a,b)=>b.n-a.n); }
 /* Change how many of a species the hedgerow has. The count becomes a required count for the species and Auto-fill runs again from scratch, so the rest re-balances around it.
    0 removes the species and excludes it. If you have edited plants since the last Auto-fill, you are asked before they are discarded. */
+/* What a density setting would do to one row, worked out on a scratch copy and put back: plants before and after, the cost change, and species that would run past the nursery's stock. */
+function densityPreview(h,i,mode){ const r=h.rows[i]; const save={plants:r.plants.map(p=>Object.assign({},p)),comp:JSON.parse(JSON.stringify(r.comp||[])),fill:r.fill};
+  const count=rows=>{ const m={}; (rows?[r]:h.rows).forEach(rr=>rr.plants.forEach(p=>{ m[p.sp]=(m[p.sp]||0)+1; })); return m; }; const before=count(true), allBefore=count();
+  r.fill=mode; (r.comp||[]).forEach(c=>{ if(!c.spacingSet&&c.role!=='dom') c.spacing=null; }); layoutRow(h,i); const after=count(true), allAfter=count();
+  r.plants=save.plants; r.comp=save.comp; r.fill=save.fill; const use=ranchUseMap(h.id); let dn=0,dc=0,nb=0,na=0; const hits=[];
+  new Set([...Object.keys(before),...Object.keys(after)]).forEach(id=>{ const sp=SP(id); if(!sp) return; const b=before[id]||0, a=after[id]||0; nb+=b; na+=a; if(haveState()[id]) return; dc+=(a-b)*sizeInfo(h,sp).unit; const left=stockLeft(sp,use), tot=allAfter[id]||0; if(isFinite(left)&&tot>left&&a>b) hits.push(sp.common+' (hedgerow would need '+tot+', '+Math.max(0,left)+' available)'); });
+  return {before:nb,after:na,cost:dc,hits}; }
+async function fillChange(i,v){ const h=curHedge(); if(!h||!h.rows[i]) return; const r=h.rows[i]; const mode=FILL[v]?v:'standard';
+  if(r.plants.length&&(r.comp||[]).length){ const pv=densityPreview(h,i,mode); const edited=h.autoSig!=null&&plantSig(h)!==h.autoSig;
+    const msg=FILL[mode].label.split(' (')[0]+' planting for '+r.name+': '+pv.before+' → '+pv.after+' plants in this row ('+(pv.cost>=0?'+':'−')+'$'+fmtMoney(Math.abs(pv.cost))+').'+(pv.hits.length?' Over stock: '+pv.hits.join('; ')+'.':'')+' The row is laid out again from its species list'+(edited?', so plants you placed or deleted by hand in it are replaced':'')+'. Continue?';
+    const ok=await UI.confirm(msg,{title:'Change planting density?',ok:'Apply'}); if(!ok){ renderPanels(); return; } }
+  commit('Set planting density',()=>{ const hh=R().hedgerows.find(x=>x.id===h.id), rr=hh.rows[i]; rr.fill=mode; (rr.comp||[]).forEach(c=>{ if(!c.spacingSet&&c.role!=='dom') c.spacing=null; }); if(rr.plants.length&&(rr.comp||[]).length){ autoRowGaps(hh); layoutRow(hh,i); } });
+  drawAll(); renderPanels(); saveSoon(); }
+async function treeFillChange(i,v){ const h=curHedge(); if(!h||!h.rows[i]) return; const r=h.rows[i], mode=TREEFILL[v]?v:'standard';
+  if(r.plants.length&&(r.comp||[]).length){ const ok=await UI.confirm(TREEFILL[mode].label.split(' (')[0]+' for '+r.name+'. The row is laid out again from its species list, so plants you placed or deleted by hand in it are replaced.',{title:'Change tree density?',ok:'Apply'}); if(!ok){ renderPanels(); return; } }
+  commit('Set tree density',()=>{ const hh=R().hedgerows.find(x=>x.id===h.id), rr=hh.rows[i]; rr.treeFill=mode; rr.domMinFt=null; if(rr.plants.length&&(rr.comp||[]).length){ autoRowGaps(hh); layoutRow(hh,i); } });
+  drawAll(); renderPanels(); saveSoon(); }
+/* A spacing for one species, in feet. It is used exactly as typed (not scaled by the row's density) and repair leaves it alone. Blank goes back to automatic. */
+async function setSpeciesSpacing(id,v){ const h=curHedge(), sp=SP(id); if(!h||!sp) return; const ft=v===''?null:Math.max(0.5,Math.min(80,+v||0));
+  const rows=h.rows.map((r,i)=>i).filter(i=>h.rows[i].plants.some(p=>p.sp===id)); if(!rows.length) return;
+  const ok=await UI.confirm((ft?sp.common+' at '+ft+' ft apart':sp.common+' back to automatic spacing')+' in '+h.name+'? The rows it is in are laid out again from their species lists, so plants you placed or deleted by hand in them are replaced.',{title:'Change spacing?',ok:'Apply'}); if(!ok){ renderPanels(); return; }
+  commit('Spacing for '+sp.common,()=>{ const hh=R().hedgerows.find(x=>x.id===h.id); rows.forEach(i=>{ const rr=hh.rows[i]; if(!rr.comp||!rr.comp.length) rr.comp=compFromPlants(hh,i); let c=rr.comp.find(x=>x.sp===id); if(!c){ c={sp:id,role:sp.story==='over'?'dom':(sp.story==='mid'?'mid':'ground')}; rr.comp.push(c); } c.spacing=ft; c.spacingSet=!!ft; autoRowGaps(hh); layoutRow(hh,i); }); });
+  drawAll(); renderPanels(); saveSoon(); }
+function setPlantBudget(v){ R().plantBudget=(v===''||!(+v>0))?null:Math.round(+v); saveSoon(); renderShop(); }
+/* Spend against the plant budget, for the whole ranch (every hedgerow, species marked "have" not charged). Shown only once a budget is entered. */
+function budgetHtml(){ const b=R().plantBudget; const L=ranchLines(), spent=L.reduce((a,l)=>a+(l.have?0:lineCost(l)),0), plants=L.reduce((a,l)=>a+l.n,0);
+  const input=`<label class="small" style="margin:0" title="What you can spend on plants, for the whole ranch. Irrigation and other costs come out of the grant before this figure.">Plant budget, $</label> <input type="number" min="0" step="100" style="width:96px" placeholder="none" value="${b||''}" onchange="setPlantBudget(this.value)">`;
+  if(!b) return `<div class="row" style="margin:6px 0;align-items:center">${input}<span class="small mute">${plants} plants, $${fmtMoney(spent)} so far</span></div>`;
+  const pct=Math.min(100,Math.round(100*spent/b)), over=spent>b, left=b-spent;
+  return `<div style="margin:6px 0"><div class="row" style="align-items:center">${input}<b class="small" style="color:${over?'#8A2A12':'inherit'}">$${fmtMoney(spent)} of $${fmtMoney(b)} (${Math.round(100*spent/b)}%) · ${over?'$'+fmtMoney(-left)+' over':'$'+fmtMoney(left)+' left'}</b></div><div style="height:8px;background:rgba(0,0,0,.1);border-radius:4px;margin-top:4px"><div style="height:8px;width:${pct}%;background:${over?'#8A2A12':'#2F6B3A'};border-radius:4px"></div></div><p class="small mute" style="margin:2px 0 0">${plants} plants across ${R().hedgerows.length} hedgerow${R().hedgerows.length===1?'':'s'}.</p></div>`; }
 async function setSpeciesCount(id,v){ const h=curHedge(), sp=SP(id); if(!h||!sp) return; const n=Math.max(0,Math.round(+v)); if(!isFinite(n)) return;
   const edited=h.autoSig==null?h.rows.some(r=>r.plants.length):plantSig(h)!==h.autoSig;
   if(edited){ const ok=await UI.confirm('Auto-fill will run again from scratch and replace the plants in '+h.name+', including any you placed or deleted by hand since the last fill. Continue?',{title:'Re-run Auto-fill?',ok:'Re-run'}); if(!ok){ renderPanels(); return; } }
@@ -4213,8 +4378,7 @@ function renderPaint(){ modeBanner(); /* the banner names the species being pain
      tools above it — this is a library-maintenance action, not a row-painting one,
      and sitting in the same button row as Auto-fill made it read as part of that
      toolbar rather than a separate thing. */
-  const editBtn=canEditSpecies()
-    ?`<div class="row" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><button class="small" onclick="openSpeciesGrid()">Edit species library (spreadsheet view)</button></div>`:'';
+  const editBtn=`<div class="row" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><button class="small" onclick="openSpeciesGrid()">${canEditSpecies()?'Edit species library (spreadsheet view)':'Browse species library (spreadsheet view)'}</button></div>`;
   if(!h){ setHtml('tab-paint',`<p class="small mute">Select or draw a hedgerow first.</p>`+editBtn); return; }
   const r=h.rows[S.sel.row||0];
   html+=`<div class="row"><button class="small" onclick="doPopulate()" title="${h.rows.some(r=>r.plants.length)?'Adds species around the plants already here; nothing you have placed is moved or removed.':'Fills the hedgerow from your goals and the ground.'}">${h.rows.some(r=>r.plants.length)?'Fill in around plants':'Auto-fill'}</button><button class="small${mode==='paint'?' on':''}" onclick="toggleMode('paint');renderPaint()">Paint mode</button><button class="small${mode==='erase'?' on':''}" onclick="toggleMode('erase');renderPaint()">Erase mode</button></div>`;
@@ -4708,7 +4872,8 @@ async function wsAddMissing(){ if(!canEditSpecies()) return; const d=wsData(); c
         notes:'Added from the Watershed Nursery list ('+t.life+'). Only the name, layer and container sizes are filled in.'});
       if(S.species.some(x=>x.id===e.id&&x.sci!==e.sci)||ids.has(e.id)){ let n=2; const b=e.id; while(ids.has(b+n)) n++; e.id=b+n; } if(ids.has(e.id)&&S.species.some(x=>x.id===e.id)) return; ids.add(e.id); S.species.push(e); added.push(e); }); });
   if(typeof _speciesGridDraft!=='undefined'&&_speciesGridDraft){ added.forEach(d=>_speciesGridDraft.push(JSON.parse(JSON.stringify(d)))); try{ sortSpeciesGrid(_sgSortPath||'common'); paintSpeciesGrid(); }catch(e){} }
-  await pushSharedSpecies(); drawAll(); renderPanels(); UI.toast('Added '+added.length+' Watershed species to the library.'); }
+  await pushSharedSpecies(); drawAll(); renderPanels(); UI.toast('Added '+added.length+' Watershed species. Looking up their details on Calscape and Calflora…');
+  const wr=await webFillAdded(added.map(e=>e.id),{progress:true}); UI.toast('Added '+added.length+' Watershed species; details filled in for '+wr.filled+'.'); webFillReportShow(wr.report); }
 /* ---- Urban Tree Farm (Fulton): a third nursery. Its list is a published Google Sheet (first description, second description, size, quantity, price, location),
    one row per bench location, so the same plant appears several times; rows are totalled per size. Sizes are "#1", "#5" and so on (the nursery writes
    #1 where others say 1 gallon). Only plain # sizes are read; liners, boxes over #25 and ranges like "#2-3" are skipped. The list is approximate, and the
@@ -6329,10 +6494,11 @@ function utAddRowsHtml(){ const q=((document.getElementById('utQ')||{}).value||'
 function utAddPaint(){ const el=document.getElementById('utList'); if(el) el.innerHTML=utAddRowsHtml(); }
 function utSay(t){ const el=document.getElementById('utMsg'); if(el) el.textContent=t; }
 function utAddPick(i){ const t=(window._utC||[])[i]; if(!t) return; const keys=t.rows.map(r=>r.key), small=['1g','u1_5','2g','u2_5','u3','5g'], story=!keys.some(k=>small.includes(k))?'over':(keys.some(k=>['1g','u1_5','2g'].includes(k))?'ground':'mid');
-  const nm=(t.common||t.name).replace(/^\*\w+\s*/,'').replace(/\s*\bCA native\b/i,'').trim(); const ids=new Set(S.species.map(x=>x.id));
+  const nm=(t.common||t.name).replace(/^\*\w+\s*/,'').replace(/\s*\bCA native\b/i,'').trim(); const ids=new Set(S.species.map(x=>x.id)); let newId=null;
   commit('Add '+nm+' from Urban Tree Farm',()=>{ const e=draftFromJSON({common:nm.charAt(0).toUpperCase()+nm.slice(1),sci:t.name.replace(/\*\w*/g,'').replace(/\[[^\]]*\]|\{[^}]*\}/g,'').replace(/\s+/g,' ').trim(),story,utTaxon:t.name,notes:'Added from the Urban Tree Farm list. Only the name, layer (guessed from the pot sizes) and container sizes are filled in.'});
-    if(ids.has(e.id)){ let n=2; const b=e.id; while(ids.has(b+n)) n++; e.id=b+n; } S.species.push(e); if(typeof _speciesGridDraft!=='undefined'&&_speciesGridDraft){ _speciesGridDraft.push(JSON.parse(JSON.stringify(e))); } });
-  window._utDone.add(t.norm); window._utN=(window._utN||0)+1; utSay('Added '+nm+'. Pick another, or press Done.'); utAddPaint(); }
+    if(ids.has(e.id)){ let n=2; const b=e.id; while(ids.has(b+n)) n++; e.id=b+n; } S.species.push(e); newId=e.id; if(typeof _speciesGridDraft!=='undefined'&&_speciesGridDraft){ _speciesGridDraft.push(JSON.parse(JSON.stringify(e))); } });
+  window._utDone.add(t.norm); window._utN=(window._utN||0)+1; utSay('Added '+nm+'. Looking up its details on Calscape and Calflora…'); utAddPaint();
+  if(newId) webFillAdded([newId],{say:utSay}).then(w=>{ const r=w.report[0]; utSay('Added '+nm+(r&&r.filled.length?'; filled in '+r.filled.map(k=>(WEB_LABEL[k]||k).toLowerCase()).join(', ')+'.':(r&&r.notes.length?'; could not look it up ('+r.notes[0]+').':'.'))+' Pick another, or press Done.'); }); }
 function utLinkPick(i,spId){ const t=(window._utC||[])[i]; if(!t) return; const sp0=S.species.find(x=>x.id===spId); if(!sp0) return;
   commit('Use Urban Tree Farm as a price source for '+sp0.common,()=>{ const sp=S.species.find(x=>x.id===spId); if(sp) sp.utTaxon=t.name; if(typeof _speciesGridDraft!=='undefined'&&_speciesGridDraft){ const g=_speciesGridDraft.find(x=>x.id===spId); if(g) g.utTaxon=t.name; } });
   window._utDone.add(t.norm); window._utN=(window._utN||0)+1; utSay(sp0.common+' now has Urban Tree Farm prices and stock from '+t.name+'. Pick another, or press Done.'); utAddPaint(); }
@@ -6378,6 +6544,7 @@ function renderDay(){ const h=curHedge(); const back=`<div class="row"><button c
   const tally=items=>{ const m={}; items.forEach(x=>{ const e=m[x.p.sp.id]=m[x.p.sp.id]||{sp:x.p.sp,n:0,size:sizeOf(x)}; e.n++; }); return Object.values(m).sort((a,b)=>b.n-a.n); };
   const line=items=>tally(items).map(e=>`${e.n} ${esc(e.sp.common)} <span class="mute">(${esc(e.size)})</span>`).join(', ');
   let html=back+`<h2>Planting day: ${esc(h.name)}</h2><p class="small">${order.length} plants. This page shows how many trips they take and the order to plant them in. Nothing here needs filling in.</p>`;
+  html+=`<h3>Layout</h3><div class="row"><label class="small" style="margin:0">Feet per strip</label><select onchange="dayLayoutFt=+this.value;renderDay()">${[20,30,40,60,100].map(v=>`<option value="${v}"${v===dayLayoutFt?' selected':''}>${v}</option>`).join('')}</select></div>`+dayLayoutHtml(h);
   html+=`<h3>1. How will you carry them?</h3><div class="row"><select onchange="dayVehicle=this.value;renderDay()">${Object.keys(VEHICLES).map(k=>`<option value="${k}"${k===dayVehicle?' selected':''}>${esc(VEHICLES[k].label)}</option>`).join('')}</select><span class="small">${loads.length} load${loads.length===1?'':'s'}</span></div>`;
   html+=loads.map((load,i)=>`<details ${i===0?'open':''}><summary>Load ${i+1}: ${load.length} plants</summary><p class="small">${line(load)}</p></details>`).join('');
   html+=`<h3>2. Plant in this order</h3><p class="small mute">Big plants first, so you are not stepping on small ones.</p>`;
@@ -6385,12 +6552,36 @@ function renderDay(){ const h=curHedge(); const back=`<div class="row"><button c
   ['nurse','over','mid','vine','ground'].filter(k=>bt[k]&&bt[k].length).forEach(k=>{ step++; html+=`<div class="issue"><b>${step}. ${DAY_STORY[k]}</b> (${bt[k].length})<br><span class="small">${line(bt[k])}</span></div>`; });
   html+=`<h3>3. Take it with you</h3><div class="row"><button class="small primary" onclick="printDaySheet()">Print planting-day sheet</button><button class="small" onclick="exportDayCSV()">Download list (CSV)</button></div><p class="small mute">The sheet has the loads, the order of work and a tick box for every plant, with its row and distance along the row. The CSV has the same list for a spreadsheet.</p>`;
   setHtml('tab-day',html); }
+/* Top-down layout for planting day: the hedgerow straightened into strips of segFt feet, each plant a dot carrying its species number, plus a key and a scale bar. Distances are along the centreline and across between rows, so what you read off it is what you measure on the ground. */
+let dayLayoutFt=40;
+const DAY_DOT={over:'#2F5A39',mid:'#5E8A4A',vine:'#7A5C8F',ground:'#B8963E',nurse:'#8A6B4A'};
+function dayLayoutHtml(h,segFt){ segFt=segFt||dayLayoutFt; const P=plantsXY(h); if(!P.length) return '';
+  const rk={over:0,mid:1,vine:2,ground:3,nurse:4};
+  const ids=[...new Set(P.map(x=>x.sp.id))].map(id=>SP(id)).sort((a,b)=>((rk[a.story]||0)-(rk[b.story]||0))||String(a.common).localeCompare(b.common));
+  const num={}; ids.forEach((sp,k)=>{ num[sp.id]=k+1; }); const cnt={}; P.forEach(x=>{ cnt[x.sp.id]=(cnt[x.sp.id]||0)+1; });
+  const offs=rowOffsetsFt(h); const U=16, R=7.6, ML=64, MR=14, MT=34, MB=40; const depth=offs[offs.length-1]*U+2*R+8;
+  const L=Math.max(...h.rows.map((r,i)=>rowLenFt(h,i)),...P.map(x=>x.ft)); const nseg=Math.max(1,Math.ceil(L/segFt-1e-9));
+  const W=ML+segFt*U+MR, H=MT+depth+MB; let svgs='';
+  for(let g=0;g<nseg;g++){ const a=g*segFt, b=a+segFt; const X=ft=>ML+(ft-a)*U, Y=i=>MT+R+4+offs[i]*U;
+    let o=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;background:#fff;border:1px solid #ccc;margin:6px 0;font-family:Arial,sans-serif">`;
+    o+=`<text x="${ML-60}" y="12" font-size="11" fill="#444">${a} to ${Math.min(b,Math.ceil(L))} ft along the row</text>`;
+    for(let t=Math.ceil(a/10)*10;t<=b;t+=10){ o+=`<line x1="${X(t)}" y1="${MT-4}" x2="${X(t)}" y2="${MT+depth}" stroke="#e2e2e2" stroke-width="1"/><text x="${X(t)}" y="${MT-8}" font-size="9" fill="#777" text-anchor="middle">${t}</text>`; }
+    h.rows.forEach((r,i)=>{ o+=`<line x1="${ML-6}" y1="${Y(i)}" x2="${W-MR}" y2="${Y(i)}" stroke="#cdbfa6" stroke-width="1" stroke-dasharray="3 3"/><text x="${ML-10}" y="${Y(i)+4}" font-size="10" fill="#555" text-anchor="end">${esc(String(r.name||'Row '+(i+1)).slice(0,10))}</text>`; });
+    P.filter(x=>x.ft>=a&&(x.ft<b||(g===nseg-1&&x.ft<=b+1e-9))).forEach(x=>{ const c=DAY_DOT[x.sp.story]||'#666', n=num[x.sp.id];
+      o+=`<circle cx="${X(x.ft).toFixed(1)}" cy="${Y(x.i).toFixed(1)}" r="${R}" fill="${c}" stroke="#fff" stroke-width="1"/><text x="${X(x.ft).toFixed(1)}" y="${(Y(x.i)+3.4).toFixed(1)}" font-size="${n>9?8.5:10}" font-weight="700" fill="#fff" text-anchor="middle">${n}</text>`; });
+    const by=H-18; o+=`<rect x="${ML}" y="${by-4}" width="${5*U}" height="5" fill="#222"/><rect x="${ML+5*U}" y="${by-4}" width="${5*U}" height="5" fill="#fff" stroke="#222" stroke-width="1"/><text x="${ML}" y="${by+12}" font-size="10" fill="#222">0</text><text x="${ML+10*U}" y="${by+12}" font-size="10" fill="#222" text-anchor="middle">10 ft</text></svg>`;
+    svgs+=`<div style="page-break-inside:avoid">${o}</div>`; }
+  const td='border:1px solid #bbb;padding:3px 6px;font-size:12px';
+  const key=`<table style="border-collapse:collapse;width:100%;margin-top:6px"><tr><th style="${td};text-align:left">#</th><th style="${td};text-align:left">Species</th><th style="${td};text-align:left">Layer</th><th style="${td};text-align:right">Plants</th></tr>`
+    +ids.map(sp=>`<tr><td style="${td}"><span style="display:inline-block;min-width:22px;text-align:center;border-radius:11px;background:${DAY_DOT[sp.story]||'#666'};color:#fff;font-weight:700;font-size:11px;padding:1px 0">${num[sp.id]}</span></td><td style="${td}">${esc(sp.common)}${sp.sci?` <i style="color:#777">${esc(sp.sci)}</i>`:''}</td><td style="${td}">${esc(DAY_STORY[sp.story]||sp.story)}</td><td style="${td};text-align:right">${cnt[sp.id]}</td></tr>`).join('')+`</table>`;
+  return `<p style="font-size:12px;color:#666;margin:2px 0">Top-down, with the hedgerow straightened out: left to right is distance along the row, up and down is the gap between rows. The number in each dot is the species in the key.</p>`+svgs+key; }
 /* The printable planting-day sheet: loads to pack, what to plant in what order, and the full list with a tick box per plant. */
 function dayDocBodyHtml(h){ const order=plantingOrder(h); if(!order.length) return `<p>Nothing is planted in ${esc(h.name)} yet.</p>`;
   const loads=loadPlan(h,dayVehicle), sizeOf=x=>containerLabel(chosenSize(h,x.p.sp));
   const tally=items=>{ const m={}; items.forEach(x=>{ const e=m[x.p.sp.id]=m[x.p.sp.id]||{sp:x.p.sp,n:0,size:sizeOf(x)}; e.n++; }); return Object.values(m).sort((a,b)=>b.n-a.n); };
   const bt=batchPlan(h); let step=0;
   let html=`<h2>Planting day: ${esc(h.name)}</h2><p>${order.length} plants · ${esc((VEHICLES[dayVehicle]||{}).label||dayVehicle)} · ${loads.length} load${loads.length===1?'':'s'}. Date: ______________ &nbsp; Crew: ______________________</p>`;
+  html+=`<h3>Layout</h3>`+dayLayoutHtml(h,Math.max(dayLayoutFt,40));
   html+=`<h3>1. Loads</h3>`+loads.map((load,i)=>`<p><b>Load ${i+1}</b> (${load.length} plants)<br>`+tally(load).map(e=>`☐ ${e.n} ${esc(e.sp.common)} <span style="color:#666">(${esc(e.size)})</span>`).join('<br>')+`</p>`).join('');
   html+=`<h3>2. Plant in this order</h3>`+['nurse','over','mid','vine','ground'].filter(k=>bt[k]&&bt[k].length).map(k=>{ step++; return `<p><b>${step}. ${DAY_STORY[k]}</b> (${bt[k].length})<br>`+tally(bt[k]).map(e=>`☐ ${e.n} ${esc(e.sp.common)} <span style="color:#666">(${esc(e.size)})</span>`).join('<br>')+`</p>`; }).join('');
   html+=`<h3>3. Every plant</h3><table><tr><th></th><th>#</th><th>Plant</th><th>Container</th><th>Row</th><th class="num">Distance along row (ft)</th></tr>`
@@ -6469,6 +6660,10 @@ function excludeFromCost(id){ if(!planExcluded().includes(id)) toggleExcluded(id
    the nursery carries first, then by how well they fit the rows the species is in. */
 /* Replacement candidates for a species in this hedgerow. "left" is the stock after what the other hedgerows already plant of it;
    "enough" means that covers what this hedgerow needs. Same-species selections (groupMates) come first among the enough ones. */
+/* Take a few plants of a species out, evenly along the hedgerow (the rows it is in, in order), when stock covers most but not all of what the plan needs.
+   Returns how many were removed. Plants you placed by hand are not special-cased here; this runs inside Auto-fill and density changes only. */
+function trimSpecies(h,spId,n){ const all=[]; h.rows.forEach((r,i)=>r.plants.forEach(p=>{ if(p.sp===spId) all.push({r,p}); })); if(!all.length||n<=0) return 0; n=Math.min(n,all.length); const drop=new Set(); for(let q=0;q<n;q++) drop.add(all[Math.min(all.length-1,Math.floor((q+0.5)*all.length/n))]);
+  h.rows.forEach(r=>{ r.plants=r.plants.filter(p=>![...drop].some(d=>d.p===p)); }); return n; }
 function swapCandidates(h,spId){ const sp=SP(spId); if(!sp) return []; const rowsWith=h.rows.map((r,i)=>i).filter(i=>h.rows[i].plants.some(p=>p.sp===spId)); if(!rowsWith.length) return [];
   const need=h.rows.reduce((a,r)=>a+r.plants.filter(p=>p.sp===spId).length,0); const ex=new Set(planExcluded(h)), have=new Set(); h.rows.forEach(r=>r.plants.forEach(p=>have.add(p.sp))); const moist=rowMoistures(h), gone=new Set((_shopRep&&_shopRep.h===h.id)?_shopRep.missing:[]), use=ranchUseMap(h.id), gk=groupKey(sp);
   const layerOk=x=>x.story===sp.story||(sp.story==='nurse'&&x.story==='ground')||(sp.story==='ground'&&x.story==='nurse');
@@ -6516,7 +6711,7 @@ function renderShop(){ const h=curHedge(); if(!h){ setHtml('tab-shop',`<p class=
   let html=`<h2>${esc(h.name)} — cost</h2><p class="small">${plants} plants · <b>$${fmtMoney(total)}</b>`
     +(haveN?` · ${haveN} species you already have ${haveN===1?'is':'are'} left out`:'')+(nur.length?` · ${nur.length} of ${lines.length-haveN} species at nursery prices (${nurPart.join(', ')}); the rest are generic estimates, marked ~`:` · generic estimates, marked ~`)
     +(anyLoss?`<br>Expect to lose about <b>${Math.round(lost)}</b> of them by year 3 (about $${fmtMoney(Math.round(lostCost))} to replace), at the sizes chosen below.`:'')+`</p>`;
-  html+=shortBannerHtml(lines)+ranchShopHtml();
+  html+=budgetHtml()+shortBannerHtml(lines)+ranchShopHtml();
   const shown=_shortOnly&&lines.some(shortOnStock)?lines.filter(shortOnStock):lines;
   html+=`<table><tr><th>Species</th><th title="Tick if you already have these plants. They stay in the hedgerow but are left out of the cost.">Have</th><th class="num">Qty</th><th class="num" title="What the nursery lists in stock at the size chosen. Amber means fewer than you need; red means none.">In stock</th><th>Size</th><th class="num">Each</th><th class="num">Cost</th><th class="num" title="Expected loss by year 3 at this size">Yr-3 loss</th><th>Status</th></tr>`
     +shown.map(l=>`<tr${l.have?' style="opacity:.6"':(shortOnStock(l)?' style="background:'+(l.stock<=0?'#F6D3CC':'#FCEBC8')+'"':'')}><td>${esc(l.sp.common)}${l.nursery==='cfn'?nurseryLinkHtml(l.sp):''}${stockWarn(l)}${buyFromSelectHtml(l)}${(_shopRep&&_shopRep.h===h.id&&_shopRep.missing.includes(l.sp.id))?' <span class="small" style="color:#B04A2F">not at the nursery</span> <button class="small" onclick="swapSpeciesEverywhere(\''+l.sp.id+'\')">Swap…</button>':''}</td><td><input type="checkbox" ${l.have?'checked':''} onchange="setHave('${l.id}',this.checked)" title="I already have these"></td><td class="num">${l.n}</td><td class="num">${stockCell(l)}</td><td>${sizeSelect(l)}</td><td class="num" title="${esc(eachTip(l))}">${l.src==='nursery'?'':'~'}$${fmtMoney(l.unit)}</td><td class="num">${l.have?'have':'$'+fmtMoney(lineCost(l))}</td><td class="num" title="${esc(lossTip(l))}">${l.loss==null?'—':l.loss+'%'}</td>
@@ -6560,12 +6755,12 @@ function rcdNote(sp,label){ const m=new RegExp(label+': ([^·|—]+)','i').exec(
 function rcdType(sp){ const pt=rcdNote(sp,'Plant type')+' '+rcdNote(sp,'Life form'); if(/grass|sedge|rush/i.test(pt)) return 'Grass'; if(sp.story==='vine'||/vine/i.test(pt)) return 'Vine'; if(sp.story==='over') return 'Tree'; if(sp.story==='mid') return 'Shrub'; return 'Herb'; }
 function rcdSeason(sp){ const m=new Set(sp.bloom||[]); if(!m.size) return ''; const S4=[['Winter',[12,1,2]],['Spring',[3,4,5]],['Summer',[6,7,8]],['Fall',[9,10,11]]]; return S4.filter(x=>x[1].some(k=>m.has(k))).map(x=>x[0]).join('/'); }
 function rcdLeaf(sp){ if(sp.leaf) return sp.leaf; const d=rcdNote(sp,'Dormancy'); return /evergreen/i.test(d)?'Evergreen':/semi/i.test(d)?'Semi-deciduous':/decid|dormant/i.test(d)?'Deciduous':''; }
-function rcdLink(sp){ const sci=String(sp.sci||''); if(sci&&!/['"]/.test(sci)) return 'https://calscape.org/'+encodeURIComponent(sci.replace(/\s+/g,'-')).replace(/%2D/g,'-')+'-('+encodeURIComponent(String(sp.common||'').replace(/\b[a-z]/g,m=>m.toUpperCase()).replace(/\s+/g,'-'))+')'; return sp.source||''; }
+function rcdLink(sp){ if(sp.calscapeUrl) return sp.calscapeUrl; const sci=String(sp.sci||''); if(sci&&!/['"]/.test(sci)) return 'https://calscape.org/'+encodeURIComponent(sci.replace(/\s+/g,'-')).replace(/%2D/g,'-')+'-('+encodeURIComponent(String(sp.common||'').replace(/\b[a-z]/g,m=>m.toUpperCase()).replace(/\s+/g,'-'))+')'; return sp.source||''; }
 function rcdSpacing(h,spId){ const gaps=[]; h.rows.forEach(r=>{ const f=r.plants.filter(p=>p.sp===spId).map(p=>p.ft).sort((a,b)=>a-b); for(let i=1;i<f.length;i++) gaps.push(f[i]-f[i-1]); });
   const sp=SP(spId); if(gaps.length>=2) return Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length*2)/2; return sp&&sp.spacingFt?sp.spacingFt:''; }
 function rcdRows(h){ const cnt={}; h.rows.forEach(r=>r.plants.forEach(p=>{ cnt[p.sp]=(cnt[p.sp]||0)+1; }));
-  return Object.keys(cnt).map(id=>{ const sp=SP(id); if(!sp) return null; const type=rcdType(sp); const n=cnt[id]; const area=sp.rad?Math.round(Math.PI*sp.rad*sp.rad*n):''; const unit=sizeInfo(h,sp).unit, have=!!haveState()[id];
-    return {sp,type,n,area,unit,have,cost:have?0:unit*n,origin:sp.origin||(sp.northBay===true?'Native':''),flower:sp.flowerColor||'',ht:sp.ht||'',wid:sp.rad?Math.round(sp.rad*2*10)/10:'',spacing:rcdSpacing(h,id),season:rcdSeason(sp),
+  return Object.keys(cnt).map(id=>{ const sp=SP(id); if(!sp) return null; const type=rcdType(sp); const n=cnt[id]; const area=sp.rad?Math.round(Math.PI*sp.rad*sp.rad*n):''; const si=sizeInfo(h,sp), unit=si.unit, have=!!haveState()[id], note=have?'Already have':(si.src==='nursery'?nurseryName(buyFromOf(sp)):'');
+    return {sp,type,n,area,unit,have,note,cost:have?0:unit*n,origin:sp.origin||(sp.northBay===true?'Native':''),flower:sp.flowerColor||'',ht:sp.ht||'',wid:sp.rad?Math.round(sp.rad*2*10)/10:'',spacing:rcdSpacing(h,id),season:rcdSeason(sp),
       sun:({hot:'Full Sun',any:'Full Sun/Part Shade',shade:'Part Shade/Shade'})[sp.sun]||'',cold:sp.cold||rcdNote(sp,'Cold tolerance'),water:({dry:'Low',moderate:'Moderate',wet:'High'})[sp.moisture]||'',deer:sp.deer||'',leaf:rcdLeaf(sp),link:rcdLink(sp)}; })
     .filter(Boolean).sort((a,b)=>RCD_TYPES.indexOf(a.type)-RCD_TYPES.indexOf(b.type)||a.sp.common.localeCompare(b.sp.common)); }
 function rcdDims(h){ const lens=h.rows.map((r,i)=>rowLenFt(h,i)); const lin=lens.length?lens.reduce((a,b)=>a+b,0)/lens.length:0; const w=(h.gapsFt||[]).reduce((a,b)=>a+(+b||0),0)+8; return {lin:Math.round(lin),sq:Math.round(lin*w)}; }
@@ -6574,17 +6769,17 @@ function rcdDocHtml(hedges,forExcel){ const f0=x=>Number(x).toLocaleString();
   const tb=hedges.map(h=>{ const rows=rcdRows(h), d=rcdDims(h), tot=rows.reduce((a,r)=>a+r.n,0), area=rows.reduce((a,r)=>a+(+r.area||0),0), cost=rows.reduce((a,r)=>a+r.cost,0);
     return `<tr><td colspan="17" style="background:#D9D9D9;font-weight:bold;text-align:center;font-size:12px;padding:3px">${esc(h.name)}</td></tr>`
      +rows.map(r=>{ const c=s=>`<td style="padding:2px 4px;background:${RCD_COLOR[r.type]}">${esc(s)}</td>`; const nm=r.link?`<a href="${esc(r.link)}" style="color:#1155CC">${esc(r.sp.common)}</a>`:esc(r.sp.common);
-       return `<tr><td style="padding:2px 4px;background:${RCD_COLOR[r.type]}">${nm}</td><td style="padding:2px 4px;background:${RCD_COLOR[r.type]};font-style:italic">${esc(r.sp.sci)}</td>${c(r.origin)}${c(r.type)}${c(r.flower)}${c(r.ht)}${c(r.wid)}${c(r.spacing)}${c(r.season)}${c(r.sun)}${c(r.cold)}${c(r.water)}<td style="background:${RCD_COLOR[r.type]}"></td><td style="background:#FFFF00;text-align:center;font-weight:bold">${r.n}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">${r.area===''?'':f0(r.area)}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">$${fmtMoney(r.unit)}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">${r.have?'have':'$'+fmtMoney(r.cost)}</td></tr>`; }).join('')
+       return `<tr><td style="padding:2px 4px;background:${RCD_COLOR[r.type]}">${nm}</td><td style="padding:2px 4px;background:${RCD_COLOR[r.type]};font-style:italic">${esc(r.sp.sci)}</td>${c(r.origin)}${c(r.type)}${c(r.flower)}${c(r.ht)}${c(r.wid)}${c(r.spacing)}${c(r.season)}${c(r.sun)}${c(r.cold)}${c(r.water)}${c(r.note)}<td style="background:#FFFF00;text-align:center;font-weight:bold">${r.n}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">${r.area===''?'':f0(r.area)}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">$${fmtMoney(r.unit)}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">${r.have?'have':'$'+fmtMoney(r.cost)}</td></tr>`; }).join('')
      +`<tr><td colspan="2" style="padding:4px;font-weight:bold;border:1px solid #000;background:#FFE699;font-style:italic;text-align:center">${esc(h.name)} Linear Feet</td><td style="border:1px solid #000;text-align:center;font-weight:bold">${f0(d.lin)}</td><td colspan="3"></td><td colspan="3" style="padding:4px;font-weight:bold;border:1px solid #000;background:#FFE699;font-style:italic;text-align:center">${esc(h.name)} Square Feet</td><td style="border:1px solid #000;text-align:center;font-weight:bold">${f0(d.sq)}</td><td colspan="2"></td><td style="text-align:center;font-size:9px">Total Plants In Hedgerow</td><td style="background:#FFFF00;text-align:center;font-weight:bold;border:1px solid #000">${f0(tot)}</td><td style="text-align:right;font-weight:bold;border:1px solid #000">${f0(area)}</td><td></td><td style="text-align:right;font-weight:bold;border:1px solid #000">$${fmtMoney(cost)}</td></tr>`; }).join('');
   const head=`This plant list was created for ${esc(rcdFor||R().name)} as part of the ${esc(rcdGrant)}; species data from the HedgeRight library and Cal Flora Nursery. Mature square feet = plants × canopy area (π × radius²). Costs use the container size chosen on the Cost tab; species marked "have" are not charged. Generated ${new Date().toLocaleDateString()}.`;
   return `<!DOCTYPE html><html${forExcel?' xmlns:x="urn:schemas-microsoft-com:office:excel"':''}><head><meta charset="utf-8"><title>Plant list — ${esc(rcdFor||R().name)}</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:landscape;margin:.4in}body{font-family:Arial,sans-serif;margin:16px;color:#000}table{border-collapse:collapse;width:100%;font-size:9px}td{font-size:9px}.bar{margin-bottom:8px}@media print{.bar{display:none}}</style></head><body>${forExcel?'':'<div class="bar"><button onclick="window.print()">Print or save as PDF</button></div>'}<table><tr><td colspan="17" style="background:#D9D9D9;text-align:center;font-weight:bold;font-size:9px;padding:3px">${head}</td></tr>${th}${tb}</table></body></html>`; }
-function rcdPanelHtml(){ const hs=R().hedgerows.filter(h=>h.rows.some(r=>r.plants.length)); if(rcdFor==null) rcdFor=R().name||'';
+function rcdPanelHtml(){ const hs=sortedHedges().filter(h=>h.rows.some(r=>r.plants.length)); if(rcdFor==null) rcdFor=R().name||'';
   if(!hs.length) return `<h3>Plant list for the Resource Conservation District</h3><p class="small mute">Plant a hedgerow first.</p>`;
   return `<h3>Plant list for the Resource Conservation District</h3><p class="small">One table per hedgerow in the District's layout, with the number of plants and the mature square feet filled in. Details the species library lacks (flower color, cold tolerance, native status) are left blank; they are columns in the species spreadsheet.</p>`
    +hs.map(h=>`<label class="small" style="display:block"><input type="checkbox" ${rcdSel[h.id]===false?'':'checked'} onchange="rcdSel['${h.id}']=this.checked"> ${esc(h.name)} <span class="mute">(${h.rows.reduce((a,r)=>a+r.plants.length,0)} plants)</span></label>`).join('')
    +`<div class="row"><label class="small" style="margin:0">Prepared for</label><input type="text" style="flex:1" value="${esc(rcdFor)}" oninput="rcdFor=this.value"></div><div class="row"><label class="small" style="margin:0">Grant</label><input type="text" style="flex:1" value="${esc(rcdGrant)}" oninput="rcdGrant=this.value"></div>`
    +`<div class="row"><button class="primary" onclick="rcdOpen()">Open to print or save as PDF</button><button class="small" onclick="rcdDownload()">Download Excel file</button></div>`; }
-function rcdChosen(){ const hs=R().hedgerows.filter(h=>h.rows.some(r=>r.plants.length)&&rcdSel[h.id]!==false); if(!hs.length) UI.toast('Tick at least one hedgerow with plants'); return hs; }
+function rcdChosen(){ const hs=sortedHedges().filter(h=>h.rows.some(r=>r.plants.length)&&rcdSel[h.id]!==false); if(!hs.length) UI.toast('Tick at least one hedgerow with plants'); return hs; }
 function rcdOpen(){ const hs=rcdChosen(); if(!hs.length) return; const w=window.open('about:blank','_blank'); if(!w){ UI.toast('Allow pop-ups to open the list, or use Download'); return; } w.document.write(rcdDocHtml(hs,false)); w.document.close(); }
 function rcdDownload(){ const hs=rcdChosen(); if(!hs.length) return; const blob=new Blob([rcdDocHtml(hs,true)],{type:'application/vnd.ms-excel'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='plant-list.xls'; a.click(); }
 /* A picture of the hedgerow on the satellite map, for the printed plan: the Esri tiles drawn to a canvas, with ponds, row lines, plants and a scale bar over them.

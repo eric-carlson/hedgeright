@@ -85,6 +85,31 @@ function decodeEntities(s) {
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
     .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
 }
+
+/* ---- Plant-data sources (Calscape, Calflora) ----
+   One generic route for sites that describe a plant on a page: /source?url=. Same rules as the nursery routes:
+   an allowlist of hosts and paths (this is not a general proxy), robots.txt read first and obeyed, an honest
+   User-Agent, and any Crawl-delay passed back so the app paces itself. Editors and the owner only. The page is
+   returned as is; the app reads the facts it needs out of it (and keeps facts, not the sites' prose). Adding a
+   site means adding it here and writing a small adapter in the app (WEB_SOURCES). */
+const SRC_SITES = {
+  'calscape.org': { origin: 'https://calscape.org', ok: (u) => u.pathname === '/search' ? false : /^\/(plant\/\d+\/)?[^\/]+$/.test(u.pathname) },
+  'www.calflora.org': { origin: 'https://www.calflora.org', ok: (u) => (u.pathname === '/app/taxon' && /^\d+$/.test(u.searchParams.get('crn') || '')) || (u.pathname === '/cgi-bin/species_query.cgi' && /^[A-Za-z .+-]{3,80}$/.test(u.searchParams.get('where-taxon') || '')) }, /* the second form redirects to the taxon page, which is how a species with no stored Calflora number is found */
+};
+SRC_SITES['calflora.org'] = SRC_SITES['www.calflora.org'];
+SRC_SITES['www.calscape.org'] = SRC_SITES['calscape.org'];
+const _srcRobots = {};
+async function srcRobots(origin) {
+  const c = _srcRobots[origin]; if (c && Date.now() - c.at < 3600e3) return c;
+  let resp;
+  try { resp = await fetch(origin + '/robots.txt', { headers: { 'User-Agent': CFN_UA } }); }
+  catch (e) { throw new Error('Could not read robots.txt: ' + ((e && e.message) || e)); }
+  let r;
+  if (resp.status === 404) r = { at: Date.now(), rules: [], delay: 0 };
+  else if (!resp.ok) throw new Error('robots.txt returned HTTP ' + resp.status + ', so nothing was fetched');
+  else r = Object.assign({ at: Date.now() }, parseRobots(await resp.text()));
+  _srcRobots[origin] = r; return r;
+}
 /* A listing page's plants and its paging, read from the HTML. Names come from the plant links that carry
    text (the title links); image links are skipped because they wrap an <img>. If the markup ever nests the
    title in another element and no text link matches, fall back to the unique plant links with a name built
@@ -326,6 +351,26 @@ async function handle(request, env) {
         { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
+    if (url.pathname === '/source') {
+      if (!canEdit(who)) return new Response('Forbidden — owner or editor only', { status: 403, headers: CORS_HEADERS });
+      if (request.method !== 'GET') return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
+      let t;
+      try { t = new URL(url.searchParams.get('url') || ''); } catch (e) { return new Response('Invalid url', { status: 400, headers: CORS_HEADERS }); }
+      const site = SRC_SITES[t.hostname];
+      if (t.protocol !== 'https:' || !site || !site.ok(t)) return new Response('That address is not one this tool reads (Calscape plant pages and Calflora taxon pages only)', { status: 400, headers: CORS_HEADERS });
+      let rob;
+      try { rob = await srcRobots(site.origin); } catch (e) { return new Response((e && e.message) || String(e), { status: 502, headers: CORS_HEADERS }); }
+      if (!robotsAllows(rob.rules, t.pathname + t.search)) return new Response('robots.txt disallows fetching that page', { status: 403, headers: CORS_HEADERS });
+      let pageResp;
+      try { pageResp = await fetch(t.toString(), { headers: { 'User-Agent': CFN_UA }, redirect: 'follow' }); }
+      catch (e) { return new Response('Could not reach that page: ' + ((e && e.message) || String(e)), { status: 502, headers: CORS_HEADERS }); }
+      let fin; try { fin = new URL(pageResp.url); } catch (e) { fin = t; }
+      if (!SRC_SITES[fin.hostname]) return new Response('That page redirected somewhere this tool does not read', { status: 502, headers: CORS_HEADERS });
+      if (pageResp.status === 404) return new Response('Not found', { status: 404, headers: { ...CORS_HEADERS, 'X-Crawl-Delay': String(rob.delay || 0), 'Access-Control-Expose-Headers': 'X-Crawl-Delay, X-Final-Url' } });
+      if (!pageResp.ok) return new Response('That page returned HTTP ' + pageResp.status, { status: 502, headers: CORS_HEADERS });
+      const body = (await pageResp.text()).slice(0, 900000);
+      return new Response(body, { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Crawl-Delay': String(rob.delay || 0), 'X-Final-Url': fin.toString(), 'Access-Control-Expose-Headers': 'X-Crawl-Delay, X-Final-Url' } });
+    }
     if (url.pathname === '/harvest') {
       /* Owner-only. Fetches one Cal Flora Nursery species page server-side (the
          browser can't — calfloranursery.com sets no CORS headers for cross-origin
