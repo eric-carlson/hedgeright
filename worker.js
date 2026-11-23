@@ -366,7 +366,7 @@ async function handle(request, env) {
       catch (e) { return new Response('Could not reach that page: ' + ((e && e.message) || String(e)), { status: 502, headers: CORS_HEADERS }); }
       let fin; try { fin = new URL(pageResp.url); } catch (e) { fin = t; }
       if (!SRC_SITES[fin.hostname]) return new Response('That page redirected somewhere this tool does not read', { status: 502, headers: CORS_HEADERS });
-      if (pageResp.status === 404) return new Response('Not found', { status: 404, headers: { ...CORS_HEADERS, 'X-Crawl-Delay': String(rob.delay || 0), 'Access-Control-Expose-Headers': 'X-Crawl-Delay, X-Final-Url' } });
+      if (pageResp.status === 404) return new Response('Page not found at the source', { status: 404, headers: { ...CORS_HEADERS, 'X-Source': 'missing', 'X-Crawl-Delay': String(rob.delay || 0), 'Access-Control-Expose-Headers': 'X-Crawl-Delay, X-Final-Url, X-Source' } });
       if (!pageResp.ok) return new Response('That page returned HTTP ' + pageResp.status, { status: 502, headers: CORS_HEADERS });
       const body = (await pageResp.text()).slice(0, 900000);
       return new Response(body, { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Crawl-Delay': String(rob.delay || 0), 'X-Final-Url': fin.toString(), 'Access-Control-Expose-Headers': 'X-Crawl-Delay, X-Final-Url' } });
