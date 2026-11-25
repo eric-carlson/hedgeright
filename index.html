@@ -496,7 +496,7 @@ body.wide{--panelW:560px}
     <span class="small" id="cgSum"></span>
     <span class="grow"></span>
     <button class="small" onclick="costCustomAdd();cgRender()">Add item</button>
-    <button class="small" id="cgPump" onclick="costPumpSystem();cgRender()" title="Adds blank lines for a pump, panel, mounting and wiring, float switch, intake and enclosure, ready for prices.">Add pump system items</button>
+    <button class="small" id="cgPump" onclick="costPumpSystem();cgRender()" title="Adds blank lines for a 12 V pump, panel, charge controller, battery, mounting and wiring, fuse and enclosure. Assign them to a hedgerow in the Hedgerow column.">Add tank pump items</button>
     <button class="small" data-ro onclick="exportOtherCSV()">Export CSV</button>
     <button class="small primary" data-ro onclick="cgClose()">Done</button>
   </div>
@@ -3349,7 +3349,8 @@ function supplyHtml(n){ if(!['tank','well','pond'].includes(n.kind)) return ''; 
   return `<label>Supply</label><select onchange="setSupply('${n.id}',this.value)"><option value="gravity"${pm.on?'':' selected'}>Gravity</option><option value="pumped"${pm.on?' selected':''}>Pumped</option></select>`
     +(pm.on?`<label>Pump pressure, psi</label><input type="number" step="1" min="0" value="${n.pumpPsi!=null?n.pumpPsi:(pm.legacy&&pm.psi?pm.psi:'')}" onchange="setPump('${n.id}','pumpPsi',this.value)">${pm.psi>0?`<span class="small mute"> = ${Math.round(ftFromPsi(pm.psi))} ft of head</span>`:''}
       <label>Pump flow at that pressure, gpm</label><input type="number" step="0.1" min="0" value="${n.pumpGpm!=null?n.pumpGpm:''}" onchange="setPump('${n.id}','pumpGpm',this.value)">
-      <label><input type="checkbox" ${n.solar?'checked':''} onchange="setPump('${n.id}','solar',this.checked)"> Solar, no battery (runs in daylight only)</label>
+      <label>Pump power</label><select onchange="setPump('${n.id}','solar',this.value==='direct')"><option value="battery"${n.solar?'':' selected'}>12 V battery charged by a solar panel (runs any time)</option><option value="direct"${n.solar?' selected':''}>Solar panel direct, no battery (daylight only)</option></select>
+      <label>Solar panel, watts</label><input type="number" step="10" min="0" placeholder="e.g. 430" value="${n.panelSpecW!=null?n.panelSpecW:''}" onchange="setPump('${n.id}','panelSpecW',this.value)">
       <p class="small mute">Read the pressure and flow off the pump's curve at the flow you expect. The designer sizes the zones to that flow, and the pressure solver adds that pressure at the source.</p>`:''); }
 
 function irrigSource(h){ const c=irrigCandidates(h); if(!c.length) return null;
@@ -3448,11 +3449,11 @@ function applyIrrigation(h,plan){ const W=R().water; const src=plan.src;
     const dl=z.drawnLine&&W.lines.find(l=>l.id===z.drawnLine.line.id);
     if(dl){ /* the pipe you drew becomes this zone's main: it keeps its route, now ends on the valve, and takes the designed size */
       dl.pts=z.drawnLine.pts.slice(0,-1).concat([z.valveLL]); dl.a=src.node.id; dl.b=v.id; dl.dIn=z.main.pipe.id; dl.C=dl.C||150; }
-    else W.lines.push({id:uid(),name:pre+z.name+' main',pts:[srcLL,z.valveLL],a:src.node.id,b:v.id,dIn:z.main.pipe.id,C:150,auto:true,src:tag.src,hedge:tag.hedge});
+    else W.lines.push({id:uid(),name:(src.node.name||'Source')+' main',pts:[srcLL,z.valveLL],a:src.node.id,b:v.id,dIn:z.main.pipe.id,C:150,auto:true,src:tag.src,hedge:tag.hedge});
     z.rows.forEach(x=>{ x.r.outlet=v.id;
       const lat=z.laterals.find(l=>l.row.i===x.i)||{}, d=lat.pipe?lat.pipe.id:0.6, RLx=rowLines(h)[x.i], ft=lat.ft!=null?lat.ft:0, len=x.len;
-      if(ft>0.5) W.lines.push({id:uid(),name:pre+x.r.name+' lateral',pts:[z.valveLL].concat(rowSub(RLx,ft,0)),a:v.id,b:null,dIn:d,C:150,auto:true,src:tag.src,hedge:tag.hedge});
-      if(len-ft>0.5||ft<=0.5) W.lines.push({id:uid(),name:pre+x.r.name+' lateral',pts:[z.valveLL].concat(rowSub(RLx,ft,len)),a:v.id,b:null,dIn:d,C:150,auto:true,src:tag.src,hedge:tag.hedge}); }); });
+      if(ft>0.5) W.lines.push({id:uid(),name:(src.node.name||'Source')+' lateral',pts:[z.valveLL].concat(rowSub(RLx,ft,0)),a:v.id,b:null,dIn:d,C:150,auto:true,src:tag.src,hedge:tag.hedge});
+      if(len-ft>0.5||ft<=0.5) W.lines.push({id:uid(),name:(src.node.name||'Source')+' lateral',pts:[z.valveLL].concat(rowSub(RLx,ft,len)),a:v.id,b:null,dIn:d,C:150,auto:true,src:tag.src,hedge:tag.hedge}); }); });
   irrigStore(h,plan);
   drawAll(); }
 /* Regulator for a zone: the emitters' minimum pressure plus the loss along the longest lateral, rounded up to a common size. None where the pressure left at the valve is
@@ -3485,7 +3486,7 @@ let irrigPlan=null;
    friction), and lists the parts. Record: R().water.fills[] ({tank, pond, pump, line, ...numbers, bom, warnings}); the tank keeps the options in t.fillCfg
    ({pond, gpm, sun, ratedPsi, ratedGpm}). The pump node and the pipe are not marked auto (the valve and lateral removal leaves them alone) and the pressure
    solver ignores them: they are a separate system that ends at the tank. ---- */
-const FILL_SUN_H=5, FILL_EFF=0.35, FILL_DERATE=0.75;
+const FILL_SUN_H=5;
 const FILL_PUMP_ITEMS=['Solar pump','Solar panel','Panel mount and wiring','Tank-full float switch (3-wire)','Pond low-level float switch (3-wire)','Suction hose with foot valve and strainer, 1"'];
 function fillsList(){ return R().water.fills||[]; }
 function fillOfTank(tid){ return fillsList().find(f=>f.tank===tid)||null; }
@@ -3506,19 +3507,21 @@ function designFill(tank,pondId,opts){ opts=opts||{}; const W=R().water, pond=W.
   const fric=hwLossFt(gpm,lenFt,pipe.id,150)*1.1, tdh=lift+fric, psi=psiFromFt(tdh);
   const rate=(same&&+pn0.pumpPsi>0)?{psi:+pn0.pumpPsi,gpm:+pn0.pumpGpm>0?+pn0.pumpGpm:null}:(+cfg.ratedPsi>0?{psi:+cfg.ratedPsi,gpm:+cfg.ratedGpm>0?+cfg.ratedGpm:null}:null);
   const flow=rate&&rate.gpm?rate.gpm:gpm, galDay=Math.round(flow*60*sun);
-  const hydW=9.81*1000*(gpm*6.30902e-5)*(tdh*0.3048), panelW=Math.max(50,Math.ceil(hydW/FILL_EFF/FILL_DERATE/10)*10);
+  const panelSpecW=+cfg.panelSpecW>0?+cfg.panelSpecW:null, battery=!!cfg.battery, pumpAmps=+cfg.pumpAmps>0?+cfg.pumpAmps:null;
   const pe=same&&pn0.elevFt!=null?pn0.elevFt:null, suction=pe!=null?Math.max(0,pe-pool):null;
   const need=Math.round(((W.designs||[]).filter(d=>d.src===tank.id&&d.hedge!==opts.hedge).reduce((a,d)=>a+(+d.weeklyGal||0),0)+(+opts.weeklyGal||0))/7);
   const w=[];
   if(rate&&rate.psi<psi) w.push('The pump delivers '+rate.psi+' psi'+(rate.gpm?' at '+rate.gpm+' gpm':'')+', less than the '+psi.toFixed(1)+' psi this lift and pipe need at '+gpm+' gpm. It will not reach the tank. Choose a stronger pump or lower the flow.');
   if(suction!=null&&suction>20) w.push('The pump sits '+Math.round(suction)+' ft above the pond surface. Keep the suction lift under about 20 ft by moving the pump closer to the water.');
   if(need&&galDay<need) w.push('The pump moves about '+galDay.toLocaleString()+' gal in '+sun+' sun hours, less than the '+need.toLocaleString()+' gal a day the hedgerows draw at peak. Use a higher flow, more sun hours, or enough storage to carry the gap.');
-  const bom={}; bom[pipe.label]=Math.ceil(lenFt*1.1); FILL_PUMP_ITEMS.forEach(k=>{ bom[k]=1; });
-  const spec={'Solar pump':'needs '+gpm+' gpm at '+psi.toFixed(0)+' psi ('+Math.round(tdh)+' ft of head)','Solar panel':'about '+panelW+' W, direct to the pump, no battery'};
+  const bom={}; bom[pipe.label]=Math.ceil(lenFt*1.1); FILL_PUMP_ITEMS.forEach(k=>{ bom[k]=1; }); if(battery){ bom['Battery, 12 V']=1; bom['Solar charge controller']=1; }
+  const spec={'Solar pump':'needs '+gpm+' gpm at '+psi.toFixed(0)+' psi ('+Math.round(tdh)+' ft of head)','Solar panel':(panelSpecW?panelSpecW+' W':'size not entered')+(battery?', with battery and charge controller':', direct to the pump')};
+  if(!panelSpecW) w.push('Panel size not entered. Enter the watts of the panel on this pump so the report and parts list are accurate.');
+  if(panelSpecW&&pumpAmps&&!battery){ const wNeed=Math.round(pumpAmps*12); if(panelSpecW<wNeed*1.2) w.push('A '+panelSpecW+' W panel is marginal for a pump drawing '+pumpAmps+' A at 12 V (about '+wNeed+' W) running direct. Use a larger panel or add a battery and controller.'); }
   const rec={id:'fill|'+tank.id,tank:tank.id,tankName:tank.name||'Tank',pond:pond.id,pondName:pond.name||'Pond',at:Date.now(),
-    sig:JSON.stringify({top:Math.round(tankTop*10),pool:Math.round(pool*10),len:Math.round(lenFt),gpm,sun,rate,pe:pe==null?null:Math.round(pe*10),need}),
+    sig:JSON.stringify({panelSpecW,battery,pumpAmps,top:Math.round(tankTop*10),pool:Math.round(pool*10),len:Math.round(lenFt),gpm,sun,rate,pe:pe==null?null:Math.round(pe*10),need}),
     gpm,sun,liftFt:Math.round(lift),fricFt:+fric.toFixed(1),tdhFt:Math.round(tdh),psi:+psi.toFixed(1),lenFt:Math.round(lenFt),pipe:pipe.label,pipeId:pipe.id,
-    suctionFt:suction==null?null:Math.round(suction),panelW,galPerDay:galDay,needGalPerDay:need,rate,bom,spec,warnings:w};
+    suctionFt:suction==null?null:Math.round(suction),panelSpecW,battery,pumpAmps,galPerDay:galDay,needGalPerDay:need,rate,bom,spec,warnings:w};
   return {tankId:tank.id,pondId:pond.id,shore,rec,error:null}; }
 function applyFill(plan){ const W=R().water, t=wnodeById(plan.tankId), pond=wnodeById(plan.pondId); if(!t||!pond) return null; const prev=fillOfTank(t.id);
   let pn=prev&&W.nodes.find(n=>n.id===prev.pump), ln=prev&&W.lines.find(l=>l.id===prev.line); const cfg=t.fillCfg||{}, tll=[t.lat,t.lng];
@@ -3526,8 +3529,8 @@ function applyFill(plan){ const W=R().water, t=wnodeById(plan.tankId), pond=wnod
   if(!pn){ pn={id:uid(),kind:'pump',name:(pond.name||'Pond')+' pump',lat:plan.shore[0],lng:plan.shore[1],elevFt:null,solar:true,fillOf:t.id,pond:pond.id,
       pumpPsi:+cfg.ratedPsi>0?+cfg.ratedPsi:null,pumpGpm:+cfg.ratedGpm>0?+cfg.ratedGpm:null}; W.nodes.push(pn); }
   const pll=[pn.lat,pn.lng];
-  if(!ln){ ln={id:uid(),name:(t.name||'Tank')+' fill line',pts:[pll,tll],a:pn.id,b:t.id,dIn:plan.rec.pipeId,C:150,fill:true,fillOf:t.id}; W.lines.push(ln); }
-  else { ln.dIn=plan.rec.pipeId; ln.a=pn.id; ln.b=t.id; ln.fill=true; ln.fillOf=t.id; ln.pts[0]=pll; ln.pts[ln.pts.length-1]=tll; }
+  if(!ln){ ln={id:uid(),name:(pond.name||'Pond')+' fill line',pts:[pll,tll],a:pn.id,b:t.id,dIn:plan.rec.pipeId,C:150,fill:true,fillOf:t.id}; W.lines.push(ln); }
+  else { ln.name=(pond.name||'Pond')+' fill line'; ln.dIn=plan.rec.pipeId; ln.a=pn.id; ln.b=t.id; ln.fill=true; ln.fillOf=t.id; ln.pts[0]=pll; ln.pts[ln.pts.length-1]=tll; }
   t.fillCfg=t.fillCfg||{}; t.fillCfg.pond=pond.id;
   const rec=Object.assign({},plan.rec,{pump:pn.id,line:ln.id}); W.fills=(W.fills||[]).filter(f=>f.tank!==t.id).concat(rec); S.sel.irrig=rec.id; return pn; }
 /* The pump's ground height comes from the map a moment after it is placed; the numbers are worked again once it arrives, so the suction check has something to use. */
@@ -3555,16 +3558,16 @@ function fillLiveWarnings(f){ const w=[], W=R().water, t=W.nodes.find(n=>n.id===
   const pl=designFill(t,f.pond); if(pl.error) w.push(pl.error); else if(pl.rec.sig!==f.sig) w.push('The tank, pond, pump or pipe has changed since this was calculated, so the numbers below are out of date. Recalculate.');
   return w; }
 function fillProblemsHtml(f){ const all=fillLiveWarnings(f).concat(f.warnings||[]); if(!all.length) return `<p class="small ok">No problems found.</p>`; return all.map(t=>`<div class="issue bad">${esc(t)}</div>`).join(''); }
-function fillSummaryHtml(r){ return `<p class="small">Pump on the <b>${esc(r.pondName)}</b> shore, pumping up to <b>${esc(r.tankName)}</b> through <b>${r.lenFt} ft</b> of ${esc(r.pipe)}. The water rises <b>${r.liftFt} ft</b> and loses ${r.fricFt} ft to friction at ${r.gpm} gpm, so the pump has to deliver <b>${r.gpm} gpm at ${r.psi} psi</b> (${r.tdhFt} ft of head). Solar panel: about <b>${r.panelW} W</b>. In ${r.sun} sun hours it moves about <b>${r.galPerDay.toLocaleString()} gal</b> a day${r.needGalPerDay?'; the hedgerows draw about '+r.needGalPerDay.toLocaleString()+' gal a day at peak':''}.${r.rate?' Your pump: '+r.rate.psi+' psi'+(r.rate.gpm?' at '+r.rate.gpm+' gpm':'')+'.':''}${r.suctionFt!=null?' Suction lift '+r.suctionFt+' ft.':''}</p>`
+function fillSummaryHtml(r){ return `<p class="small">Pump on the <b>${esc(r.pondName)}</b> shore, pumping up to <b>${esc(r.tankName)}</b> through <b>${r.lenFt} ft</b> of ${esc(r.pipe)}. The water rises <b>${r.liftFt} ft</b> and loses ${r.fricFt} ft to friction at ${r.gpm} gpm, so the pump has to deliver <b>${r.gpm} gpm at ${r.psi} psi</b> (${r.tdhFt} ft of head). Solar panel: ${r.panelSpecW?'<b>'+r.panelSpecW+' W</b>'+(r.battery?', with battery and charge controller':', direct to the pump'):'<b>size not entered</b>'}. In ${r.sun} sun hours it moves about <b>${r.galPerDay.toLocaleString()} gal</b> a day${r.needGalPerDay?'; the hedgerows draw about '+r.needGalPerDay.toLocaleString()+' gal a day at peak':''}.${r.rate?' Your pump: '+r.rate.psi+' psi'+(r.rate.gpm?' at '+r.rate.gpm+' gpm':'')+'.':''}${r.suctionFt!=null?' Suction lift '+r.suctionFt+' ft.':''}</p>`
   +`<table><tr><th>Item</th><th class="num">Qty</th></tr>`+Object.entries(r.bom).map(([k,v])=>`<tr><td>${esc(k)}${r.spec&&r.spec[k]?`<div class="mute small">${esc(r.spec[k])}</div>`:''}</td><td class="num">${v.toLocaleString()}${/poly/.test(k)?' ft':''}</td></tr>`).join('')+`</table><p class="small mute">The pipe runs straight from the pump to the tank, so add slack for the route you dig. The float switches go one at the tank (stops the pump when full) and one at the pond intake (stops it if the water drops).</p>`; }
 function fillPlanHtml(f){ if(f.error) return `<div class="issue bad"><b>Pump and fill line:</b> ${esc(f.error)}</div>`;
   const r=f.rec; return `<div class="card"><b>Pump and fill line: ${esc(r.pondName)} to ${esc(r.tankName)}</b> ${prov('model')}${fillSummaryHtml(r)}${r.warnings.map(t=>`<div class="issue bad">${esc(t)}</div>`).join('')}<div class="row"><button onclick="applyFillNow()">Put the pump and fill line on the map</button></div></div>`; }
 function fillOptionHtml(h){ const sc=irrigSource(h); if(!sc||sc.kind!=='tank') return ''; const ponds=pondList(); if(!ponds.length) return '';
   const t=sc.node, cfg=t.fillCfg||{}, cur=cfg.pond&&ponds.some(x=>x.id===cfg.pond)?cfg.pond:'', num=(k,ph,w)=>`<input type="number" step="any" min="0" style="width:${w||56}px" placeholder="${ph}" value="${cfg[k]!=null?cfg[k]:''}" onchange="setFillCfg('${t.id}','${k}',this.value)">`;
   return `<div class="row" style="align-items:center"><label class="small" style="margin:0" title="Also designs a pump at the pond's shore and a pipe up to this tank, sized for the lift. Leave it off if the tank is filled another way.">Fill the tank from</label><select onchange="setFillCfg('${t.id}','pond',this.value)"><option value=""${cur?'':' selected'}>No pump (filled another way)</option>${ponds.map(x=>`<option value="${x.id}"${cur===x.id?' selected':''}>${esc(x.name||'Pond')}</option>`).join('')}</select></div>`
-    +(cur?`<div class="row small" style="align-items:center;gap:6px">Design flow ${num('gpm','3')} gpm · sun hours ${num('sun','5',44)} · your pump (optional) ${num('ratedGpm','gpm',48)} gpm at ${num('ratedPsi','psi',48)} psi</div>`:''); }
+    +(cur?`<div class="row small" style="align-items:center;gap:6px">Design flow ${num('gpm','3')} gpm · sun hours ${num('sun','5',44)} · your pump (optional) ${num('ratedGpm','gpm',48)} gpm at ${num('ratedPsi','psi',48)} psi · pump draw ${num('pumpAmps','A',44)} A</div><div class="row small" style="align-items:center;gap:6px">Solar panel on this pump ${num('panelSpecW','W',52)} W · <label style="margin:0"><input type="checkbox" ${cfg.battery?'checked':''} onchange="setFillCfg('${t.id}','battery',this.checked?1:0)"> battery and charge controller</label></div>`:''); }
 function fillCardHtml(f){ const sel=S.sel.irrig===f.id, nW=fillLiveWarnings(f).length+(f.warnings||[]).length;
-  return `<div class="card${sel?' sel':''}"><div style="cursor:pointer" onclick="selIrrig('${f.id}')"><span class="small mute">${sel?'▾':'▸'} </span><b>${esc(f.tankName)} pump and fill line</b><span class="small mute"> · from ${esc(f.pondName)} · ${f.gpm} gpm at ${f.psi} psi · panel ${f.panelW} W</span> ${nW?`<span class="alert">⚠ ${nW}</span>`:'<span class="ok">✓</span>'}</div>`
+  return `<div class="card${sel?' sel':''}"><div style="cursor:pointer" onclick="selIrrig('${f.id}')"><span class="small mute">${sel?'▾':'▸'} </span><b>${esc(f.tankName)} pump and fill line</b><span class="small mute"> · from ${esc(f.pondName)} · ${f.gpm} gpm at ${f.psi} psi · panel ${f.panelSpecW?f.panelSpecW+' W':'not entered'}</span> ${nW?`<span class="alert">⚠ ${nW}</span>`:'<span class="ok">✓</span>'}</div>`
     +(sel?`<div class="wedit"><div class="row"><button onclick="fillRecalc('${f.id}')">Recalculate</button><button class="small danger" onclick="fillDelete('${f.id}')">Delete</button></div><p class="small mute">Calculated ${esc(new Date(f.at).toLocaleString())}.</p>${fillProblemsHtml(f)}${fillSummaryHtml(f)}</div>`:'')+`</div>`; }
 function fillDayHtml(tids){ const fs=fillsList().filter(f=>tids.includes(f.tank)); return fs.map(f=>`<h4 style="margin:10px 0 2px">Pump and fill line: ${esc(f.pondName)} to ${esc(f.tankName)}</h4>`+fillProblemsHtml(f).replace(/<p class="small ok">No problems found.<\/p>/,'')+fillSummaryHtml(f)).join(''); }
 function irrigDesigns(){ return (R().water.designs||[]).filter(d=>R().hedgerows.some(h=>h.id===d.hedge)); }
@@ -4459,7 +4462,7 @@ async function doPopulate(){ busy(true,'Filling the hedgerow…'); const h=curHe
     :after>before?h.name+': kept your '+before+' plants and added '+(after-before)+' around them — see “Why it filled this way” below.'
     :h.name+': nothing added around your '+before+' plants — “Why it filled this way” below says why.'); }
 function renderWater(){ const r=R(); const sol=solveNet();
-  let html=`<div class="row"><label style="margin:0">Feed</label><select onchange="commit('Set water feed',()=>{R().feed=this.value});drawAll();renderPanels()"><option value="gravity"${r.feed==='gravity'?' selected':''}>Gravity</option><option value="pumped"${r.feed==='pumped'?' selected':''}>Pumped</option></select>
+  let html=`<h2>Irrigation</h2>`+irrigDesignsHtml()+`<div class="row"><label style="margin:0">Feed</label><select onchange="commit('Set water feed',()=>{R().feed=this.value});drawAll();renderPanels()"><option value="gravity"${r.feed==='gravity'?' selected':''}>Gravity</option><option value="pumped"${r.feed==='pumped'?' selected':''}>Pumped</option></select>
     ${r.feed==='pumped'?`<label style="margin:0">psi</label><input type="number" style="width:60px" value="${r.feedPsi||0}" onchange="commit('Set feed psi',()=>{R().feedPsi=+this.value});afterChange(()=>{drawAll();renderPanels();})">`:''}</div>
     <h2>Find the water on this ranch</h2>
     <div class="row">${bigBtn('pond','Find ponds','NWI + NHD waterbodies in view',"findPonds()")}${bigBtn('creek','Find creeks','NHD flowlines in view',"findCreeks()")}</div>
@@ -4467,7 +4470,7 @@ function renderWater(){ const r=R(); const sol=solveNet();
     ${(foundPonds.length||foundCreeks.length)?`<p class="small">${foundPonds.length} pond${foundPonds.length===1?'':'s'}/wetland${foundPonds.length===1?'':'s'}, ${foundCreeks.length} stream${foundCreeks.length===1?'':'s'} found in view — tap one on the map, or:</p>
       <div class="row">${foundPonds.length?`<button class="small" onclick="adoptAllPonds(true)">Add all ponds</button><button class="small" onclick="adoptAllPonds(false)">Add every water feature</button>`:''}${foundCreeks.length?`<button class="small" onclick="adoptAllCreeks()">Add all streams</button>`:''}</div>`:''}
     <h2>Add a node</h2><div class="row">${Object.keys(WKINDS).filter(k=>k!=='pond').map(k=>`<button class="small${(mode==='wnode'&&wnodeKind===k)?' on':''}" onclick="toggleWnodeKind('${k}')">${WKINDS[k].label}</button>`).join('')}<button class="small${mode==='pond'?' on':''}" onclick="toggleMode('pond')">Draw pond outline</button></div>
-    <h2>Nodes</h2>`+nodesHtml(sol)+`<h2>Pipes</h2>`+pipesHtml()+`<h2>Irrigation</h2>`+irrigDesignsHtml();
+    `+nodesHtml(sol)+`<h2>Pipes</h2>`+pipesHtml();
   html+=`<h2>Creeks</h2><div class="row"><button class="small${mode==='creek'?' on':''}" onclick="toggleMode('creek')">Trace a creek</button></div>`+creeksHtml();
   html+=`<h2>Network</h2>`+renderIrrigation();
   setHtml('tab-water',html);
@@ -4493,7 +4496,12 @@ function lineEditorHtml(wl){ return `<div class="wedit"><div class="row"><input 
     <label>Diameter</label><select onchange="commit('Set pipe diameter',()=>{wlineById('${wl.id}').dIn=+this.value});drawWater();renderPanels()">${PIPE_SIZES.map(p=>`<option value="${p.id}"${Math.abs(wl.dIn-p.id)<0.01?' selected':''}>${p.label}</option>`).join('')}</select>
     <p class="small mute">${Math.round(pathLenFt(wl.pts))} ft · C=${wl.C}</p></div>`; }
 function nodesHtml(sol){ const nodes=R().water.nodes;
-  if(!nodes.length) return `<p class="small mute">None yet. Add one above, or draw a pond outline.</p>`;
+  if(!nodes.length) return `<h2>Tanks, pumps, sources and valves</h2><p class="small mute">None yet. Add one above, or draw a pond outline.</p>`;
+  const groups=[['Tanks',['tank']],['Pumps',['pump']],['Sources',['well','pond']],['Valves',['valve','reg','outlet']]];
+  const known=groups.reduce((a,g)=>a.concat(g[1]),[]), other=nodes.filter(n=>!known.includes(n.kind));
+  if(other.length) groups.push(['Other',other.map(n=>n.kind)]);
+  return groups.map(g=>{ const ns=nodes.filter(n=>g[1].includes(n.kind)); return ns.length?`<h2>${g[0]}</h2>`+nodeCardsHtml(ns,sol):''; }).join(''); }
+function nodeCardsHtml(nodes,sol){
   return nodes.slice().sort(byNameNat).map(n=>{ const sel=n.id===S.sel.wnode;
     return `<div class="card${sel?' sel':''}"><div style="cursor:pointer" onclick="selWnode('${n.id}')"><span class="small mute">${sel?'\u25BE':'\u25B8'} </span><b>${esc(n.name)}</b><span class="small mute"> \u00B7 ${esc((WKINDS[n.kind]||{}).label||n.kind)}${n.elevFt!=null?' \u00B7 '+n.elevFt.toFixed(0)+' ft':''}</span></div>${sel?nodeEditorHtml(n,sol):''}</div>`; }).join(''); }
 function pipesHtml(){ const W=R().water; if(!W.lines.length) return `<p class="small mute">None yet. Draw one with Draw pipe, or let the irrigation design add them.</p>`;
@@ -4653,7 +4661,7 @@ function otherCostLines(){ const C=costState(), out=[];
     out.push({key:'bom:'+k,group:'Irrigation parts',name:k,qty:agg[k],unit:/poly/i.test(k)?'ft':'each',p:own?+st.p:(pz?pz.cost:null),est:!own&&!!pz,have:!!st.have,url:st.url||'',fixedQty:true}); });
   R().water.nodes.filter(n=>n.kind==='tank').slice().sort(byNameNat).forEach(n=>{ const st=C.prices['tank:'+n.id]||{};
     out.push({key:'tank:'+n.id,group:'Tanks',name:'Tank: '+(n.name||'Tank')+(+n.tankGal>0?' ('+n.tankGal+' gal)':''),qty:1,unit:'each',p:st.p!=null&&st.p!==''?+st.p:null,est:false,have:!!st.have,url:st.url||'',fixedQty:true}); });
-  C.custom.forEach(c=>out.push({key:'c:'+c.id,group:'Other items',id:c.id,name:c.name||'',qty:+c.qty||0,unit:c.unit||'each',p:c.p!=null&&c.p!==''?+c.p:null,est:false,have:!!c.have,url:c.url||'',fixedQty:false}));
+  C.custom.forEach(c=>out.push({key:'c:'+c.id,group:'Other items',id:c.id,name:c.name||'',qty:+c.qty||0,unit:c.unit||'each',p:c.p!=null&&c.p!==''?+c.p:null,est:false,have:!!c.have,url:c.url||'',hedge:c.hedge||'',fixedQty:false}));
   return out; }
 function otherLineCost(l){ return l.have||l.p==null?0:l.qty*l.p; }
 function otherCostTotal(){ return otherCostLines().reduce((a,l)=>a+otherLineCost(l),0); }
@@ -4663,7 +4671,7 @@ function costHaveKey(k,b){ commit('Already have '+k.replace(/^[a-z]+:/,''),()=>{
 function costCustomSet(id,f,v){ commit('Edit cost item',()=>{ const c=costState().custom.find(x=>x.id===id); if(!c) return; if(f==='qty') c.qty=Math.max(0,+v||0); else c[f]=v; }); renderShop(); }
 function costCustomAdd(items){ commit('Add cost item'+((items&&items.length>1)?'s':''),()=>{ (items||[{name:'',qty:1,unit:'each'}]).forEach(it=>costState().custom.push({id:uid(),name:it.name,qty:it.qty,unit:it.unit||'each',p:null,have:false})); }); _otherOpen=true; renderShop(); }
 function costCustomDel(id){ commit('Remove cost item',()=>{ const C=costState(); C.custom=C.custom.filter(x=>x.id!==id); }); renderShop(); }
-function costPumpSystem(){ costCustomAdd([{name:'Solar pump',qty:1},{name:'Solar panel',qty:1},{name:'Panel mount and wiring',qty:1},{name:'Tank-full float switch',qty:1},{name:'Intake hose and strainer',qty:1},{name:'Pump enclosure',qty:1}]); }
+function costPumpSystem(){ costCustomAdd([{name:'12 V pump with pressure switch',qty:1},{name:'Solar panel',qty:1},{name:'Solar charge controller',qty:1},{name:'Battery, 12 V',qty:1},{name:'Panel mount and wiring',qty:1},{name:'Fuse and disconnect',qty:1},{name:'Pump and battery enclosure',qty:1}]); }
 function setProjectBudget(v){ commit('Project budget',()=>{ costState().budget=(v===''||!(+v>0))?null:Math.round(+v); }); renderShop(); }
 function exportOtherCSV(){ const rows=[['group','item','have','qty','unit','price each','cost','price is estimate','url']]; otherCostLines().forEach(l=>rows.push([l.group,l.name,l.have?'yes':'',l.qty,l.unit,l.p==null?'':l.p,otherLineCost(l),l.est?'yes':'',l.url||''])); downloadCSV('other-costs.csv',rows); }
 function otherCostsHtml(){ const C=costState(), L=otherCostLines(), plants=plantCostTotal(), other=otherCostTotal(), total=plants+other, b=C.budget;
@@ -4686,15 +4694,15 @@ function cgGroupSummaryHtml(L){ if(!L.length) return `<p class="small mute">Noth
   return `<ul class="small" style="margin:4px 0 0;padding-left:18px">`+gs.map(g=>`<li><b>${esc(g.name)}</b>: ${g.n} item${g.n===1?'':'s'}, $${fmtMoney(Math.round(g.cost))}${g.have?`, ${g.have} already on hand`:''}${g.nop?`, <span style="color:#8A5A12">${g.nop} unpriced</span>`:''}</li>`).join('')+`</ul>`+cgMissingHtml(); }
 function cgOpen(){ cgRender(); document.getElementById('costGrid').classList.add('show'); lockViewerUI(); }
 function cgClose(){ document.getElementById('costGrid').classList.remove('show'); renderShop(); }
-function cgRender(){ const L=_cgRows=otherCostLines(), t=document.getElementById('cgTable'), sc=document.getElementById('cgScroll'), top=sc.scrollTop; document.getElementById('cgPump').style.display=fillsList().length?'none':'';
-  let h=`<tr><th>Item</th><th title="Tick if you already have it. It stays on the list but costs nothing.">Have</th><th class="num">Qty</th><th>Unit</th><th class="num">Price each, $</th><th class="num">Cost</th><th title="Where to buy it. Paste a web address; the arrow opens it in a new tab.">Link</th><th></th></tr>`, g=null;
-  if(!L.length) h+=`<tr><td colspan="8" class="small mute" style="padding:12px">Nothing here yet. Design the irrigation on the Water tab, or use Add item.</td></tr>`;
-  L.forEach((l,i)=>{ if(l.group!==g){ g=l.group; h+=`<tr class="cgGroup"><td colspan="8">${esc(g)}</td></tr>`; }
+function cgRender(){ const L=_cgRows=otherCostLines(), t=document.getElementById('cgTable'), sc=document.getElementById('cgScroll'), top=sc.scrollTop; 
+  let h=`<tr><th>Item</th><th title="Tick if you already have it. It stays on the list but costs nothing.">Have</th><th class="num">Qty</th><th>Unit</th><th class="num">Price each, $</th><th class="num">Cost</th><th title="The hedgerow whose irrigation this item belongs to. The project report lists it under that hedgerow. Items left blank appear under the first hedgerow.">Hedgerow</th><th title="Where to buy it. Paste a web address; the arrow opens it in a new tab.">Link</th><th></th></tr>`, g=null;
+  if(!L.length) h+=`<tr><td colspan="9" class="small mute" style="padding:12px">Nothing here yet. Design the irrigation on the Water tab, or use Add item.</td></tr>`;
+  L.forEach((l,i)=>{ if(l.group!==g){ g=l.group; h+=`<tr class="cgGroup"><td colspan="9">${esc(g)}</td></tr>`; }
     const nm=l.fixedQty?`<span style="padding:0 4px">${esc(l.name)}</span>`:`<input type="text" value="${esc(l.name)}" placeholder="Item" style="min-width:220px" onchange="cgEdit(${i},'name',this.value)">`;
     const q=l.fixedQty?`<span style="padding:0 4px">${l.qty}</span>`:`<input type="number" min="0" step="any" value="${l.qty}" style="width:80px;text-align:right" onchange="cgEdit(${i},'qty',this.value)">`;
     const u=l.fixedQty?esc(l.unit):`<input type="text" value="${esc(l.unit)}" style="width:60px" onchange="cgEdit(${i},'unit',this.value)">`;
     h+=`<tr id="cgr${i}" class="${l.have?'cgHaveRow':''}"><td>${nm}</td><td class="cgHave"><input type="checkbox" ${l.have?'checked':''} onchange="cgHave(${i},this.checked)" title="I already have this"></td><td class="num">${q}</td><td>${u}</td>`
-      +`<td class="num">${l.est?'~':''}<input type="number" min="0" step="any" style="width:90px;text-align:right" value="${l.p==null?'':l.p}" placeholder="price" onchange="cgEdit(${i},'p',this.value)"></td><td class="num" id="cgc${i}"></td><td><input type="url" value="${esc(l.url||'')}" placeholder="https://" style="width:230px" onchange="cgEdit(${i},'url',this.value)"> <a id="cgl${i}" href="${esc(l.url||'#')}" target="_blank" rel="noopener" title="Open the link"${l.url?'':' style="display:none"'}>↗</a></td><td>${l.fixedQty?'':`<button class="small" onclick="cgDel(${i})" title="Remove this item">✕</button>`}</td></tr>`; });
+      +`<td class="num">${l.est?'~':''}<input type="number" min="0" step="any" style="width:90px;text-align:right" value="${l.p==null?'':l.p}" placeholder="price" onchange="cgEdit(${i},'p',this.value)"></td><td class="num" id="cgc${i}"></td><td>${l.fixedQty?'':`<select onchange="cgEdit(${i},'hedge',this.value)" style="max-width:130px"><option value="">(first hedgerow)</option>${sortedHedges().map(x=>`<option value="${x.id}"${l.hedge===x.id?' selected':''}>${esc(x.name||'Hedgerow')}</option>`).join('')}</select>`}</td><td><input type="url" value="${esc(l.url||'')}" placeholder="https://" style="width:230px" onchange="cgEdit(${i},'url',this.value)"> <a id="cgl${i}" href="${esc(l.url||'#')}" target="_blank" rel="noopener" title="Open the link"${l.url?'':' style="display:none"'}>↗</a></td><td>${l.fixedQty?'':`<button class="small" onclick="cgDel(${i})" title="Remove this item">✕</button>`}</td></tr>`; });
   document.getElementById('cgNote').innerHTML=cgMissingHtml(); t.innerHTML=h; sc.scrollTop=top; cgRefresh(); lockViewerUI(); }
 function cgRefresh(){ const L=_cgRows=otherCostLines(); L.forEach((l,i)=>{ const c=document.getElementById('cgc'+i); if(c) c.textContent=l.have?'have':(l.p==null?'—':'$'+fmtMoney(Math.round(otherLineCost(l)*100)/100)); const r=document.getElementById('cgr'+i); if(r) r.classList.toggle('cgHaveRow',!!l.have); });
   const pl=plantCostTotal(), ot=otherCostTotal(), b=costState().budget, tot=pl+ot, un=L.filter(l=>!l.have&&l.p==null&&l.qty>0).length;
@@ -7165,20 +7173,36 @@ function rcdDocHtml(hedges,forExcel){ const f0=x=>Number(x).toLocaleString();
      +rows.map(r=>{ const c=s=>`<td style="padding:2px 4px;background:${RCD_COLOR[r.type]}">${esc(s)}</td>`; const nm=r.link?`<a href="${esc(r.link)}" style="color:#1155CC">${esc(r.sp.common)}</a>`:esc(r.sp.common);
        return `<tr><td style="padding:2px 4px;background:${RCD_COLOR[r.type]}">${nm}</td><td style="padding:2px 4px;background:${RCD_COLOR[r.type]};font-style:italic">${esc(r.sp.sci)}</td>${c(r.origin)}${c(r.type)}${c(r.flower)}${c(r.ht)}${c(r.wid)}${c(r.spacing)}${c(r.season)}${c(r.sun)}${c(r.cold)}${c(r.water)}${c(r.note)}<td style="background:#FFFF00;text-align:center;font-weight:bold">${r.n}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">${r.area===''?'':f0(r.area)}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">$${fmtMoney(r.unit)}</td><td style="text-align:right;background:${RCD_COLOR[r.type]}">${r.have?'have':'$'+fmtMoney(r.cost)}</td></tr>`; }).join('')
      +`<tr><td colspan="2" style="padding:4px;font-weight:bold;border:1px solid #000;background:#FFE699;font-style:italic;text-align:center">${esc(h.name)} Linear Feet</td><td style="border:1px solid #000;text-align:center;font-weight:bold">${f0(d.lin)}</td><td colspan="3"></td><td colspan="3" style="padding:4px;font-weight:bold;border:1px solid #000;background:#FFE699;font-style:italic;text-align:center">${esc(h.name)} Square Feet</td><td style="border:1px solid #000;text-align:center;font-weight:bold">${f0(d.sq)}</td><td colspan="2"></td><td style="text-align:center;font-size:9px">Total Plants In Hedgerow</td><td style="background:#FFFF00;text-align:center;font-weight:bold;border:1px solid #000">${f0(tot)}</td><td style="text-align:right;font-weight:bold;border:1px solid #000">${f0(area)}</td><td></td><td style="text-align:right;font-weight:bold;border:1px solid #000">$${fmtMoney(cost)}</td></tr>`; }).join('');
-  const head=`This plant list was created for ${esc(rcdFor||R().name)} as part of the ${esc(rcdGrant)}; species data from the HedgeRight library and Cal Flora Nursery. Mature square feet = plants × canopy area (π × radius²). Costs use the container size chosen on the Cost tab; species marked "have" are not charged. Generated ${new Date().toLocaleDateString()}.`;
+  const head=`This plant list was created for ${esc(rcdFor||R().name)} as part of the ${esc(rcdGrant)}; species data from the HedgeRight library and Cal Flora Nursery. Mature square feet = plants × canopy area (π × radius²). Costs use the container size chosen on the Cost tab; species marked "have" are not charged. Prices do not include sales tax. Generated ${new Date().toLocaleDateString()}.`;
   return `<!DOCTYPE html><html${forExcel?' xmlns:x="urn:schemas-microsoft-com:office:excel"':''}><head><meta charset="utf-8"><title>Plant list — ${esc(rcdFor||R().name)}</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:landscape;margin:.4in}body{font-family:Arial,sans-serif;margin:16px;color:#000}table{border-collapse:collapse;width:100%;font-size:9px}td{font-size:9px}.bar{margin-bottom:8px}@media print{.bar{display:none}}</style></head><body>${forExcel?'':'<div class="bar"><button onclick="window.print()">Print or save as PDF</button></div>'}<table><tr><td colspan="17" style="background:#D9D9D9;text-align:center;font-weight:bold;font-size:9px;padding:3px">${head}</td></tr>${th}${tb}</table></body></html>`; }
 function rcdPanelHtml(){ const hs=sortedHedges().filter(h=>h.rows.some(r=>r.plants.length)); if(rcdFor==null) rcdFor=R().name||'';
   if(!hs.length) return `<h3>Plant list for the Resource Conservation District</h3><p class="small mute">Plant a hedgerow first.</p>`;
   return `<h3>Plant list for the Resource Conservation District</h3><p class="small">One table per hedgerow in the District's layout, with the number of plants and the mature square feet filled in. Details the species library lacks (flower color, cold tolerance, native status) are left blank; they are columns in the species spreadsheet.</p>`
    +hs.map(h=>`<label class="small" style="display:block"><input type="checkbox" ${rcdSel[h.id]===false?'':'checked'} onchange="rcdSel['${h.id}']=this.checked"> ${esc(h.name)} <span class="mute">(${h.rows.reduce((a,r)=>a+r.plants.length,0)} plants)</span></label>`).join('')
    +`<div class="row"><label class="small" style="margin:0">Prepared for</label><input type="text" style="flex:1" value="${esc(rcdFor)}" oninput="rcdFor=this.value"></div><div class="row"><label class="small" style="margin:0">Grant</label><input type="text" style="flex:1" value="${esc(rcdGrant)}" oninput="rcdGrant=this.value"></div>`
-   +`<div class="row"><button class="primary" onclick="rcdOpen()">Open to print or save as PDF</button><button class="small" onclick="rcdDownload()">Download Excel file</button></div>`; }
+   +`<div class="row"><button class="primary" onclick="rcdOpen()">Open to print or save as PDF</button><button class="small" onclick="rcdDownload()">Download Excel file</button></div>`
+   +`<h3>Project report</h3><p class="small">A compact printable report for the ticked hedgerows: the aerial map, a narrow plant table, and each hedgerow's irrigation equipment with prices, then tanks, pump lines, other items and the budget.</p><div class="row"><button class="primary" onclick="projectReportOpen()">Open the project report to print</button></div>`; }
 function rcdChosen(){ const hs=sortedHedges().filter(h=>h.rows.some(r=>r.plants.length)&&rcdSel[h.id]!==false); if(!hs.length) UI.toast('Tick at least one hedgerow with plants'); return hs; }
 function rcdOpen(){ const hs=rcdChosen(); if(!hs.length) return; const w=window.open('about:blank','_blank'); if(!w){ UI.toast('Allow pop-ups to open the list, or use Download'); return; } w.document.write(rcdDocHtml(hs,false)); w.document.close(); }
 function rcdDownload(){ const hs=rcdChosen(); if(!hs.length) return; const blob=new Blob([rcdDocHtml(hs,true)],{type:'application/vnd.ms-excel'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='plant-list.xls'; a.click(); }
 /* A picture of the hedgerow on the satellite map, for the printed plan: the Esri tiles drawn to a canvas, with ponds, row lines, plants and a scale bar over them.
    If the tiles will not load (offline, or the server does not allow it) it draws the same layout on a plain background and says so, so the plan still gets a map. */
+/* The irrigation that belongs to a hedgerow, for its printed map: each design's source tank, its zone valves, mains and laterals, and the pump and fill line feeding the tank. */
+function irrigMapParts(h){ const W=R().water, nodes=new Map(), lines=new Map(), valves=new Set();
+  irrigDesigns().filter(d=>d.hedge===h.id).forEach(d=>{ const src=W.nodes.find(n=>n.id===d.src); if(src) nodes.set(src.id,src);
+    W.nodes.filter(n=>irrigMine(n,d.src,h.id)).forEach(n=>{ nodes.set(n.id,n); valves.add(n.id); });
+    const f=fillsList().find(x=>x.tank===d.src); if(f){ const pn=W.nodes.find(n=>n.id===f.pump), ln=W.lines.find(l=>l.id===f.line); if(pn) nodes.set(pn.id,pn); if(ln) lines.set(ln.id,ln); } });
+  W.lines.forEach(l=>{ if(l.fill) return; if(l.pts&&l.pts.length>1&&((valves.has(l.a)||valves.has(l.b))||[...nodes.values()].some(n=>n.kind==='tank'&&l.auto&&irrigMine(l,n.id,h.id)))) lines.set(l.id,l); });
+  return {nodes:[...nodes.values()],lines:[...lines.values()],valves}; }
+/* A pump at a distant pond would shrink the hedgerow to a few pixels. When the pump and fill line would make the picture more than three times the size of the hedgerow
+   and its valves and mains, they are left out of the frame (the line runs off the edge) and the legend says so. */
+function irrigFillFar(h){ const ir=irrigMapParts(h); if(!ir.lines.some(l=>l.fill)&&!ir.nodes.some(n=>n.kind==='pump')) return false;
+  const base=[]; rowLines(h).forEach(l=>base.push(...l)); ir.lines.filter(l=>!l.fill).forEach(l=>l.pts.forEach(pt=>base.push(pt))); ir.nodes.filter(n=>n.kind!=='pump').forEach(n=>base.push([n.lat,n.lng]));
+  const all=base.slice(); ir.lines.filter(l=>l.fill).forEach(l=>l.pts.forEach(pt=>all.push(pt))); ir.nodes.filter(n=>n.kind==='pump').forEach(n=>all.push([n.lat,n.lng]));
+  const dim=a=>{ const la=a.map(q=>q[0]), lo=a.map(q=>q[1]), m=111320; return Math.max((Math.max(...la)-Math.min(...la))*m,(Math.max(...lo)-Math.min(...lo))*m*Math.cos(la[0]*Math.PI/180)); };
+  return dim(all)>3*Math.max(60,dim(base)); }
 async function hedgeMapImage(h){ const lines=rowLines(h); const all=[]; lines.forEach(l=>all.push(...l)); h.rows.forEach((r,i)=>r.plants.forEach(p=>{ const sp=SP(p.sp); if(sp) all.push(pointAtFt(lines[i],p.ft)); })); if(!all.length) return null;
+  const ir=irrigMapParts(h), farFill=irrigFillFar(h); ir.lines.forEach(l=>{ if(!(farFill&&l.fill)) l.pts.forEach(pt=>all.push(pt)); }); ir.nodes.forEach(n=>{ if(!(farFill&&n.kind==='pump')) all.push([n.lat,n.lng]); });
   let la0=Math.min(...all.map(p=>p[0])), la1=Math.max(...all.map(p=>p[0])), lo0=Math.min(...all.map(p=>p[1])), lo1=Math.max(...all.map(p=>p[1]));
   const midLat=(la0+la1)/2, mLat=111320, mLon=111320*Math.cos(midLat*Math.PI/180); let wM=(lo1-lo0)*mLon, hM=(la1-la0)*mLat; const padM=Math.max(9,0.1*Math.max(wM,hM)); const padLa=padM/mLat, padLo=padM/mLon; la0-=padLa; la1+=padLa; lo0-=padLo; lo1+=padLo;
   const tileX=(lo,z)=>(lo+180)/360*Math.pow(2,z), tileY=(la,z)=>(1-Math.log(Math.tan(la*Math.PI/180)+1/Math.cos(la*Math.PI/180))/Math.PI)/2*Math.pow(2,z);
@@ -7192,19 +7216,90 @@ async function hedgeMapImage(h){ const lines=rowLines(h); const all=[]; lines.fo
   const halo=(txt,x,y,sz,col)=>{ g.font='bold '+sz+'px Arial,sans-serif'; g.lineJoin='round'; g.lineWidth=4; g.strokeStyle='rgba(0,0,0,.75)'; g.strokeText(txt,x,y); g.fillStyle=col||'#fff'; g.fillText(txt,x,y); };
   R().water.nodes.filter(n=>n.kind==='pond'&&n.poly&&n.poly.length>=3).forEach(n=>{ g.beginPath(); n.poly.forEach((pt,i)=>{ const q=px(pt); i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); g.closePath(); g.fillStyle='rgba(76,143,191,.35)'; g.fill(); g.lineWidth=2; g.strokeStyle='#4C8FBF'; g.stroke(); });
   g.lineWidth=1.5; g.strokeStyle='rgba(255,255,255,.7)'; lines.forEach(l=>{ g.beginPath(); l.forEach((pt,i)=>{ const q=px(pt); i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); g.stroke(); });
+  g.lineCap='round'; g.lineJoin='round'; const pipePath=l=>{ g.beginPath(); l.pts.forEach((pt,i)=>{ const q=px(pt); i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); };
+  ir.lines.forEach(l=>{ const fill=!!l.fill, main=!fill&&ir.valves.has(l.b); g.setLineDash(fill?[14,8]:[]); pipePath(l); g.lineWidth=(main?5.5:fill?5.5:3.6)+2; g.strokeStyle='rgba(0,0,0,.7)'; g.stroke(); pipePath(l); g.lineWidth=main?5.5:fill?5.5:3.6; g.strokeStyle=fill?'#B79CE6':main?'#2F9BFF':'#8FD8FF'; g.stroke(); }); g.setLineDash([]);
   const mpp=156543.03392*Math.cos(midLat*Math.PI/180)/Math.pow(2,z)/k; const rad=Math.max(2.5,Math.min(8,0.9/mpp));
   h.rows.forEach((r,i)=>r.plants.forEach(p=>{ const sp=SP(p.sp); if(!sp) return; const q=px(pointAtFt(lines[i],p.ft)); g.beginPath(); g.arc(q[0],q[1],rad,0,6.2832); g.fillStyle=sp.color; g.fill(); g.lineWidth=1; g.strokeStyle='#111'; g.stroke(); }));
+  const nr=Math.max(7,rad+3), shortName=n=>String(n.name||'').split(' · ').pop().replace(/ valve$/,'');
+  ir.nodes.forEach(n=>{ const q=px([n.lat,n.lng]); g.lineWidth=2; g.strokeStyle='#fff';
+    if(n.kind==='tank'){ g.fillStyle='#2F6FB5'; g.fillRect(q[0]-nr,q[1]-nr,nr*2,nr*2); g.strokeRect(q[0]-nr,q[1]-nr,nr*2,nr*2); halo(n.name||'Tank',q[0]+nr+5,q[1]+5,Math.max(13,Math.round(W/70))); }
+    else if(n.kind==='pump'){ g.beginPath(); g.arc(q[0],q[1],nr,0,6.2832); g.fillStyle='#7A5CA8'; g.fill(); g.stroke(); g.fillStyle='#fff'; g.font='bold '+Math.round(nr*1.4)+'px Arial'; g.fillText('P',q[0]-nr*0.38,q[1]+nr*0.5); halo(n.name||'Pump',q[0]+nr+5,q[1]+5,Math.max(13,Math.round(W/70))); }
+    else if(ir.valves.has(n.id)){ g.beginPath(); g.moveTo(q[0],q[1]-nr-1); g.lineTo(q[0]+nr+1,q[1]); g.lineTo(q[0],q[1]+nr+1); g.lineTo(q[0]-nr-1,q[1]); g.closePath(); g.fillStyle='#F5A623'; g.fill(); g.stroke(); halo(shortName(n),q[0]+nr+5,q[1]+4,Math.max(12,Math.round(W/78)),'#FFD58A'); } });
   lines.forEach((l,i)=>{ const q=px(l[Math.floor(l.length/2)]); halo(h.rows[i].name,q[0]+rad+6,q[1]-rad-4,Math.max(13,Math.round(W/70))); });
   /* scale bar: the longest of these that is under a fifth of the width */
   const nice=[5,10,20,25,50,100,200,500].filter(ft=>ft*FT_M/mpp<W/5).pop()||5, bw=nice*FT_M/mpp, bx=16, by=H-22; g.fillStyle='rgba(0,0,0,.6)'; g.fillRect(bx-6,by-18,bw+12+(String(nice).length+3)*9,34); g.fillStyle='#fff'; g.fillRect(bx,by,bw,4); g.fillRect(bx,by-6,2,10); g.fillRect(bx+bw-2,by-6,2,10); g.font='bold 13px Arial'; g.fillText(nice+' ft',bx+bw+8,by+5); halo('N ↑',W-40,24,16);
   g.font='11px Arial'; g.fillStyle='rgba(255,255,255,.85)'; const note=tiled?'Imagery © Esri, Maxar, Earthstar Geographics':'Aerial imagery was not available; layout only'; g.fillText(note,W-g.measureText(note).width-8,H-8);
   return {url:cv.toDataURL('image/png'),W,H,tiled}; }
-function mapLegendHtml(h){ return '<p style="font-size:12px;line-height:1.9;margin:6px 0">'+catalog(h).map(c=>'<span style="display:inline-block;margin-right:12px;white-space:nowrap"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+c.sp.color+';border:1px solid #111;vertical-align:-1px"></span> '+esc(c.sp.common)+' ('+c.n+')</span>').join('')+'</p>'; }
+function mapLegendHtml(h){ const ir=irrigMapParts(h), sw=(c,sh)=>'<span style="display:inline-block;'+sh+';background:'+c+';vertical-align:-2px;margin-right:4px"></span>', has=k=>ir.nodes.some(n=>n.kind===k), anyLn=f=>ir.lines.some(l=>f(l));
+  const irr=(ir.nodes.length||ir.lines.length)?'<p style="font-size:12px;line-height:1.9;margin:0 0 6px"><b>Irrigation:</b> '+[anyLn(l=>!l.fill&&ir.valves.has(l.b))?sw('#2F9BFF','width:20px;height:5px')+'main':'',anyLn(l=>!l.fill&&!ir.valves.has(l.b))?sw('#8FD8FF','width:20px;height:4px')+'lateral':'',anyLn(l=>l.fill)?sw('#B79CE6','width:20px;height:5px')+'fill line':'',has('tank')?sw('#2F6FB5','width:11px;height:11px')+'tank':'',ir.valves.size?sw('#F5A623','width:10px;height:10px;transform:rotate(45deg)')+'zone valve':'',has('pump')?sw('#7A5CA8','width:11px;height:11px;border-radius:50%')+'pump':''].filter(Boolean).map(t=>'<span style="margin-right:14px;white-space:nowrap">'+t+'</span>').join('')+(irrigFillFar(h)?'<br><i>The pump and fill line run off the edge of this picture, toward the pond.</i>':'')+'</p>':'';
+  return irr+'<p style="font-size:12px;line-height:1.9;margin:6px 0">'+catalog(h).map(c=>'<span style="display:inline-block;margin-right:12px;white-space:nowrap"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+c.sp.color+';border:1px solid #111;vertical-align:-1px"></span> '+esc(c.sp.common)+' ('+c.n+')</span>').join('')+'</p>'; }
+/* ---- Project report: one compact printable page set for the whole project. Per hedgerow: the aerial map, a narrow plant table (same data and colors as the District's list,
+   with names, size and sun/water merged into single columns), and that hedgerow's irrigation: design summary, zones and an equipment table with prices. A last section holds
+   what is shared (tanks, the pump and fill lines, your own items) and the project totals against the budget. Prices and "have" ticks are the ones on the Cost tab. ---- */
+function prBomLines(bom){ const C=costState(), agg={}; Object.keys(bom||{}).forEach(k0=>{ const k=k0.replace(/ \(estimated\)$/,''); agg[k]=(agg[k]||0)+(+bom[k0]||0); });
+  const pi=k=>PIPE_SIZES.findIndex(x=>x.label===k);
+  return Object.keys(agg).sort((a,b)=>{ const x=pi(a),y=pi(b); return (x<0?999:x)-(y<0?999:y)||a.localeCompare(b); }).map(k=>{ const pz=PIPE_SIZES.find(x=>x.label===k), st=C.prices['bom:'+k]||{}, own=st.p!=null&&st.p!=='';
+    return {name:k,qty:agg[k],unit:/poly/i.test(k)?'ft':'each',p:own?+st.p:(pz?pz.cost:null),est:!own&&!!pz,have:!!st.have}; }); }
+function prEquipHtml(lines){ const f0=x=>Number(x).toLocaleString(); let total=0, unp=0, grp=null;
+  const body=lines.map(l=>{ let g=''; if(l.grp&&l.grp!==grp){ grp=l.grp; g=`<tr class="grp"><td colspan="5">${esc(grp)}</td></tr>`; } const c=otherLineCost(l); total+=c; if(!l.have&&l.p==null&&l.qty>0) unp++;
+    return g+`<tr><td>${esc(l.name)}${l.spec?`<div class="tag">${esc(l.spec)}</div>`:''}</td><td class="n">${f0(l.qty)}</td><td>${esc(l.unit)}</td><td class="n">${l.have?'have':(l.p==null?'':(l.est?'~':'')+'$'+fmtMoney(l.p))}</td><td class="n">${l.have?'$0':(l.p==null?'':'$'+fmtMoney(Math.round(c*100)/100))}</td></tr>`; }).join('');
+  return {total,unp,html:`<table class="eq" style="table-layout:fixed"><colgroup><col style="width:56%"><col style="width:9%"><col style="width:8%"><col style="width:13%"><col style="width:14%"></colgroup><tr><th>Item</th><th class="n">Qty</th><th>Unit</th><th class="n">Each</th><th class="n">Cost</th></tr>${body}</table>`}; }
+function prSpeciesHtml(h){ const rows=rcdRows(h), d=rcdDims(h), f0=x=>Number(x).toLocaleString(); let html='', cost=0, plants=0, area=0;
+  RCD_TYPES.forEach(ty=>{ const rs=rows.filter(r=>r.type===ty); if(!rs.length) return; html+=`<tr class="grp"><td colspan="9" style="background:${RCD_COLOR[ty]}">${ty}${ty==='Shrub'||ty==='Tree'||ty==='Herb'||ty==='Vine'?'s':'es'}</td></tr>`;
+    rs.forEach(r=>{ cost+=r.cost; plants+=r.n; area+=(+r.area||0); const nm=r.link?`<a href="${esc(r.link)}">${esc(r.sp.common)}</a>`:esc(r.sp.common);
+      const size=(r.ht!==''||r.wid!=='')?(r.ht!==''?r.ht:'?')+' × '+(r.wid!==''?r.wid:'?'):'', bloom='';
+      const sun=({'Full Sun':'Sun','Full Sun/Part Shade':'Sun/part shade','Part Shade/Shade':'Part shade/shade'})[r.sun]||r.sun, water=r.water?r.water.toLowerCase()+' water':'';
+      html+=`<tr style="background:${RCD_COLOR[r.type]}33"><td>${nm}<div class="lat">${esc(r.sp.sci)}</div>${r.note?`<div class="tag">${esc(r.note)}</div>`:''}</td><td class="n b">${r.n}</td><td>${esc(size)}</td><td class="n">${r.spacing===''?'':esc(r.spacing)}</td><td>${esc(r.season)}${r.season&&r.flower?'<br>':''}<span class="tag">${esc(r.flower)}</span></td><td>${esc(sun)}${sun&&water?'<br>':''}<span class="tag">${esc(water)}</span></td><td>${/^native/i.test(r.origin)?'Native':esc(r.origin)}</td><td class="n">$${fmtMoney(r.unit)}</td><td class="n b">${r.have?'have':'$'+fmtMoney(r.cost)}</td></tr>`; }); });
+  const th='<tr><th>Plant</th><th class="n">#</th><th>Size, ft<br><span class="tag">H × W</span></th><th class="n">Spacing, ft</th><th>Bloom</th><th>Sun / water</th><th>Origin</th><th class="n">Each</th><th class="n">Total</th></tr>';
+  return {cost,plants,area,html:`<table class="sp" style="table-layout:fixed"><colgroup><col style="width:25%"><col style="width:5%"><col style="width:10%"><col style="width:8%"><col style="width:15%"><col style="width:14%"><col style="width:7%"><col style="width:7%"><col style="width:9%"></colgroup>${th}${html}<tr class="ft"><td colspan="9">${f0(plants)} plants · ${f0(d.lin)} linear ft · ${f0(d.sq)} sq ft of hedgerow · ${f0(area)} sq ft of mature canopy · plants $${fmtMoney(cost)}</td></tr></table>`}; }
+/* One "Irrigation equipment" table per hedgerow, holding all the hardware: the source tank, the pump and fill line (solar pump, panel, floats, hose and its pipe), and the zone
+   valves, filters, regulators, fittings, pipe and emitters. A tank, or the pump and fill line feeding it, that serves several hedgerows is listed once, under the first of them
+   (the others say where). Tanks that feed none of the hedgerows in the report, and the Cost tab's own items, are listed under the first hedgerow too, so the totals match. */
+function prIrrigHtml(h,ctx){ const C=costState(), W=R().water, ds=irrigDesigns().filter(d=>d.hedge===h.id), lines=[], notes=[];
+  const tankLine=n=>{ const st=C.prices['tank:'+n.id]||{}; return {grp:'Water source',name:'Tank: '+(n.name||'Tank')+(+n.tankGal>0?' ('+n.tankGal+' gal)':''),qty:1,unit:'each',p:st.p!=null&&st.p!==''?+st.p:null,est:false,have:!!st.have}; };
+  ds.forEach(d=>{ const tk=W.nodes.find(n=>n.id===d.src); if(!tk||tk.kind!=='tank') return;
+    if(ctx.claimed.has(tk.id)){ notes.push(`${esc(tk.name||'Tank')}${fillsList().some(f=>f.tank===tk.id)?' and its pump and fill line are':' is'} listed under ${esc(ctx.claimed.get(tk.id))}.`); return; }
+    ctx.claimed.set(tk.id,h.name||'Hedgerow'); lines.push(tankLine(tk));
+    fillsList().filter(f=>f.tank===tk.id).forEach(f=>{ const g='Pump and fill line: '+f.pondName+' to '+f.tankName;
+      prBomLines(f.bom).forEach(l=>lines.push(Object.assign(l,{grp:g,spec:(f.spec&&f.spec[l.name])||''}))); }); });
+  const merged={}; ds.forEach(d=>{ const b=costBomOf(d); Object.keys(b).forEach(k=>{ merged[k]=(merged[k]||0)+(+b[k]||0); }); });
+  prBomLines(merged).forEach(l=>lines.push(Object.assign(l,{grp:'Zone equipment, pipe and emitters'})));
+  if(ctx.extra){ ctx.extra.filter(l=>(l.hedge&&ctx.ids.has(l.hedge))?l.hedge===h.id:ctx.first===h.id).forEach(l=>lines.push(Object.assign({},l,{grp:'Other project items'}))); }
+  if(!lines.length) return {total:0,html:`<p class="mute">No irrigation has been designed for this hedgerow yet.</p>`};
+  const eq=prEquipHtml(lines); return {total:eq.total,html:eq.html+`<p class="sub">Irrigation equipment total: <b>$${fmtMoney(Math.round(eq.total))}</b>${eq.unp?` · ${eq.unp} item${eq.unp===1?'':'s'} without a price`:''}</p>${notes.map(t=>`<p class="mute">${t}</p>`).join('')}`}; }
+async function projectReportDoc(hs,onStep){ const f0=x=>Number(x).toLocaleString(), C=costState(), L=otherCostLines(); let plantCost=0, plantCount=0, irrCost=0, secs='';
+  /* what belongs to no hedgerow in the report: tanks that feed none of them, and the Cost tab's own items */
+  const srcIds=new Set(); hs.forEach(h=>irrigDesigns().filter(d=>d.hedge===h.id).forEach(d=>srcIds.add(d.src)));
+  const extra=L.filter(l=>l.group==='Tanks'&&!srcIds.has(l.key.slice(5))).concat(L.filter(l=>l.group==='Other items'&&(l.name||l.p!=null)));
+  /* fill lines for tanks that feed none of the hedgerows are not shown in the report, so they are also left out of its totals */
+  const ctx={claimed:new Map(),extra,first:hs[0].id,ids:new Set(hs.map(x=>x.id))};
+  for(let i=0;i<hs.length;i++){ const h=hs[i]; if(onStep) onStep('Drawing '+(h.name||'hedgerow')+' ('+(i+1)+' of '+hs.length+')…');
+    let img=null; try{ img=await hedgeMapImage(h); }catch(e){ img=null; }
+    const sp=prSpeciesHtml(h), ir=prIrrigHtml(h,ctx); plantCost+=sp.cost; plantCount+=sp.plants; irrCost+=ir.total;
+    secs+=`<section class="hed${i?' pb':''}"><h2>${esc(h.name)}</h2>`
+      +(img?`<div class="map"><img src="${img.url}" alt="${esc(h.name)} on the map">${mapLegendHtml(h)}${img.tiled?'':'<p class="mute">Aerial imagery could not be loaded, so this shows the layout only.</p>'}</div>`:'')
+      +`<h3>Plants</h3>${sp.html}<h3>Irrigation equipment</h3>${ir.html}</section>`; }
+  const total=plantCost+irrCost, b=C.budget;
+  const summary=`<table class="eq" style="width:auto;min-width:340px"><tr><td>Plants (${f0(plantCount)})</td><td class="n">$${fmtMoney(Math.round(plantCost))}</td></tr><tr><td>Irrigation equipment</td><td class="n">$${fmtMoney(Math.round(irrCost))}</td></tr><tr><td><b>Total</b></td><td class="n"><b>$${fmtMoney(Math.round(total))}</b></td></tr>${b?`<tr><td>Project budget</td><td class="n">$${fmtMoney(b)}</td></tr><tr><td>${total>b?'Over budget by':'Left in budget'}</td><td class="n">$${fmtMoney(Math.abs(Math.round(b-total)))}</td></tr>`:''}</table>`;
+  const head=`<h1>${(rcdFor||R().name)?esc(rcdFor||R().name)+': ':''}Hedgerow Project Report</h1><p><b>All prices in this report are before sales tax.</b></p><p class="mute">${esc(rcdGrant)} · ${hs.map(h=>esc(h.name)).join(', ')} · generated ${new Date().toLocaleDateString()}. Plant costs use the container sizes chosen on the Cost tab. Items already owned are marked "have" and cost $0. A "~" marks a generic estimate where no price was entered.</p>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(rcdFor||R().name)} project report</title><style>
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:letter;margin:.5in}body{font-family:Arial,sans-serif;margin:18px auto;max-width:7.5in;color:#111;font-size:10px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:15px;margin:0 0 6px;background:#D9D9D9;padding:4px 8px}h3{font-size:12px;margin:12px 0 4px}p{margin:4px 0}.mute{color:#555}.sum{margin:8px 0 3px;font-size:10px}.sub{margin:3px 0 10px;font-size:11px}
+table{border-collapse:collapse;width:100%;font-size:9.5px}th{border-bottom:1px solid #888;padding:3px 4px;text-align:left;vertical-align:bottom}td{padding:2px 4px;vertical-align:top}.n{text-align:right}.b{font-weight:bold}
+.sp td{border-bottom:1px solid #ddd}.grp td{font-weight:bold;font-size:9px;padding:3px 4px}.eq .grp td{background:#EEF2EC;border-top:6px solid #fff}.lat{font-style:italic;font-size:8px;color:#444}.tag{font-size:8px;color:#555}.ft td{background:#FFE699;font-weight:bold;padding:4px;font-size:9px}
+.eq td{border-bottom:1px solid #ddd}.map img{width:100%;max-height:4.4in;object-fit:contain;background:#eee;border:1px solid #ccc}.map p{font-size:9px!important}
+.top{margin-bottom:44px;padding-bottom:26px;border-bottom:2px solid #999}section.hed{margin-top:56px;padding-bottom:26px;border-bottom:2px solid #999}section.hed:last-of-type{border-bottom:0}
+tr{page-break-inside:avoid}section.pb{page-break-before:always;margin-top:0}a{color:#1155CC;text-decoration:none}.bar{margin-bottom:10px}@media print{.bar{display:none}body{margin:0 auto}.top{margin-bottom:0}}</style></head><body>
+<div class="bar"><button onclick="window.print()">Print or save as PDF</button></div><div class="top">${head}${summary}</div>${secs}</body></html>`; }
+async function projectReportOpen(){ const hs=rcdChosen(); if(!hs.length) return; const w=window.open('about:blank','_blank'); if(!w){ UI.toast('Allow pop-ups to open the report'); return; }
+  w.document.write('<p style="font-family:Arial;padding:20px">Building the report…</p>'); w.document.close();
+  try{ const html=await projectReportDoc(hs,t=>{ try{ w.document.body.innerHTML='<p style="font-family:Arial;padding:20px">'+esc(t)+'</p>'; }catch(e){} }); w.document.open(); w.document.write(html); w.document.close(); }
+  catch(e){ try{ w.document.body.innerHTML='<p style="font-family:Arial;padding:20px">The report could not be built: '+esc(e.message)+'</p>'; }catch(x){} } }
 async function exportPlanDoc(){ const h=curHedge(); if(!h) return; let mapBlock=''; try{ busy(true,'Drawing the map for the plan…'); const im=await hedgeMapImage(h); if(im) mapBlock='<h2>Hedgerow map</h2><img src="'+im.url+'" alt="'+esc(h.name)+' on the map" style="width:100%;border:1px solid #ccc">'+mapLegendHtml(h)+(im.tiled?'':'<p style="font-size:12px"><i>Aerial imagery could not be loaded, so the plants are shown on a plain background.</i></p>'); }catch(e){ console.warn('plan map failed',e); } finally{ busy(false,''); }
   const doc=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(h.name)} — HedgeRight plan</title>
   <style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 20px;color:#1E2A22}h1,h2,h3{font-family:Arial,sans-serif}
   table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:5px 8px;font-size:13px}</style></head><body>
-  <h1>${esc(h.name)} — Hedgerow Plan</h1><p>${esc(R().name)} · generated ${new Date().toLocaleDateString()}</p>
+  <h1>${esc(h.name)} — Hedgerow Plan</h1><p>${esc(R().name)} · generated ${new Date().toLocaleDateString()}</p><p><b>Prices do not include sales tax.</b></p>
   ${mapBlock}
   ${shoppingHtml(h)}
   ${dayDocBodyHtml(h)}
