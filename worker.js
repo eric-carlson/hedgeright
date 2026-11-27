@@ -226,6 +226,13 @@ async function handle(request, env) {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    /* The demo (the app opened with ?demo) reads the species list without an access code. This is the only route that needs none, it only
+       reads, and it returns the same list the signed-in app uses. */
+    if (url.pathname === '/demo-species' && request.method === 'GET') {
+      const raw = await env.DESIGN_KV.get('species');
+      return new Response(raw === null ? 'null' : raw, { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+    }
+
     const who = await identify(request, env);
     if (!who) {
       return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS });
